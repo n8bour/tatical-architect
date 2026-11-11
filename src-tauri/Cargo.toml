@@ -1,16 +1,28 @@
 [package]
-name = "fm-tactical-architect"
-version = "0.1.0"
+name = "fm27-tactical-bible"
+version = "3.1.0"
+description = "FM27 Tactical Bible"
 edition = "2021"
-
-[dependencies]
-tauri = { version = "2", features = [] }
-tauri-plugin-dialog = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-sha2 = "0.10"
-base64 = "0.22"
-hex = "0.4"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Perfil de release afinado para compilar depressa no CI (o binário continua pequeno).
+# LTO "fat" e codegen-units=1 triplicavam o tempo de build sem ganho visível numa app destas.
+[profile.release]
+opt-level = "s"
+lto = false
+codegen-units = 16
+incremental = false
+panic = "abort"
+strip = true
+debug = false
+
+# As dependências compilam com opt-level baixo: é aí que está quase todo o tempo de build
+[profile.release.package."*"]
+opt-level = 1

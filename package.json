@@ -1,8 +1,16 @@
 {
-  "name":"fm-tactical-architect",
-  "version":"0.1.0",
-  "private":true,
-  "type":"module",
-  "scripts":{"build":"mkdir -p dist && cp -r src/* dist/","dev":"python3 -m http.server 4173 --directory src"},
-  "devDependencies":{}
+  "name": "fm27-tactical-bible",
+  "private": true,
+  "version": "3.1.0",
+  "description": "Bíblia tática e analisador para o Football Manager 27 — funciona offline",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node tests/engine.test.cjs",
+    "app:dev": "node build.mjs && tauri dev",
+    "app:build": "node build.mjs && tauri build --bundles nsis",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
 }

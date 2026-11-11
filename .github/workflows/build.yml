@@ -1,54 +1,107 @@
-name: Build FM Tactical Architect
+# Build da app instalável — optimizado para ser rápido:
+#  • por defeito só Windows (instalador .exe + executável portátil)
+#  • cache do Rust entre execuções (2.ª execução em ~2–3 min)
+#  • perfil de release sem LTO e dependências com opt-level 1
+#  • a CLI do Tauri vem pré-compilada via npx (sem npm install)
+# Correr: Actions → "Build desktop app" → Run workflow (marque a opção para incluir macOS/Linux).
+# Uma tag v* (ex.: git tag v3.0.0 && git push --tags) gera todas as plataformas e um Release em rascunho.
+name: Build desktop app
 
 on:
   workflow_dispatch:
+    inputs:
+      all_platforms:
+        description: 'Incluir também macOS e Linux (mais lento)'
+        type: boolean
+        default: false
+  push:
+    tags: ['v*']
 
-permissions:
-  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
-
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      platforms: ${{ steps.p.outputs.platforms }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
-
-      - name: Install frontend dependencies
-        run: npm install
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
+          node-version: 22
+      - name: Testes do motor
+        run: node tests/engine.test.cjs
+      - name: Gerar app/index.html
+        run: node build.mjs
+      - uses: actions/upload-artifact@v4
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build Tauri application
-        uses: tauri-apps/tauri-action@v1
-        with:
-          projectPath: .
-          args: ""
-
-          uploadWorkflowArtifacts: true
-          workflowArtifactNamePattern: "FM-Tactical-Architect-[platform]-[arch]-[bundle]"
-
-      - name: Show build outputs
-        shell: pwsh
+          name: FM27-Tactical-Bible-HTML
+          path: app/index.html
+      - id: p
+        name: Escolher plataformas
         run: |
-          Write-Host "Build completed."
-          Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse |
-            Select-Object FullName
+          if [ "${{ github.event.inputs.all_platforms }}" = "true" ] || [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo 'platforms=["windows-latest","macos-latest","ubuntu-22.04"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'platforms=["windows-latest"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(needs.test.outputs.platforms) }}
+    runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          key: ${{ matrix.platform }}
+      - name: Dependências Linux
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Gerar app/index.html
+        run: node build.mjs
+      - name: Compilar
+        shell: bash
+        run: |
+          case "${{ matrix.platform }}" in
+            windows-latest) B=nsis ;;
+            macos-latest)   B=dmg ;;
+            *)              B=appimage ;;
+          esac
+          npx --yes @tauri-apps/cli@2 build --bundles "$B"
+      - name: Juntar ficheiros
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp src-tauri/target/release/bundle/nsis/*.exe dist/ 2>/dev/null || true
+          cp src-tauri/target/release/fm27-tactical-bible.exe "dist/FM27-Tactical-Bible-portatil.exe" 2>/dev/null || true
+          cp src-tauri/target/release/bundle/dmg/*.dmg dist/ 2>/dev/null || true
+          cp src-tauri/target/release/bundle/appimage/*.AppImage dist/ 2>/dev/null || true
+          ls -la dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FM27-Tactical-Bible-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+      - name: Release (só com tags v*)
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" --draft --title "FM27 Tactical Bible ${{ github.ref_name }}" --notes "Instalador e executável portátil." || true
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
