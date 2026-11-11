@@ -1,0 +1,8 @@
+{
+  "name":"fm-tactical-architect",
+  "version":"0.1.0",
+  "private":true,
+  "type":"module",
+  "scripts":{"build":"mkdir -p dist && cp -r src/* dist/","dev":"python3 -m http.server 4173 --directory src"},
+  "devDependencies":{}
+}
