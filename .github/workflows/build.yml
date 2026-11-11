@@ -1,13 +1,14 @@
 name: Build FM Tactical Architect
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-windows:
+    name: Build Windows
     runs-on: windows-latest
 
     steps:
@@ -19,22 +20,35 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm install
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --locked
-
-      - name: Build Tauri app
-        run: cargo tauri build
-
-      - name: Upload Windows installer
-        uses: actions/upload-artifact@v4
+      - name: Cache Cargo
+        uses: actions/cache@v4
         with:
-          name: FM-Tactical-Architect-Windows
           path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build Tauri application
+        uses: tauri-apps/tauri-action@v1
+        with:
+          projectPath: .
+          args: ""
+
+          uploadWorkflowArtifacts: true
+          workflowArtifactNamePattern: "FM-Tactical-Architect-[platform]-[arch]-[bundle]"
+
+      - name: Show build outputs
+        shell: pwsh
+        run: |
+          Write-Host "Build completed."
+          Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse |
+            Select-Object FullName
