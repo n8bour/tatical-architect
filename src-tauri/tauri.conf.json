@@ -5,5 +5,5 @@
   "identifier":"net.fm-tactical-architect.desktop",
   "build":{"frontendDist":"../src"},
   "app":{"windows":[{"title":"FM Tactical Architect","width":1440,"height":920,"minWidth":1180,"minHeight":720}],"security":{"csp":null}},
-  "bundle":{"active":true,"targets":["nsis","msi","dmg","appimage","deb"],"createUpdaterArtifacts":false}
+  "bundle":{"active":true,"targets":["nsis"],"createUpdaterArtifacts":false}
 }
