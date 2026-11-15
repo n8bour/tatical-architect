@@ -263,10 +263,14 @@ function phaseText(t, k, M) {
 // demonstração de um papel: tática simples com o papel em destaque
 function demoTacticForRole(r) {
   const g = r.groups[0];
-  const F = { GK:'4-3-3 DM Wide', DC: r.wideCB ? '3-4-2-1' : '4-3-3 DM Wide', D_LR:'4-3-3 DM Wide', WB_LR:'3-4-2-1', DM:'4-3-3 DM Wide', MC:'4-3-3 DM Wide', M_LR:'4-4-2', AMC:'4-2-3-1 Wide', AM_LR:'4-3-3 DM Wide', ST:'4-3-3 DM Wide' }[g];
+  let F = { GK:'4-3-3 DM Wide', DC: r.wideCB ? '3-4-2-1' : '4-3-3 DM Wide', D_LR:'4-3-3 DM Wide', WB_LR:'3-4-2-1', DM:'4-3-3 DM Wide', MC:'4-3-3 DM Wide', M_LR:'4-4-2', AMC:'4-2-3-1 Wide', AM_LR:'4-3-3 DM Wide', ST:'4-3-3 DM Wide' }[g];
   const t = newTactic(F, F); t.name = 'Demo: ' + r.name; t.ment = 'Balanced';
-  let idx = t.slots.findIndex(s => { const a = slotInfo(F, s.ipCode); return a.group === g && (!r.wideCB || a.wideCB) && a.side !== 'R'; });
-  if (idx < 0) idx = t.slots.findIndex(s => slotInfo(F, s.ipCode).group === g);
+  // casa onde o papel é válido (respeita casa central/deslocada); se a formação base não tiver, procura outra
+  const fits = (form, code) => { const a = slotInfo(form, code); return a && validRole(r.id, a.group, r.phase, a); };
+  if (!FORMATIONS[F].some(z => fits(F, z.code))) F = Object.keys(FORMATIONS).find(f => FORMATIONS[f].some(z => fits(f, z.code))) || F;
+  const t2 = newTactic(F, F); t.slots = t2.slots; t.ipForm = F; t.oopForm = F;
+  let idx = t.slots.findIndex(s => fits(F, s.ipCode) && slotInfo(F, s.ipCode).side !== 'R');
+  if (idx < 0) idx = t.slots.findIndex(s => fits(F, s.ipCode));
   t.slots[idx][r.phase === 'IP' ? 'ip' : 'oop'] = r.id;
   return { t, idx };
 }

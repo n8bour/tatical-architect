@@ -19,7 +19,7 @@ function vTraining() {
   </div>
   <div class="panel" style="margin-top:16px"><h3>Desenvolvimento individual do XI</h3>
     ${plan.indiv.length ? `<div class="table-wrap"><table><thead><tr><th>Jogador</th><th>Pos</th><th>IP</th><th>OOP</th><th>Role Training</th><th>Foco adicional</th></tr></thead><tbody>
-      ${plan.indiv.map(x => `<tr><td><b>${esc(x.p.name)}</b></td><td>${x.slot}</td><td>${fitBadge(x.si)}</td><td>${fitBadge(x.so)}</td><td>${esc(x.role.name)}</td><td>${x.weak.map(k => `<span class="chip">${esc(attrName(k))} ${Math.round(x.p.a[k])}</span>`).join('')}</td></tr>`).join('')}
+      ${plan.indiv.map(x => `<tr><td><b>${esc(x.p.name)}</b></td><td>${x.slot}</td><td>${fitBadge(x.si)}</td><td>${fitBadge(x.so)}</td><td>${esc(roleName(x.role))}</td><td>${x.weak.map(k => `<span class="chip">${esc(attrName(k))} ${Math.round(x.p.a[k])}</span>`).join('')}</td></tr>`).join('')}
     </tbody></table></div>` : '<p class="muted">Atribua jogadores ao XI (Plantel → Analisador → Auto XI) para recomendações individuais.</p>'}
     ${plan.mentors.length && plan.youth.length ? `<h4 style="margin-top:12px">Mentoria</h4><p class="small">Mentores (Determinação ≥ 15, ≥ 26 anos): ${plan.mentors.slice(0, 4).map(p => esc(p.name)).join(', ')}. Jovens ≤ 21: ${plan.youth.slice(0, 8).map(p => esc(p.name)).join(', ')}.</p>` : ''}
   </div>`;

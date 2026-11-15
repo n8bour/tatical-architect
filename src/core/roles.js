@@ -158,10 +158,10 @@ const ROLES = [
   R('hb','HB','Half Back','IP',['DM'],'RD DROP TOCB','mar tck pos ant cmp cnt dec tea','pas str jum fir',
     'Baixa para entre os centrais na construção, formando linha de 3.',
     'Permite aos laterais subirem os dois. Redundante com IFB do mesmo lado.','v'),
-  R('b2b','BBM','Box-To-Box Midfielder','IP',['DM','MC'],'ADV BOX','pas tck otb tea wor sta','dri fin fir lon ant cmp dec pos acc str bal',
+  R('b2b','BBM','Box-To-Box Midfielder','IP',['DM'],'ADV BOX','pas tck otb tea wor sta','dri fin fir lon ant cmp dec pos acc str bal',
     'Sobe até à zona de médio ofensivo e chega à área.',
     'Resistência e Índice de Trabalho são inegociáveis.','v'),
-  R('b2bp','BBP','Box-To-Box Playmaker','IP',['DM','MC'],'ADV CR','pas fir tec vis dec tea wor sta','dri lon otb ant cmp',
+  R('b2bp','BBP','Box-To-Box Playmaker','IP',['DM'],'ADV CR','pas fir tec vis dec tea wor sta','dri lon otb ant cmp',
     'Sobe à zona de médio ofensivo como criativo.', 'Bom num duplo pivot com um DM seguro.','v'),
   R('dm_oop','DM','Defensive Midfielder','OOP',['DM'],'','tck pos ant cnt dec mar','tea wor str sta',
     'Comportamento defensivo padrão à frente da defesa.','Base.','v'),
@@ -265,3 +265,11 @@ const ROLES = [
 ];
 
 const ROLE_BY_ID = Object.fromEntries(ROLES.map(r => [r.id, r]));
+
+// ---------------------------------------------------------------------------
+// Casa exacta: no FM26/27 alguns papéis só existem na casa central ('C': DM, MC, AMC, ST)
+// ou só nas deslocadas ('S': DML/DMR, MCL/MCR, AMCL/AMCR, STL/STR) da mesma linha.
+// Fontes: jogo (relato do utilizador) e guias FM26 — o Box-to-Box Midfielder só em DM deslocado.
+// Com o Tactics Lab ligado, a disponibilidade pode ser confirmada pelo catálogo do motor.
+const ROLE_SLOT = { b2b: 'S' };
+ROLES.forEach(r => { if (ROLE_SLOT[r.id]) r.slot = ROLE_SLOT[r.id]; });

@@ -1,7 +1,7 @@
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.3.0';
+const VERSION = '4.6.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -15,29 +15,39 @@ const ST = {
   view: 'home', tabs: { team: 'squad', tactic: 'analyze', bible: 'roles' },
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
   saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
-  auto: { on: true, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 43 },   // carregamento automático (app instalada)
+  auto: { on: false, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 45 },   // carregamento automático (app instalada)
   lastSave: null, gen: null, lab: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames })); } catch (e) {}
 }
 
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (!d) { ST.tactic = tacticFromTemplate(TEMPLATES[0]); ST.saved = [JSON.parse(JSON.stringify(ST.tactic))]; return; }
+    if (!d) return;                                   // primeira utilização: tática nova e vazia, sem táticas guardadas
     if (d.tactic && FORMATIONS[d.tactic.ipForm] && FORMATIONS[d.tactic.oopForm]) ST.tactic = d.tactic;
     if (d.squad && Array.isArray(d.squad.players)) ST.squad = d.squad;
     if (Array.isArray(d.saved)) ST.saved = d.saved;
     if (d.theme) ST.theme = d.theme;
     if (d.opp && Array.isArray(d.opp.players)) ST.opp = d.opp;
     if (d.myClub) ST.myClub = d.myClub;
-    if (d.auto) { ST.auto = Object.assign(ST.auto, d.auto); if (!d.auto.v || d.auto.v < 43) { ST.auto.save = false; ST.auto.v = 43; } }   // v4.3: ler o save passa a ser opcional
+    if (d.auto) {
+      ST.auto = Object.assign(ST.auto, d.auto);
+      if (!d.auto.v || d.auto.v < 43) ST.auto.save = false;   // v4.3: ler o save passa a ser opcional
+      if (!d.auto.v || d.auto.v < 45) ST.auto.on = false;     // v4.5: carregar o F9 sozinho também passa a ser opcional
+      ST.auto.v = 45;
+    }
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
     if (d.gen) ST.gen = d.gen;
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
+    if (d.sheetNames) ST.sheetNames = d.sheetNames;
+    // v4.4: a tática de exemplo “Cenas v2” deixou de vir com a app — sai das guardadas e, se for a activa, dá lugar a uma nova
+    const isCenas = (t) => t && typeof t.name === 'string' && /^Cenas v2\b/.test(t.name);
+    ST.saved = ST.saved.filter(t => !isCenas(t));
+    if (isCenas(ST.tactic)) { ST.tactic = newTactic(); }
     if (d.ui) ST.ui = { collapsed: d.ui.collapsed || {}, navMini: !!d.ui.navMini };
     if (d.lab) ST.lab = { port: d.lab.port || 8765, more: d.lab.more || 100, status: null, jobs: [], job: null, err: '', busy: false };
     [ST.tactic, ...ST.saved].forEach(t => { if (t && t.ti && t.ti.loe > 2) t.ti.loe = 2; if (t && t.ti && t.ti.short_gk > 1) t.ti.short_gk = 1; });

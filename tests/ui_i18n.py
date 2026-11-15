@@ -52,6 +52,30 @@ with sync_playwright() as p:
             texts.update(l for l, t in zip(lits, trans) if t == l)
         pg.close()
     b.close()
+# caminhos raros (erros e acções): forçados com uma app instalada simulada que falha de propósito
+with sync_playwright() as p:
+    b = p.chromium.launch(); pg = b.new_page(viewport={'width': 1400, 'height': 900}); pg.on('pageerror', lambda e: errors.append(str(e)))
+    pg.add_init_script("""window.__TOASTS = []; window.__TAURI__ = { core: { invoke: async (c, a) => {
+        if (c === 'export_dirs') return []; if (c === 'latest_save') return { path: 'C:/x/T.fm', name: 'T.fm', modified: 9, size: 1e8 };
+        if (c === 'export_save') throw 'Não consegui correr o fmsave. uvx: program not found | fmsave: program not found';
+        if (c === 'latest_export') return null;
+        if (c === 'lab_request') { if (a.path === '/api/status' && a.port === 8790) return { status: 200, body: '{"engine":"original_native","roles":79}' };
+          if (a.path.startsWith('/api/jobs/j1/export')) return { status: 200, body: '{"summary":{"name":"x"},"scenarios":{"A":{}}}' };
+          if (a.port === 8790) return { status: 200, body: '[]' };
+          throw 'O Tactics Lab não responde na porta ' + a.port + ': connection refused'; }
+        return null; } } };""")
+    pg.goto(U.APP); pg.wait_for_timeout(200)
+    pg.evaluate("() => { ST.lang = LANG = 'en'; const o = toast; toast = (m) => { o(m); window.__TOASTS.push(document.getElementById('toast').textContent); }; render(); }")
+    grab = lambda: [texts.add(x) for x in pg.evaluate(GRAB) + pg.evaluate("window.__TOASTS")]
+    pg.evaluate("A.go('lab')"); pg.click('button[data-busy="lab-connect"]'); pg.wait_for_function("!BUSY['lab-connect']", timeout=30000); grab()
+    pg.evaluate("() => { labState().port = 8790; labState().status = { engine: 'x' }; A.labJobs(); }"); pg.wait_for_timeout(200); grab()
+    pg.evaluate("() => { labState().port = 8790; A.labMore('j1'); }"); pg.wait_for_timeout(400); grab()
+    pg.evaluate("() => { labState().port = 8000; A.labFmf('zz', 'B'); }"); pg.wait_for_timeout(400); grab()
+    pg.evaluate("() => { ST.auto.save = true; A.saveNow(); }"); pg.wait_for_timeout(600); pg.evaluate("A.tab('team','squad')"); grab(); pg.evaluate("A.go('settings')"); grab()
+    pg.evaluate("() => { ingestJSON({ foo: 1 }, 'x.json'); ingestSquadText('nada aqui', 'vazio.csv'); A.autoXI(); A.resetTI(); A.saveTactic(); A.sampleSquad(); A.applyAllPIs(); }"); pg.wait_for_timeout(200); grab()
+    pg.evaluate("() => { A.tab('team','opp'); }"); pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", U.RIVAL); pg.evaluate("() => { render(); A.applyPlan('all'); }"); grab()
+    pg.evaluate("() => { genOpts(); return A.genRun(); }"); pg.wait_for_timeout(1500); pg.evaluate("() => { A.genUse(); }"); pg.wait_for_timeout(200); grab()
+    b.close()
 left = sorted(s for s in texts if is_pt(s) and not re.search(NAMES, s))
 for s in left: print('  EM PORTUGUÊS:', s[:150])
 print('cobertura de idioma (inglês):', 'OK' if not left and not errors else f'{len(left)} textos em português, {len(errors)} erros JS')

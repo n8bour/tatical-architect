@@ -4,7 +4,7 @@
 function vRoles() {
   const q = ST.rq.toLowerCase();
   const list = ROLES.filter(r => (!ST.rg || r.groups.includes(ST.rg)) && (!ST.rp || r.phase === ST.rp) &&
-    (!q || (r.name + ' ' + r.desc + ' ' + r.tip + ' ' + r.ab).toLowerCase().includes(q)));
+    (!q || [r.name, PT_TERMS[r.name] || '', PT_ROLE_ID[r.id] || '', r.desc, r.tip, r.ab, T(r.desc), T(r.tip)].join(' ').toLowerCase().includes(q)));
   const tagNames = { W:'dá largura', IN:'entra por dentro', RD:'fica atrás', BOX:'ataca a área', CR:'criativo', LINK:'liga jogo', RUN:'profundidade', DROP:'baixa', AIR:'aéreo', ADV:'sobe', TOCB:'vira central', TODM:'vira médio def.', HP:'pressiona alto', LOW:'cauteloso', OUT:'outlet', CW:'cobre flanco', TRK:'acompanha recuo' };
   return `<div class="top"><div><h2>Papéis — com bola e sem bola</h2>
     <p class="muted small">${ROLES.length} papéis. Desde o FM26 não há duties: cada jogador tem um papel IP e um OOP. <span class="tag v">CONF</span> atributos confirmados · <span class="tag e">EST</span> estimados.</p></div></div>
@@ -14,7 +14,7 @@ function vRoles() {
     ${selectHTML([['', 'IP + OOP'], ['IP', 'Com bola (IP)'], ['OOP', 'Sem bola (OOP)']], ST.rp, 'A.rp(this.value)')}
     <span class="small muted">${list.length} resultado(s)</span></div>
   <div class="grid g2">${list.map(r => `<div class="role-card">
-    <div class="row" style="justify-content:space-between"><div><b>${esc(r.name)}</b> <span class="muted small">(${esc(r.ab)})</span></div><div><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span>${srcTag(r)}</div></div>
+    <div class="row" style="justify-content:space-between"><div><b>${esc(roleName(r))}</b> <span class="muted small">(${esc(r.ab)})</span></div><div><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span>${srcTag(r)}</div></div>
     <div class="small muted">${r.groups.map(g => `<span>${GROUPS[g]}</span>`).join(' · ')}${r.wideCB ? ` · <span>só central do lado numa linha de 3</span>` : ''}</div>
     <p class="small">${esc(r.desc)}</p><p class="small">💡 ${esc(r.tip)}</p>
     <div class="attrs"><b>Chave:</b> ${r.key.map(k => `<span class="chip">${esc(attrName(k))}</span>`).join('')}</div>

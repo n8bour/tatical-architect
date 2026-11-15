@@ -44,7 +44,7 @@ const A = {
   applyPI(i, n) { const s = ST.tactic.slots[i]; s.pis = s.pis || []; if (!s.pis.includes(n)) s.pis.push(n); save(); render(); toast(n + ' aplicado'); },
   applyAllPIs() { const pm = Object.fromEntries(players().map(p => [p.id, p])); let n = 0;
     ST.tactic.slots.forEach(s => { const a = slotInfo(ST.tactic.ipForm, s.ipCode); recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], a.group).slice(0, 1).forEach(r => { s.pis = s.pis || []; if (!s.pis.includes(r.pi)) { s.pis.push(r.pi); n++; } }); });
-    save(); render(); toast(n + ' instruções aplicadas (a principal de cada jogador — mais instruções = mais complexidade)'); },
+    save(); render(); toast(L(n + ' instruções aplicadas (a principal de cada jogador — mais instruções = mais complexidade)', n + ' instructions applied (each player’s main one — more instructions = more complexity)')); },
   applyPlan(list) { const rep = ST._oppRep; if (!rep) return; const items = list === 'all' ? rep.plan : [rep.plan[list]];
     items.forEach(x => { const d = TI_BY_KEY[x.ti]; if (x.v === d.def) delete ST.tactic.ti[x.ti]; else ST.tactic.ti[x.ti] = x.v; });
     save(); render(); toast(items.length === 1 ? `${TI_BY_KEY[items[0].ti].n}: ${TI_BY_KEY[items[0].ti].opts[items[0].v]}` : 'Plano aplicado à tática'); },
@@ -56,13 +56,13 @@ const A = {
     const t0 = performance.now();
     g.res = await withBusy('gen', 'A gerar a tática', (prog) => generateTacticAsync(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth },
       (s) => prog(s.total ? s.done / s.total : null, `${s.label}${s.total > 1 ? ` (${Math.min(s.done + 1, s.total)}/${s.total})` : ''}`)));
-    g.pick = 0; save(); render(); toast(`Tática gerada em ${(performance.now() - t0) / 1000 < 1 ? Math.round(performance.now() - t0) + ' ms' : ((performance.now() - t0) / 1000).toFixed(1) + ' s'}`);
+    g.pick = 0; save(); render(); toast(L('Tática gerada em ', 'Tactic generated in ') + ((performance.now() - t0) / 1000 < 1 ? Math.round(performance.now() - t0) + ' ms' : ((performance.now() - t0) / 1000).toFixed(1) + ' s'));
   },
   genPick(i) { genOpts().pick = i; save(); render(); },
   genTactic() { const g = genOpts(); const all = [g.res.main, ...g.res.alts]; const t = JSON.parse(JSON.stringify((all[g.pick] || all[0]).t));
     const pm = Object.fromEntries(players().map(p => [p.id, p]));
     t.slots.forEach(s => { const r = recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], slotInfo(t.ipForm, s.ipCode).group)[0]; s.pis = r ? [r.pi] : []; });
-    t.name = `${t.ipForm} — gerada para ${ST.myClub || 'o plantel'}`; t.source = 'gerador'; return t; },
+    t.name = L(`${t.ipForm} — gerada para ${ST.myClub || 'o plantel'}`, `${t.ipForm} — generated for ${ST.myClub || 'the squad'}`); t.source = 'gerador'; return t; },
   genUse(sim, tab) { const t = A.genTactic(); ST.tactic = t; ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(JSON.parse(JSON.stringify(t))); ST.sugg = null; save();
     if (sim) return A.simOpen(); if (tab === 'training') return A.go('training'); A.tab('tactic', tab || 'analyze'); toast('Tática gerada carregada e guardada'); },
   genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
@@ -84,7 +84,7 @@ const A = {
   async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
   async labMore(id) {
     const LS = labState(), n = LS.more || 100; if (BUSY['lab-more']) return;
-    busyStart('lab-more', `A pedir mais ${n} jogos ao motor do FM27`, { detail: 'a preparar as táticas A e B' });
+    busyStart('lab-more', L(`A pedir mais ${n} jogos ao motor do FM27`, `Asking the FM27 engine for ${n} more matches`), { detail: L('a preparar as táticas A e B', 'preparing tactics A and B') });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
       const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
@@ -98,10 +98,10 @@ const A = {
   },
   async labFmf(id, g) {
     if (BUSY['lab-fmf']) return;
-    busyStart('lab-fmf', `A exportar o .fmf da tática ${g}`, { detail: 'o próprio jogo gera e verifica o ficheiro', slow: 'o motor do FM27 está a serializar e a reler a tática — até 45 s', slowAfter: 8 });
+    busyStart('lab-fmf', L(`A exportar o .fmf da tática ${g}`, `Exporting tactic ${g}’s .fmf`), { detail: L('o próprio jogo gera e verifica o ficheiro', 'the game itself writes and verifies the file'), slow: L('o motor do FM27 está a serializar e a reler a tática — até 45 s', 'the FM27 engine is serialising and re-reading the tactic — up to 45 s'), slowAfter: 8 });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
-      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error('Tática ' + g + ' indisponível');
+      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error(L('Tática ' + g + ' indisponível', 'Tactic ' + g + ' unavailable'));
       const r = await labCall('POST', '/api/export-fmf', { side: 0, scenario: sc, name: `${(pkg.summary && pkg.summary.name) || 'Tatica'} ${g}`.slice(0, 90) }, 60000);
       const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
@@ -120,6 +120,7 @@ const A = {
     if (ST.gen && ST.gen.res && players().length >= 11) [ST.gen.res.main, ...ST.gen.res.alts].forEach(r => { const g = generateTIs(r.t, players(), ST.gen.res.expect); r.reasons = g.reasons; r.mentWhy = g.mentWhy; });
     save(); render();
   },
+  sheetNames(v) { ST.sheetNames = v; save(); render(); },
   navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
   clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },
@@ -170,7 +171,7 @@ const A = {
   // plantel
   squadText(force) { const txt = document.getElementById('sqtext').value; ingestSquadText(txt, 'texto colado', { force }); render(); },
   squadFile(input, force) { const f = input.files[0]; if (!f) return; f.text().then(txt => { ingestSquadText(txt, f.name, { force }); render(); }); },
-  sampleSquad() { ST.squad = { ...EMPTY_SQUAD(), players: makeSample(), source: 'exemplo (fictício)' }; ST.myClub = null; ST.sugg = null; autoPickXI(ST.tactic, ST.squad.players); save(); render(); toast('Plantel de exemplo carregado (fictício)'); },
+  sampleSquad() { ST.squad = { ...EMPTY_SQUAD(), players: makeSample(), source: L('exemplo (fictício)', 'sample (fictional)') }; ST.myClub = null; ST.sugg = null; autoPickXI(ST.tactic, ST.squad.players); save(); render(); toast('Plantel de exemplo carregado (fictício)'); },
   clearSquad() { ST.squad = EMPTY_SQUAD(); ST.myClub = null; ST.tactic.slots.forEach(s => s.pid = null); ST.sugg = null; save(); render(); },
   runSuggest() { ST.sugg = suggestTactics(players()); render(); },
   // bíblia

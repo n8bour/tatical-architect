@@ -29,16 +29,31 @@ function hungarian(cost) {
 }
 
 // ---------- Papéis válidos ----------
-function rolesFor(group, phase, wideCB) {
-  return ROLES.filter(r => r.phase === phase && r.groups.includes(group) && (r.wideCB ? wideCB : true));
+// posição central ('C') ou deslocada ('S') dentro da linha (DM/MC/AMC/ST); null se não se aplica
+const CENTRAL_CODES = new Set(['DM', 'MC', 'AMC', 'ST', 'DC']);
+function slotPos(code) { return code ? (CENTRAL_CODES.has(code) ? 'C' : /^(DM|MC|AMC|ST|DC)[LR]$/.test(code) ? 'S' : null) : null; }
+// ctx: o objecto devolvido por slotInfo (recomendado: sabe a casa exacta) ou, por compatibilidade, o booleano wideCB
+function roleFits(r, group, phase, ctx) {
+  if (r.phase !== phase || !r.groups.includes(group)) return false;
+  const wideCB = typeof ctx === 'object' && ctx ? ctx.wideCB : !!ctx;
+  if (r.wideCB && !wideCB) return false;
+  if (r.slot && typeof ctx === 'object' && ctx && ctx.code) { const sp = slotPos(ctx.code); if (sp && sp !== r.slot) return false; }
+  if (typeof ROLE_AVAIL_ENGINE !== 'undefined' && ROLE_AVAIL_ENGINE && typeof ctx === 'object' && ctx && ctx.code) {
+    const ok = ROLE_AVAIL_ENGINE[r.id]; if (ok && !ok.includes(ctx.code)) return false;     // disponibilidade confirmada pelo motor do FM27
+  }
+  return true;
+}
+let ROLE_AVAIL_ENGINE = null;
+function rolesFor(group, phase, ctx) {
+  return ROLES.filter(r => roleFits(r, group, phase, ctx));
 }
 const DEFAULT_ROLE = {
   IP:{ GK:'gk_ip', DC:'cb_ip', D_LR:'fb_ip', WB_LR:'wb_ip', DM:'dm_ip', MC:'cm_ip', M_LR:'wm_ip', AMC:'am_ip', AM_LR:'w_ip', ST:'cf_ip' },
   OOP:{ GK:'gk_oop', DC:'cb_oop', D_LR:'fb_oop', WB_LR:'wb_oop', DM:'dm_oop', MC:'cm_oop', M_LR:'wm_oop', AMC:'am_oop', AM_LR:'w_oop', ST:'cf_oop' },
 };
-function validRole(id, group, phase, wideCB) {
+function validRole(id, group, phase, ctx) {
   const r = ROLE_BY_ID[id];
-  return !!r && r.phase === phase && r.groups.includes(group) && (!r.wideCB || wideCB);
+  return !!r && roleFits(r, group, phase, ctx);
 }
 
 // ---------- Tática ----------
@@ -82,8 +97,8 @@ function retargetTactic(t, ipForm, oopForm) {
   nt.slots.forEach((s, i) => {
     const old = t.slots.find(o => o.ipCode === oldIP[asg[i]].code); if (!old) return;
     const a = slotInfo(ipForm, s.ipCode), b = slotInfo(oopForm, s.oopCode);
-    if (validRole(old.ip, a.group, 'IP', a.wideCB)) s.ip = old.ip;
-    if (validRole(old.oop, b.group, 'OOP', b.wideCB)) s.oop = old.oop;
+    if (validRole(old.ip, a.group, 'IP', a)) s.ip = old.ip;
+    if (validRole(old.oop, b.group, 'OOP', b)) s.oop = old.oop;
     s.pid = old.pid; s.pis = old.pis || [];
   });
   return nt;
@@ -95,8 +110,8 @@ function tacticFromTemplate(tp) {
   t.slots.forEach(s => {
     const r = tp.roles[s.ipCode]; if (!r) return;
     const a = slotInfo(tp.ip, s.ipCode), b = slotInfo(tp.oop, s.oopCode);
-    if (validRole(r[0], a.group, 'IP', a.wideCB)) s.ip = r[0];
-    if (validRole(r[1], b.group, 'OOP', b.wideCB)) s.oop = r[1];
+    if (validRole(r[0], a.group, 'IP', a)) s.ip = r[0];
+    if (validRole(r[1], b.group, 'OOP', b)) s.oop = r[1];
   });
   return t;
 }
@@ -287,8 +302,8 @@ function autoPickXI(t, players) {
   t.slots.forEach((s, i) => { s.pid = players[asg[i]] ? players[asg[i]].id : null; });
   return t;
 }
-function bestRolesForPlayer(p, group, phase, wideCB, n = 3) {
-  return rolesFor(group, phase, wideCB).map(r => ({ r, s: (roleScore(p, r) || { score: 0 }).score })).sort((a, b) => b.s - a.s).slice(0, n);
+function bestRolesForPlayer(p, group, phase, ctx, n = 3) {
+  return rolesFor(group, phase, ctx).map(r => ({ r, s: (roleScore(p, r) || { score: 0 }).score })).sort((a, b) => b.s - a.s).slice(0, n);
 }
 
 // ---------- Auditoria ----------
@@ -327,8 +342,8 @@ function auditTactic(t, squad) {
 
   // 1. papéis em falta / inválidos
   S.forEach(x => {
-    if (!x.ip || !validRole(x.s.ip, x.a.group, 'IP', x.a.wideCB)) add('IP','crit',L(`Papel IP inválido em ${x.s.ipCode}`, `Invalid in-possession role at ${x.s.ipCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel IP válido.', 'Pick a valid in-possession role.'));
-    if (!x.oop || !validRole(x.s.oop, x.b.group, 'OOP', x.b.wideCB)) add('OOP','crit',L(`Papel OOP inválido em ${x.s.oopCode}`, `Invalid out-of-possession role at ${x.s.oopCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel OOP válido.', 'Pick a valid out-of-possession role.'));
+    if (!x.ip || !validRole(x.s.ip, x.a.group, 'IP', x.a)) add('IP','crit',L(`Papel IP inválido em ${x.s.ipCode}`, `Invalid in-possession role at ${x.s.ipCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel IP válido.', 'Pick a valid in-possession role.'));
+    if (!x.oop || !validRole(x.s.oop, x.b.group, 'OOP', x.b)) add('OOP','crit',L(`Papel OOP inválido em ${x.s.oopCode}`, `Invalid out-of-possession role at ${x.s.oopCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel OOP válido.', 'Pick a valid out-of-possession role.'));
   });
 
   // 2. largura por flanco
@@ -446,7 +461,7 @@ function auditTactic(t, squad) {
       const sc = slotScore(x.p, t, x.s);
       const ri = roleScore(x.p, x.ip), ro = roleScore(x.p, x.oop);
       if (sc < 50) {
-        const alt = bestRolesForPlayer(x.p, x.a.group, 'IP', x.a.wideCB, 1)[0];
+        const alt = bestRolesForPlayer(x.p, x.a.group, 'IP', x.a, 1)[0];
         add('Plantel','warn',L(`${x.p.name} pouco adequado em ${x.s.ipCode} (${sc})`, `${x.p.name} is a poor fit at ${x.s.ipCode} (${sc})`),
           `${x.ip.name}: ${ri ? ri.score : '—'} · ${x.oop.name}: ${ro ? ro.score : '—'}.` + (Math.min(posFactor(x.p, x.a.group, x.a.side), posFactor(x.p, x.b.group, x.b.side)) < 1 ? L(' Penalizado por jogar fora da posição natural (com ou sem bola).', ' Penalised for playing out of his natural position (in or out of possession).') : ''),
           alt && alt.r.id !== x.ip.id ? L(`Melhor papel IP para ele aqui: ${alt.r.name} (${alt.s}).`, `His best in-possession role here: ${alt.r.name} (${alt.s}).`) : L('Considere outro jogador.', 'Consider another player.'));

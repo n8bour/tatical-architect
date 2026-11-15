@@ -72,7 +72,7 @@ console.log('códigos curtos', JSON.stringify(X.parsePositions('DC, DM')), JSON.
     ['width','passing','loe','dline','trigger','def_trans','att_trans','press_trap','support_runs','buildup','short_gk','dl_behaviour'].forEach(k=>S.TI_BY_KEY[k].opts.forEach((_,v)=>{ const t2=JSON.parse(JSON.stringify(t)); t2.ti[k]=v; check(t2,tp.id+':'+k+v); })); });
   S.ROLES.forEach(r=>{ const d=S.demoTacticForRole(r); if(d.idx<0){bad++;console.log('demo sem slot',r.id);} else if(d.t.slots[d.idx][r.phase==='IP'?'ip':'oop']!==r.id){bad++;console.log('demo papel não aplicado',r.id);} check(d.t,'demo:'+r.id); });
   const cen=S.simModel(S.tacticFromTemplate(S.TEMPLATES[0]));
-  console.log('simulador:',n,'modelos verificados; avisos na tua tática:',cen.overlays.map(o=>o.label).join(' | ')||'nenhum');
+  console.log('simulador:',n,'modelos verificados; avisos no 1.º modelo:',cen.overlays.map(o=>o.label).join(' | ')||'nenhum');
   if(bad){ console.log('FAIL simulador',bad); process.exitCode=1; }
 }
 
@@ -146,7 +146,7 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
     const ps=G.parseSquad(rd(f)).players; const must=[ps[3].id]; const r=G.generateTactic(ps,{expect:ex,must,star:ps[14].id});
     [r.main,...r.alts].forEach(x=>{ const t=x.t;
       chk(new Set(t.slots.map(s=>s.pid)).size===11,'XI sem repetidos '+f);
-      t.slots.forEach(s=>{ const a=G.slotInfo(t.ipForm,s.ipCode),b=G.slotInfo(t.oopForm,s.oopCode); chk(G.validRole(s.ip,a.group,'IP',a.wideCB)&&G.validRole(s.oop,b.group,'OOP',b.wideCB),'papel inválido '+t.ipForm+' '+s.ipCode); });
+      t.slots.forEach(s=>{ const a=G.slotInfo(t.ipForm,s.ipCode),b=G.slotInfo(t.oopForm,s.oopCode); chk(G.validRole(s.ip,a.group,'IP',a)&&G.validRole(s.oop,b.group,'OOP',b),'papel inválido '+t.ipForm+' '+s.ipCode+' '+s.ip+'/'+s.oop); });
       chk(x.audit.findings.filter(q=>q.sev==='crit').length===0,'crítico na gerada '+f+' '+ex+' '+t.ipForm+': '+x.audit.findings.filter(q=>q.sev==='crit').map(q=>q.title).join('|'));
       chk(depth(t.ipForm)>=depth(t.oopForm)-0.5,'IP mais recuada que OOP');
       chk(Object.keys(x.reasons).length>=G.TEAM_INSTRUCTIONS.length-2,'razões em falta');
@@ -185,5 +185,24 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
   chk(sa.per.A.w===2 && sa.per.B.w===2,'orientação fora (lado 1): A ganhou 1-0 e 1-0; B ganhou 2-0 e 3-1 → '+JSON.stringify([sa.per.A.w,sa.per.B.w]));
   chk(sa.comparison.n===2 && sa.byOpp.length===1,'pares e por adversário no modo save');
   console.log('laboratório: efeito',e.comparison.dXG.mean.toFixed(2),'xG ['+e.comparison.dXG.lo.toFixed(2)+', '+e.comparison.dXG.hi.toFixed(2)+'] |',z.comparison.verdict);
+  if(bad) process.exitCode=1;
+}
+
+// 17. disponibilidade por casa exacta (FM26/27): modelos e demonstrações só usam papéis válidos naquela casa
+{
+  const c8={console,Math}; vm.createContext(c8);
+  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','sim_model.js'),'utf8')+';this.V={TEMPLATES,tacticFromTemplate,slotInfo,validRole,rolesFor,ROLES,demoTacticForRole};',c8);
+  const V=c8.V; let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  V.TEMPLATES.forEach(tp=>{ Object.entries(tp.roles||{}).forEach(([code,[ip,oop]])=>{ const t=V.tacticFromTemplate(tp); const s=t.slots.find(z=>z.ipCode===code); if(!s) return;
+    const a=V.slotInfo(t.ipForm,s.ipCode), b=V.slotInfo(t.oopForm,s.oopCode);
+    chk(V.validRole(ip,a.group,'IP',a),'modelo '+tp.id+' '+code+' IP '+ip); chk(V.validRole(oop,b.group,'OOP',b),'modelo '+tp.id+' '+code+' OOP '+oop); }); });
+  V.ROLES.forEach(r=>{ const d=V.demoTacticForRole(r), s=d.t.slots[d.idx], a=V.slotInfo(d.t.ipForm,s.ipCode); chk(V.validRole(r.id,a.group,r.phase,a),'demo '+r.id); });
+  // casos confirmados no jogo
+  const at=(f,c)=>V.rolesFor(V.slotInfo(f,c).group,'IP',V.slotInfo(f,c)).map(r=>r.id);
+  chk(!at('4-3-3 DM Wide','MCL').includes('b2bp'),'BBP não pode estar no médio centro');
+  chk(!at('4-3-3 DM Wide','MCL').includes('b2b'),'BBM não pode estar no médio centro');
+  chk(!at('4-3-3 DM Wide','DM').includes('b2b'),'BBM não pode estar no DM central');
+  chk(at('4-2-4 DM Wide','DML').includes('b2b'),'BBM tem de estar no DM deslocado');
+  console.log('casa exacta: modelos, 77 demonstrações e casos confirmados verificados');
   if(bad) process.exitCode=1;
 }

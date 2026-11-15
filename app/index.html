@@ -315,8 +315,21 @@ const L = (pt, en) => (LANG === 'en' ? en : pt);
 const EN_DICT = new Map();
 const EN_NUM = /[+−-]?\d+(?:[.,]\d+)?/g;
 function addEN(obj) { for (const [k, v] of Object.entries(obj)) EN_DICT.set(k, v); }
+// Em português: os termos do FM (papéis, instruções, opções…) passam aos nomes portugueses, também dentro de frases.
+let PT_RE = null;
+function ptTerms(s) {
+  if (typeof PT_TERMS === 'undefined') return s;
+  const tr = s.trim(); if (PT_EXACT_ONLY[tr]) return s.replace(tr, PT_EXACT_ONLY[tr]);
+  if (!PT_RE) {
+    const ks = Object.keys(PT_TERMS).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    PT_RE = new RegExp('(?<![A-Za-z\\-])(' + ks.join('|') + ')(?![A-Za-z])', 'g');
+  }
+  return s.replace(PT_RE, m => PT_TERMS[m]).replace(/\(default\)/g, '(padrão)');
+}
 function T(s) {
-  if (LANG !== 'en' || s == null) return s;
+  if (s == null) return s;
+  if (LANG === 'pt') return ptTerms(String(s));
+  if (LANG !== 'en') return s;
   const str = String(s), m = str.match(/^(\s*)([\s\S]*?)(\s*)$/), core = m[2];
   if (!core) return str;
   let t = EN_DICT.get(core);
@@ -329,15 +342,27 @@ function T(s) {
     const tpl = EN_DICT.get(key);
     if (tpl !== undefined) { let i = 0; t = tpl.replace(/#/g, () => (i < nums.length ? nums[i++] : '#')); }
   }
+  if (t === undefined) { for (const [re, rep] of EN_RX) { if (re.test(core)) { t = core.replace(re, rep); break; } } }
   return t === undefined ? str : m[1] + t + m[3];
 }
+// mensagens com partes variáveis que não vêm de L() (erros devolvidos pela parte nativa da app)
+const EN_RX = [
+  [/^O Tactics Lab não responde na porta (\d+): ([\s\S]*)$/, 'Tactics Lab is not responding on port $1: $2'],
+  [/^Não consegui correr o fmsave\. ([\s\S]*)$/, 'Could not run fmsave. $1'],
+  [/^Não consegui copiar o save: ([\s\S]*)$/, 'Could not copy the save: $1'],
+  [/^Save não encontrado: ([\s\S]*)$/, 'Save not found: $1'],
+  [/^Resposta inválida do Tactics Lab$/, 'Invalid response from Tactics Lab'],
+  [/^Caminho inválido$/, 'Invalid path'], [/^Método inválido$/, 'Invalid method'], [/^Link inválido$/, 'Invalid link'],
+];
 const TR_ATTRS = ['title', 'placeholder', 'aria-label'];
 function translateDOM(root) {
-  if (LANG !== 'en' || !root) return;
-  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => (n.parentNode && /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  if (!root || (LANG !== 'en' && LANG !== 'pt')) return;
+  // em português, os blocos marcados data-gameterms="en" (Ficha para o FM27) mantêm os nomes como no jogo em inglês
+  const keep = (n) => LANG === 'pt' && n.parentElement && n.parentElement.closest('[data-gameterms="en"]');
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => ((n.parentNode && /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)) || keep(n)) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
   const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
   for (const n of nodes) { const v = n.nodeValue; if (v && /\S/.test(v)) { const t = T(v); if (t !== v) n.nodeValue = t; } }
-  root.querySelectorAll('[title],[placeholder],[aria-label]').forEach(el => TR_ATTRS.forEach(a => { const v = el.getAttribute(a); if (v) { const t = T(v); if (t !== v) el.setAttribute(a, t); } }));
+  root.querySelectorAll('[title],[placeholder],[aria-label]').forEach(el => !(LANG === 'pt' && el.closest('[data-gameterms="en"]')) && TR_ATTRS.forEach(a => { const v = el.getAttribute(a); if (v) { const t = T(v); if (t !== v) el.setAttribute(a, t); } }));
 }
 const LOCALE = () => (LANG === 'en' ? 'en-GB' : 'pt-PT');
 
@@ -503,10 +528,10 @@ const ROLES = [
   R('hb','HB','Half Back','IP',['DM'],'RD DROP TOCB','mar tck pos ant cmp cnt dec tea','pas str jum fir',
     'Baixa para entre os centrais na construção, formando linha de 3.',
     'Permite aos laterais subirem os dois. Redundante com IFB do mesmo lado.','v'),
-  R('b2b','BBM','Box-To-Box Midfielder','IP',['DM','MC'],'ADV BOX','pas tck otb tea wor sta','dri fin fir lon ant cmp dec pos acc str bal',
+  R('b2b','BBM','Box-To-Box Midfielder','IP',['DM'],'ADV BOX','pas tck otb tea wor sta','dri fin fir lon ant cmp dec pos acc str bal',
     'Sobe até à zona de médio ofensivo e chega à área.',
     'Resistência e Índice de Trabalho são inegociáveis.','v'),
-  R('b2bp','BBP','Box-To-Box Playmaker','IP',['DM','MC'],'ADV CR','pas fir tec vis dec tea wor sta','dri lon otb ant cmp',
+  R('b2bp','BBP','Box-To-Box Playmaker','IP',['DM'],'ADV CR','pas fir tec vis dec tea wor sta','dri lon otb ant cmp',
     'Sobe à zona de médio ofensivo como criativo.', 'Bom num duplo pivot com um DM seguro.','v'),
   R('dm_oop','DM','Defensive Midfielder','OOP',['DM'],'','tck pos ant cnt dec mar','tea wor str sta',
     'Comportamento defensivo padrão à frente da defesa.','Base.','v'),
@@ -610,6 +635,14 @@ const ROLES = [
 ];
 
 const ROLE_BY_ID = Object.fromEntries(ROLES.map(r => [r.id, r]));
+
+// ---------------------------------------------------------------------------
+// Casa exacta: no FM26/27 alguns papéis só existem na casa central ('C': DM, MC, AMC, ST)
+// ou só nas deslocadas ('S': DML/DMR, MCL/MCR, AMCL/AMCR, STL/STR) da mesma linha.
+// Fontes: jogo (relato do utilizador) e guias FM26 — o Box-to-Box Midfielder só em DM deslocado.
+// Com o Tactics Lab ligado, a disponibilidade pode ser confirmada pelo catálogo do motor.
+const ROLE_SLOT = { b2b: 'S' };
+ROLES.forEach(r => { if (ROLE_SLOT[r.id]) r.slot = ROLE_SLOT[r.id]; });
 
 ;
 // ---- core/tactics_data.js
@@ -874,10 +907,6 @@ const OPPONENTS = [
 // ---- Modelos táticos (usados pelas sugestões)
 // slots: [IPcode, IProle, OOPcode, OOProle] — IP/OOP formações indicadas
 const TEMPLATES = [
-  { id:'cenas', n:'Cenas v2 — 4-2-4 DM Wide (a tua)', ip:'4-2-4 DM Wide', oop:'4-4-2 DM Wide', ment:'Positive',
-    style:'counter', desc:'A tua tática tal como está no jogo (screenshots de 10/11), já com Winger/Wing-Back nos lados certos.',
-    roles:{ GK:['gk_ip','gk_oop'], DL:['wb_ip','fb_oop'], DCL:['cb_ip','cb_oop'], DCR:['cb_ip','cb_oop'], DR:['fb_ip','fb_oop'], DML:['dlp','dm_oop'], DMR:['b2b','dm_oop'], AML:['iw_ip','wm_oop'], AMR:['wf_ip','wm_oop'], STL:['poa','cf_oop'], STR:['cf_ip','tcf'] },
-    ti:{ passing:1, tempo:3, att_trans:2, timewaste:0, set_pieces:0, dribbling:2, reception:0, loe:1, dline:4, trigger:1, def_trans:2, short_gk:0 } },
   { id:'possession433', n:'4-3-3 Posse & Contra-pressão', ip:'4-3-3 DM Wide', oop:'4-1-4-1 DM Wide', ment:'Positive',
     style:'possession_press', desc:'Domínio com bola, saída curta, recuperação imediata.',
     roles:{ GK:['bpgk','swk'], DL:['wb_ip','fb_oop'], DCL:['bpcb','ccb'], DCR:['cb_ip','scb'], DR:['iwb','pfb'], DM:['dlp','sdm'], MCL:['chm','pcm'], MCR:['mp','cm_oop'], AML:['if_ip','wm_oop'], AMR:['w_ip','wm_oop'], ST:['f9','tcf'] },
@@ -892,19 +921,19 @@ const TEMPLATES = [
     ti:{ passing:3, tempo:4, reception:0, loe:2, dline:3, trigger:4, def_trans:2, width:1, short_gk:1 } },
   { id:'counter442', n:'4-4-2 Bloco Médio & Contra-ataque', ip:'4-4-2', oop:'4-4-2', ment:'Cautious',
     style:'counter', desc:'Compacto sem bola, transições rápidas para dois avançados.',
-    roles:{ GK:['gk_ip','gk_oop'], DL:['fb_ip','fb_oop'], DCL:['cb_ip','cb_oop'], DCR:['cb_ip','ccb'], DR:['fb_ip','fb_oop'], ML:['w_ip','twm'], MCL:['cm_ip','scm'], MCR:['b2b','cm_oop'], MR:['iw_ip','twm'], STL:['tf','cf_oop'], STR:['chf','socf'] },
+    roles:{ GK:['gk_ip','gk_oop'], DL:['fb_ip','fb_oop'], DCL:['cb_ip','cb_oop'], DCR:['cb_ip','ccb'], DR:['fb_ip','fb_oop'], ML:['w_ip','twm'], MCL:['cm_ip','scm'], MCR:['chm','cm_oop'], MR:['iw_ip','twm'], STL:['tf','cf_oop'], STR:['chf','socf'] },
     ti:{ passing:3, att_trans:2, loe:1, dline:1, reception:0 } },
   { id:'wb3421', n:'3-4-2-1 Alas & Meios-espaços', ip:'3-4-2-1', oop:'5-4-1', ment:'Positive',
     style:'possession', desc:'Linha de 3 com alas a dar largura e dois 10 nos meios-espaços.',
-    roles:{ GK:['bpgk','swk'], DCL:['cb_ip','swcb'], DC:['bpcb','ccb'], DCR:['cb_ip','cwcb'], WBL:['awb','wb_oop'], MCL:['mp','scm'], MCR:['b2b','pcm'], WBR:['wb_ip','wb_oop'], AMCL:['ap','twm'], AMCR:['am_ip','wm_oop'], ST:['cf_ip','cf_oop'] },
+    roles:{ GK:['bpgk','swk'], DCL:['cb_ip','swcb'], DC:['bpcb','ccb'], DCR:['cb_ip','cwcb'], WBL:['awb','wb_oop'], MCL:['mp','scm'], MCR:['chm','pcm'], WBR:['wb_ip','wb_oop'], AMCL:['ap','twm'], AMCR:['am_ip','wm_oop'], ST:['cf_ip','cf_oop'] },
     ti:{ passing:1, buildup:0, reception:2, dline:3, loe:1 } },
   { id:'lowblock532', n:'5-3-2 Bloco Baixo', ip:'3-5-2', oop:'5-3-2 WB', ment:'Defensive',
     style:'low_block', desc:'Defende a área, sai rápido com dois avançados complementares.',
-    roles:{ GK:['nngk','lhk'], DCL:['cb_ip','cwcb'], DC:['nncb','cb_oop'], DCR:['cb_ip','cwcb'], WBL:['wb_ip','hwb'], DM:['dlp','scm'], MCL:['cm_ip','wccm'], MCR:['b2b','wccm'], WBR:['wb_ip','hwb'], STL:['tf','cocf'], STR:['poa','socf'] },
+    roles:{ GK:['nngk','lhk'], DCL:['cb_ip','cwcb'], DC:['nncb','cb_oop'], DCR:['cb_ip','cwcb'], WBL:['wb_ip','hwb'], DM:['dlp','scm'], MCL:['cm_ip','wccm'], MCR:['chm','wccm'], WBR:['wb_ip','hwb'], STL:['tf','cocf'], STR:['poa','socf'] },
     ti:{ passing:3, buildup:2, goal_kicks:2, att_trans:2, loe:0, dline:1, cross_eng:0, tackling:2 } },
   { id:'diamond', n:'4-4-2 Losango de Controlo', ip:'4-4-2 Diamond', oop:'4-4-2 Diamond', ment:'Positive',
     style:'possession', desc:'Superioridade central, laterais dão toda a largura.',
-    roles:{ GK:['gk_ip','gk_oop'], DL:['wb_ip','fb_oop'], DCL:['bpcb','cb_oop'], DCR:['cb_ip','ccb'], DR:['wb_ip','fb_oop'], DM:['dlp','sdm'], MCL:['wcm','wccm'], MCR:['b2b','pcm'], AMC:['ap','am_oop'], STL:['dlf','cf_oop'], STR:['chf','cf_oop'] },
+    roles:{ GK:['gk_ip','gk_oop'], DL:['wb_ip','fb_oop'], DCL:['bpcb','cb_oop'], DCR:['cb_ip','ccb'], DR:['wb_ip','fb_oop'], DM:['dlp','sdm'], MCL:['wcm','wccm'], MCR:['chm','pcm'], AMC:['ap','am_oop'], STL:['dlf','cf_oop'], STR:['chf','cf_oop'] },
     ti:{ passing:1, width:3, support_runs:2, reception:2 } },
   { id:'wide4141', n:'4-1-4-1 Pressão Equilibrada', ip:'4-1-4-1 DM Wide', oop:'4-1-4-1 DM Wide', ment:'Balanced',
     style:'press_balanced', desc:'Bloco médio-alto, extremos abertos, um avançado de referência.',
@@ -970,16 +999,31 @@ function hungarian(cost) {
 }
 
 // ---------- Papéis válidos ----------
-function rolesFor(group, phase, wideCB) {
-  return ROLES.filter(r => r.phase === phase && r.groups.includes(group) && (r.wideCB ? wideCB : true));
+// posição central ('C') ou deslocada ('S') dentro da linha (DM/MC/AMC/ST); null se não se aplica
+const CENTRAL_CODES = new Set(['DM', 'MC', 'AMC', 'ST', 'DC']);
+function slotPos(code) { return code ? (CENTRAL_CODES.has(code) ? 'C' : /^(DM|MC|AMC|ST|DC)[LR]$/.test(code) ? 'S' : null) : null; }
+// ctx: o objecto devolvido por slotInfo (recomendado: sabe a casa exacta) ou, por compatibilidade, o booleano wideCB
+function roleFits(r, group, phase, ctx) {
+  if (r.phase !== phase || !r.groups.includes(group)) return false;
+  const wideCB = typeof ctx === 'object' && ctx ? ctx.wideCB : !!ctx;
+  if (r.wideCB && !wideCB) return false;
+  if (r.slot && typeof ctx === 'object' && ctx && ctx.code) { const sp = slotPos(ctx.code); if (sp && sp !== r.slot) return false; }
+  if (typeof ROLE_AVAIL_ENGINE !== 'undefined' && ROLE_AVAIL_ENGINE && typeof ctx === 'object' && ctx && ctx.code) {
+    const ok = ROLE_AVAIL_ENGINE[r.id]; if (ok && !ok.includes(ctx.code)) return false;     // disponibilidade confirmada pelo motor do FM27
+  }
+  return true;
+}
+let ROLE_AVAIL_ENGINE = null;
+function rolesFor(group, phase, ctx) {
+  return ROLES.filter(r => roleFits(r, group, phase, ctx));
 }
 const DEFAULT_ROLE = {
   IP:{ GK:'gk_ip', DC:'cb_ip', D_LR:'fb_ip', WB_LR:'wb_ip', DM:'dm_ip', MC:'cm_ip', M_LR:'wm_ip', AMC:'am_ip', AM_LR:'w_ip', ST:'cf_ip' },
   OOP:{ GK:'gk_oop', DC:'cb_oop', D_LR:'fb_oop', WB_LR:'wb_oop', DM:'dm_oop', MC:'cm_oop', M_LR:'wm_oop', AMC:'am_oop', AM_LR:'w_oop', ST:'cf_oop' },
 };
-function validRole(id, group, phase, wideCB) {
+function validRole(id, group, phase, ctx) {
   const r = ROLE_BY_ID[id];
-  return !!r && r.phase === phase && r.groups.includes(group) && (!r.wideCB || wideCB);
+  return !!r && roleFits(r, group, phase, ctx);
 }
 
 // ---------- Tática ----------
@@ -1023,8 +1067,8 @@ function retargetTactic(t, ipForm, oopForm) {
   nt.slots.forEach((s, i) => {
     const old = t.slots.find(o => o.ipCode === oldIP[asg[i]].code); if (!old) return;
     const a = slotInfo(ipForm, s.ipCode), b = slotInfo(oopForm, s.oopCode);
-    if (validRole(old.ip, a.group, 'IP', a.wideCB)) s.ip = old.ip;
-    if (validRole(old.oop, b.group, 'OOP', b.wideCB)) s.oop = old.oop;
+    if (validRole(old.ip, a.group, 'IP', a)) s.ip = old.ip;
+    if (validRole(old.oop, b.group, 'OOP', b)) s.oop = old.oop;
     s.pid = old.pid; s.pis = old.pis || [];
   });
   return nt;
@@ -1036,8 +1080,8 @@ function tacticFromTemplate(tp) {
   t.slots.forEach(s => {
     const r = tp.roles[s.ipCode]; if (!r) return;
     const a = slotInfo(tp.ip, s.ipCode), b = slotInfo(tp.oop, s.oopCode);
-    if (validRole(r[0], a.group, 'IP', a.wideCB)) s.ip = r[0];
-    if (validRole(r[1], b.group, 'OOP', b.wideCB)) s.oop = r[1];
+    if (validRole(r[0], a.group, 'IP', a)) s.ip = r[0];
+    if (validRole(r[1], b.group, 'OOP', b)) s.oop = r[1];
   });
   return t;
 }
@@ -1228,8 +1272,8 @@ function autoPickXI(t, players) {
   t.slots.forEach((s, i) => { s.pid = players[asg[i]] ? players[asg[i]].id : null; });
   return t;
 }
-function bestRolesForPlayer(p, group, phase, wideCB, n = 3) {
-  return rolesFor(group, phase, wideCB).map(r => ({ r, s: (roleScore(p, r) || { score: 0 }).score })).sort((a, b) => b.s - a.s).slice(0, n);
+function bestRolesForPlayer(p, group, phase, ctx, n = 3) {
+  return rolesFor(group, phase, ctx).map(r => ({ r, s: (roleScore(p, r) || { score: 0 }).score })).sort((a, b) => b.s - a.s).slice(0, n);
 }
 
 // ---------- Auditoria ----------
@@ -1268,8 +1312,8 @@ function auditTactic(t, squad) {
 
   // 1. papéis em falta / inválidos
   S.forEach(x => {
-    if (!x.ip || !validRole(x.s.ip, x.a.group, 'IP', x.a.wideCB)) add('IP','crit',L(`Papel IP inválido em ${x.s.ipCode}`, `Invalid in-possession role at ${x.s.ipCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel IP válido.', 'Pick a valid in-possession role.'));
-    if (!x.oop || !validRole(x.s.oop, x.b.group, 'OOP', x.b.wideCB)) add('OOP','crit',L(`Papel OOP inválido em ${x.s.oopCode}`, `Invalid out-of-possession role at ${x.s.oopCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel OOP válido.', 'Pick a valid out-of-possession role.'));
+    if (!x.ip || !validRole(x.s.ip, x.a.group, 'IP', x.a)) add('IP','crit',L(`Papel IP inválido em ${x.s.ipCode}`, `Invalid in-possession role at ${x.s.ipCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel IP válido.', 'Pick a valid in-possession role.'));
+    if (!x.oop || !validRole(x.s.oop, x.b.group, 'OOP', x.b)) add('OOP','crit',L(`Papel OOP inválido em ${x.s.oopCode}`, `Invalid out-of-possession role at ${x.s.oopCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel OOP válido.', 'Pick a valid out-of-possession role.'));
   });
 
   // 2. largura por flanco
@@ -1387,7 +1431,7 @@ function auditTactic(t, squad) {
       const sc = slotScore(x.p, t, x.s);
       const ri = roleScore(x.p, x.ip), ro = roleScore(x.p, x.oop);
       if (sc < 50) {
-        const alt = bestRolesForPlayer(x.p, x.a.group, 'IP', x.a.wideCB, 1)[0];
+        const alt = bestRolesForPlayer(x.p, x.a.group, 'IP', x.a, 1)[0];
         add('Plantel','warn',L(`${x.p.name} pouco adequado em ${x.s.ipCode} (${sc})`, `${x.p.name} is a poor fit at ${x.s.ipCode} (${sc})`),
           `${x.ip.name}: ${ri ? ri.score : '—'} · ${x.oop.name}: ${ro ? ro.score : '—'}.` + (Math.min(posFactor(x.p, x.a.group, x.a.side), posFactor(x.p, x.b.group, x.b.side)) < 1 ? L(' Penalizado por jogar fora da posição natural (com ou sem bola).', ' Penalised for playing out of his natural position (in or out of possession).') : ''),
           alt && alt.r.id !== x.ip.id ? L(`Melhor papel IP para ele aqui: ${alt.r.name} (${alt.s}).`, `His best in-possession role here: ${alt.r.name} (${alt.s}).`) : L('Considere outro jogador.', 'Consider another player.'));
@@ -1860,7 +1904,7 @@ function* generateTacticSteps(players, opts = {}) {
   // ---------- 1. pré-selecção rápida
   const bestPair = (p, a, b) => {
     let best = 0;
-    const ipR = rolesFor(a.group, 'IP', a.wideCB), opR = rolesFor(b.group, 'OOP', b.wideCB);
+    const ipR = rolesFor(a.group, 'IP', a), opR = rolesFor(b.group, 'OOP', b);
     const bi = Math.max(...ipR.map(r => S.rs(p, r))), bo = Math.max(...opR.map(r => S.rs(p, r)));
     best = (bi * 0.55 + bo * 0.45) * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side));
     return best;
@@ -1906,7 +1950,7 @@ function* generateTacticSteps(players, opts = {}) {
         for (const phase of ['IP', 'OOP']) {
           const key = phase === 'IP' ? 'ip' : 'oop', grp = phase === 'IP' ? a : b;
           let best = s[key], bestV = -1;
-          for (const r of rolesFor(grp.group, phase, grp.wideCB)) { s[key] = r.id; const o = objective(t, pmap).v; if (o > bestV + 1e-9) { bestV = o; best = r.id; } }
+          for (const r of rolesFor(grp.group, phase, grp)) { s[key] = r.id; const o = objective(t, pmap).v; if (o > bestV + 1e-9) { bestV = o; best = r.id; } }
           s[key] = best;
         }
       });
@@ -2434,10 +2478,14 @@ function phaseText(t, k, M) {
 // demonstração de um papel: tática simples com o papel em destaque
 function demoTacticForRole(r) {
   const g = r.groups[0];
-  const F = { GK:'4-3-3 DM Wide', DC: r.wideCB ? '3-4-2-1' : '4-3-3 DM Wide', D_LR:'4-3-3 DM Wide', WB_LR:'3-4-2-1', DM:'4-3-3 DM Wide', MC:'4-3-3 DM Wide', M_LR:'4-4-2', AMC:'4-2-3-1 Wide', AM_LR:'4-3-3 DM Wide', ST:'4-3-3 DM Wide' }[g];
+  let F = { GK:'4-3-3 DM Wide', DC: r.wideCB ? '3-4-2-1' : '4-3-3 DM Wide', D_LR:'4-3-3 DM Wide', WB_LR:'3-4-2-1', DM:'4-3-3 DM Wide', MC:'4-3-3 DM Wide', M_LR:'4-4-2', AMC:'4-2-3-1 Wide', AM_LR:'4-3-3 DM Wide', ST:'4-3-3 DM Wide' }[g];
   const t = newTactic(F, F); t.name = 'Demo: ' + r.name; t.ment = 'Balanced';
-  let idx = t.slots.findIndex(s => { const a = slotInfo(F, s.ipCode); return a.group === g && (!r.wideCB || a.wideCB) && a.side !== 'R'; });
-  if (idx < 0) idx = t.slots.findIndex(s => slotInfo(F, s.ipCode).group === g);
+  // casa onde o papel é válido (respeita casa central/deslocada); se a formação base não tiver, procura outra
+  const fits = (form, code) => { const a = slotInfo(form, code); return a && validRole(r.id, a.group, r.phase, a); };
+  if (!FORMATIONS[F].some(z => fits(F, z.code))) F = Object.keys(FORMATIONS).find(f => FORMATIONS[f].some(z => fits(f, z.code))) || F;
+  const t2 = newTactic(F, F); t.slots = t2.slots; t.ipForm = F; t.oopForm = F;
+  let idx = t.slots.findIndex(s => fits(F, s.ipCode) && slotInfo(F, s.ipCode).side !== 'R');
+  if (idx < 0) idx = t.slots.findIndex(s => fits(F, s.ipCode));
   t.slots[idx][r.phase === 'IP' ? 'ip' : 'oop'] = r.id;
   return { t, idx };
 }
@@ -2449,6 +2497,48 @@ const SIM_TI = new Set(['buildup','goal_kicks','passing','tempo','width','suppor
 // ---- i18n/en_dict.js
 // Dicionário PT → EN (texto fixo da interface e da Bíblia). Chaves com '#' = números (repostos na tradução).
 addEN({
+  "Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.": "Press F9 in FM27 and then “Load the latest F9” — or turn on automatic loading in Squad.",
+  "Exportar catálogo do motor (diagnóstico)": "Export the engine catalogue (diagnostics)",
+  "Ligado ao Tactics Lab": "Connected to Tactics Lab",
+  "Desligado": "Disconnected",
+  "Actualizar": "Refresh",
+  "Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.": "Tactics Lab not found. Open it first (with Steam open) and check the port in the address it shows.",
+  "Esta experiência não tem a tática B exportável.": "This experiment has no exportable tactic B.",
+  "Plano aplicado à tática": "Plan applied to the tactic",
+  "Escolha o contexto e carregue em": "Pick the context and press",
+  "Nenhum atributo pede instruções individuais.": "No attribute calls for player instructions.",
+  "Todas as posições têm titular ≥ # e alternativa ≥ #. 👍": "Every position has a starter ≥ # and a back-up ≥ #. 👍",
+  "Uma tática completa feita à volta do teu plantel, pronta a copiar para o FM27.": "A complete tactic built around your squad, ready to copy into FM27.",
+  "Nada grave na tática. 👍": "Nothing serious in the tactic. 👍",
+  "Sem ajustes necessários.": "No adjustments needed.",
+  "Falta instalar o leitor de saves — veja Plantel.": "The save reader still needs installing — see Squad.",
+  "Grave o jogo no FM27: a app lê o save sozinha.": "Save the game in FM27: the app reads the save by itself.",
+  "Carregue F9 no ecrã do plantel no FM27.": "Press F9 on the squad screen in FM27.",
+  "Ainda não há experiências no Tactics Lab.": "There are no experiments in Tactics Lab yet.",
+  "Correr mais": "Run more",
+  "Não consegui montar o XI.": "Could not build the XI.",
+  "Modelos disponíveis": "Available templates",
+  "Que sistema serve este plantel?": "Which system suits this squad?",
+  "Sem diferenças marcadas entre as equipas: mantém o teu plano.": "No clear differences between the teams: keep your plan.",
+  "# jogadores · onze provável escolhido pelos atributos (####). Carrega o teu plantel para comparar.": "# players · likely XI picked by attributes (####). Load your squad to compare.",
+  "Os nomes encontrados indicam o que a tática contém, mas não a que posição pertencem. Use-os como guia para recriar a tática no analisador.": "The names found show what the tactic contains, but not which position they belong to. Use them as a guide to recreate the tactic in the analyser.",
+  "Tática gerada em # s": "Tactic generated in # s",
+  "Clique num jogador para o seguir.": "Click a player to follow him.",
+  "Posse + Contra-pressão": "Possession + Counter-press",
+  "Pressão + verticalidade": "Pressing + verticality",
+  "Pressão moderada": "Moderate pressing",
+  "Posse": "Possession",
+  "Equilibrado": "Balanced",
+  "Contra-ataque": "Counter-attack",
+  "Área (FM27)": "Box (FM27)",
+  "Remate": "Shooting",
+  "Drible": "Dribbling",
+  "Passe": "Passing",
+  "Cruzamento": "Crossing",
+  "Movimento": "Movement",
+  "Defesa": "Defending",
+  "Ler o save agora": "Read the save now",
+  "Sem plantel": "No squad",
   "pelo jogo. Esta app não o decifra: para importar ou exportar .fmf use o": "by the game. This app does not decrypt it: to import or export .fmf files use the",
   "(FM Tactics Lab). O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈# minuto).": "(FM Tactics Lab). The inspector confirms the format and shows its structure; you can also recreate the tactic in the analyser (≈# minute).",
   "esta app não lê o conteúdo. Para importar a tática use o Laboratório (FM Tactics Lab), ou recrie-a no analisador a partir do nome do ficheiro.": "this app does not read the content. To import the tactic use the Lab (FM Tactics Lab), or recreate it in the analyser starting from the file name.",
@@ -3436,11 +3526,93 @@ addEN({
 });
 
 ;
+// ---- i18n/pt_terms.js
+// ============================================================
+// Termos do FM em português (usados quando a app está em PT).
+// Papéis: 34 nomes confirmados no FM26 em português (marcados ✓); o FM27 pode ter acertos pontuais;
+// por isso a Ficha para o FM27 mostra, por defeito, os nomes como no jogo em inglês.
+// ============================================================
+const PT_TERMS = {
+  // ---- papéis — ✓ = nome confirmado no FM26 em português (táticas publicadas pelo Salão de Jogos, 2025–26);
+  //      os restantes seguem o mesmo padrão do jogo (Trabalhador = Pressing, Esforçado = Tracking, de Transição = Wide Outlet,
+  //      de Ligação / de Desmarcação = Central / Splitting Outlet, Invertido = Inside de lado)
+  'Goalkeeper':'Guarda-Redes', /* ✓ */ 'Ball-Playing Goalkeeper':'Guarda-Redes De Construção', /* ✓ */ 'Sweeper Keeper':'Guarda-Redes Líbero', /* ✓ */
+  'No-Nonsense Goalkeeper':'Guarda-Redes Limitado', 'Line-Holding Keeper':'Guarda-Redes de Linha',
+  'Centre-Back':'Defesa Central', /* ✓ */ 'Ball-Playing Centre-Back':'Central De Construção', /* ✓ */ 'Covering Centre-Back':'Central De Cobertura', /* ✓ */
+  'Stopping Centre-Back':'Central de Antecipação', /* ✓ */ 'No-Nonsense Centre-Back':'Central Limitado', 'Advanced Centre-Back':'Central Avançado',
+  'Overlapping Centre-Back':'Central de Sobreposição', 'Covering Wide Centre-Back':'Central Aberto de Cobertura', 'Stopping Wide Centre-Back':'Central Aberto de Antecipação',
+  'Full-Back':'Defesa Lateral', /* ✓ */ 'Pressing Full-Back':'Lateral Trabalhador', /* ✓ */ 'Inside Full-Back':'Lateral Invertido', 'Holding Full-Back':'Defesa Lateral Fixo',
+  'Wing-Back':'Ala', /* ✓ */ 'Inside Wing-Back':'Ala Invertido', /* ✓ */ 'Advanced Wing-Back':'Ala Projetado', /* ✓ */
+  'Playmaking Wing-Back':'Ala Construtor', 'Holding Wing-Back':'Ala Fixo', 'Pressing Wing-Back':'Ala Trabalhador',
+  'Defensive Midfielder':'Médio Defensivo', /* ✓ */ 'Dropping Defensive Midfielder':'Médio Defensivo Recuado', /* ✓ */ 'Deep-Lying Playmaker':'Construtor De Jogo Recuado', /* ✓ */
+  'Box-To-Box Midfielder':'Médio Área-A-Área', /* ✓ */ 'Box-To-Box Playmaker':'Construtor De Jogo Área-A-Área', /* ✓ */
+  'Half Back':'Médio Recuado', 'Screening Defensive Midfielder':'Médio Defensivo de Proteção', 'Wide Covering Defensive Midfielder':'Médio Defensivo de Cobertura',
+  'Pressing Defensive Midfielder':'Médio Defensivo Trabalhador',
+  'Central Midfielder':'Médio Centro', /* ✓ */ 'Pressing Central Midfielder':'Médio Trabalhador', /* ✓ */ 'Attacking Midfielder':'Médio Entrelinhas', /* ✓ */
+  'Advanced Playmaker':'Construtor De Jogo Avançado', /* ✓ */ 'Midfield Playmaker':'Construtor De Jogo Médio', 'Wide Central Midfielder':'Médio Centro Aberto',
+  'Channel Midfielder':'Médio de Corredor', 'Screening Central Midfielder':'Médio Centro de Proteção', 'Wide Covering Central Midfielder':'Médio Centro de Cobertura',
+  'Wide Midfielder':'Médio Ala', /* ✓ */ 'Winger':'Extremo', /* ✓ */ 'Inside Winger':'Extremo de Apoio Interior', /* ✓ */ 'Playmaking Winger':'Construtor De Jogo Aberto', /* ✓ */
+  'Tracking Wide Midfielder':'Médio Ala Esforçado', /* ✓ */ 'Wide Outlet Wide Midfielder':'Médio Ala de Transição', /* ✓ */
+  'Free Role':'Criador Livre', /* ✓ */ 'Second Striker':'Segundo Avançado', /* ✓ */ 'Inside Forward':'Avançado Interior', /* ✓ */ 'Wide Forward':'Ponta-de-Lança Aberto', /* ✓ */
+  'Central Outlet Attacking Midfielder':'Médio Ofensivo de Ligação', 'Splitting Outlet Attacking Midfielder':'Médio Ofensivo de Desmarcação', 'Tracking Attacking Midfielder':'Médio Ofensivo Esforçado',
+  'Tracking Winger':'Extremo Esforçado', 'Wide Outlet Winger':'Extremo de Transição', 'Inside Outlet Winger':'Extremo de Transição Interior',
+  'Centre Forward':'Ponta-de-Lança', /* ✓ */ 'Target Forward':'Avançado De Referência', /* ✓ */ 'Deep-Lying Forward':'Avançado Recuado', /* ✓ */ 'Tracking Centre Forward':'Avançado Esforçado', /* ✓ */
+  'Central Outlet Centre Forward':'Avançado De Ligação', /* ✓ */ 'Splitting Outlet Centre Forward':'Avançado de Desmarcação', /* ✓ */
+  'Channel Forward':'Avançado de Corredor', 'False Nine':'Falso Nove', 'Poacher':'Ponta-de-Lança Fixo',
+  // ---- mentalidades
+  'Very Defensive':'Muito Defensiva', 'Defensive':'Defensiva', 'Cautious':'Cautelosa', 'Positive':'Positiva', /* ✓ */ 'Attacking':'Ofensiva', 'Very Attacking':'Muito Ofensiva',
+  // ---- instruções de equipa (nomes)
+  'Passing Directness':'Objetividade do Passe', 'Tempo':'Ritmo', 'Attacking Width':'Largura Ofensiva', 'Creative Freedom':'Liberdade Criativa',
+  'Attacking Transition':'Transição Ofensiva', 'Time Wasting':'Queimar Tempo', 'Play for Set Pieces':'Procurar Bolas Paradas', 'Pass Reception':'Receção do Passe',
+  'Build-up Strategy':'Estratégia de Construção', 'Goal Kicks':'Pontapés de Baliza', 'GK Distribution Speed':'Velocidade de Reposição do GR', 'GK Distribution':'Reposição do GR',
+  'Supporting Runs':'Movimentos de Apoio', 'Dribbling':'Drible', 'Progress Through':'Progredir Por', 'Final Third Patience':'Paciência no Último Terço',
+  'Shots from Distance':'Remates de Longe', 'Crossing Style':'Estilo de Cruzamento', 'Line of Engagement':'Linha de Pressão', 'Defensive Line Behaviour':'Comportamento da Linha Defensiva',
+  'Defensive Line':'Linha Defensiva', 'Trigger Press':'Gatilho de Pressão', 'Defensive Transition':'Transição Defensiva', 'Tackling':'Desarme', 'Pressing Trap':'Armadilha de Pressão',
+  'Short Goalkeeper Distribution':'Reposição Curta do GR', 'Cross Engagement':'Abordagem a Cruzamentos',
+  // ---- opções
+  'Much Shorter':'Muito Mais Curto', 'Shorter':'Mais Curto', 'More Direct':'Mais Direto', 'Much More Direct':'Muito Mais Direto', 'Much Lower':'Muito Mais Baixo', 'Lower':'Mais Baixo',
+  'Higher':'Mais Alto', 'Much Higher':'Muito Mais Alto', 'Much Narrower':'Muito Mais Estreito', 'Narrower':'Mais Estreito', 'Wider':'Mais Largo', 'Much Wider':'Muito Mais Largo',
+  'More Disciplined':'Mais Disciplinado', 'More Expressive':'Mais Expressivo', 'Hold Shape':'Manter a Forma', 'Counter-Attack':'Contra-Ataque', 'Keep Ball in Play':'Manter a Bola em Jogo',
+  'Pass into Space':'Passe para o Espaço', 'Pass to Feet':'Passe ao Pé', 'Play Through Press':'Sair a Jogar contra a Pressão', 'Bypass Press':'Contornar a Pressão',
+  'Slow Pace Down':'Abrandar', 'Distribute Quickly':'Repor Rápido', 'Centre-Backs':'Centrais', 'Full-Backs':'Laterais', 'Flanks':'Flancos',
+  'Underlap':'Por Dentro', 'Overlap':'Por Fora', 'Discourage':'Desencorajar', 'Encourage':'Encorajar', 'Low Crosses':'Cruzamentos Rasteiros', 'Whipped Crosses':'Cruzamentos Tensos',
+  'Floated Crosses':'Cruzamentos Altos', 'Low Block':'Bloco Baixo', 'Mid Block':'Bloco Médio', 'High Press':'Pressão Alta', 'Drop Off':'Recuar', 'Step Up':'Subir',
+  'Much Less':'Muito Menos', 'Much More':'Muito Mais', 'Regroup':'Reagrupar', 'Counter-Press':'Contra-Pressão', 'Stay On Feet':'Ficar de Pé', 'Get Stuck In':'Entrar Forte',
+  'Invite Crosses':'Convidar Cruzamentos', 'Stop Crosses':'Impedir Cruzamentos', 'Balanced':'Equilibrado', 'Standard':'Normal', 'Short':'Curtos', 'Mixed':'Mistos', 'Long':'Longos',
+  'Inside':'Por Dentro', 'Outside':'Por Fora', 'Centre':'Centro', 'Left':'Esquerda', 'Right':'Direita', 'More':'Mais', 'Less':'Menos', 'High':'Alta', 'Low':'Baixa', 'Allow':'Permitir',
+  // ---- instruções individuais e de adversário
+  'Shoot more':'Rematar mais', 'Shoot less':'Rematar menos', 'Dribble more':'Driblar mais', 'Dribble less':'Driblar menos', 'Take more risks':'Arriscar mais', 'Take fewer risks':'Arriscar menos',
+  'Cross from byline':'Cruzar da linha de fundo', 'Cross from deep':'Cruzar de trás', 'Roam from position':'Deambular', 'Stay wider':'Ficar mais aberto', 'Sit narrower':'Fechar por dentro',
+  'Hold position':'Manter posição', 'Get further forward':'Subir mais', 'Move into channels':'Procurar os corredores', 'Press more':'Pressionar mais', 'Press less':'Pressionar menos',
+  'Mark tighter':'Marcar mais apertado', 'Tackle harder':'Desarmar com mais força', 'Ease off tackles':'Desarmar com cautela', 'Arrive Late':'Chegar Atrasado',
+  'Attack the Defensive Line':'Atacar a Linha Defensiva', 'Target Near Post':'Alvo 1.º Poste', 'Target Centre':'Alvo Centro', 'Target Far Post':'Alvo 2.º Poste',
+  'Show onto (weaker) foot':'Forçar para o pé (mais fraco)', 'Show onto weaker foot':'Forçar para o pé mais fraco', 'Close down (more/less)':'Pressionar (mais/menos)',
+  'Close down more':'Pressionar mais', 'Tight marking':'Marcação apertada',
+  // ---- Tactical Tweaks, treino e Effectiveness
+  'More Urgency':'Mais Urgência', 'Play Longer':'Jogar Mais Longo', 'Exploit Width':'Explorar a Largura', 'Press Less':'Pressionar Menos', 'Wingers Swap Sides':'Trocar Extremos de Flanco',
+  'Tactical Understanding':'Compreensão Tática', 'Tactical Effectiveness':'Eficácia Tática', 'Tactical Tweaks':'Ajustes Táticos', 'Tactical Complexity':'Complexidade Tática',
+  'Player Ability':'Capacidade dos Jogadores', 'Player Buy-In':'Adesão dos Jogadores', 'Next Match Information':'Informação do Próximo Jogo', 'Projected Effectiveness':'Eficácia Projetada',
+  'In-Possession Shape':'Forma com Bola', 'Out-of-Possession Shape':'Forma sem Bola', 'IP Shape':'Forma com Bola', 'OOP Shape':'Forma sem Bola', 'Passing Style':'Estilo de Passe',
+  'Build Up':'Construção', 'Chance Creation':'Criação de Oportunidades', 'Match Preparation':'Preparação do Jogo', 'Match Prep':'Prep. do Jogo', 'Team Cohesion':'Coesão da Equipa',
+  'Role Training':'Treino de Papel', 'Individual Development':'Desenvolvimento Individual', 'Physical':'Físico', 'Clean Slate':'Estilo Livre',
+  'Team Instructions':'Instruções à Equipa' /* ✓ */, 'In Possession':'Com Bola', 'Out of Possession':'Sem Bola', 'Final Third':'Último Terço', 'Progression':'Progressão', 'Buildup':'Construção',
+  'Overview':'Visão Geral', 'Team Shape':'Forma da Equipa', 'Set Pieces & Captains':'Bolas Paradas e Capitães', 'Captain':'Capitão', 'Vice Captain':'Vice-Capitão',
+  'Corners (right)':'Cantos (direita)', 'Corners (left)':'Cantos (esquerda)', 'Free Kicks (direct)':'Livres (diretos)', 'Free Kicks (crossed)':'Livres (cruzados)', 'Long Throws':'Lançamentos Longos',
+  'Mentality':'Mentalidade', 'Style':'Estilo',
+};
+// só por correspondência exacta (são palavras portuguesas comuns e não podem ser trocadas no meio de frases)
+const PT_EXACT_ONLY = { 'No':'Não', 'Yes':'Sim' };
+
+// Papéis com o mesmo nome em inglês mas nomes diferentes no FM em português
+const PT_ROLE_ID = { am_oop: 'Médio Ofensivo' /* ✓ ex.: Paz (Médio Entrelinhas/Médio Ofensivo) */ };
+function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_ID[r.id] : r.name) : ''; }
+
+;
 // ---- ui/state.js
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.3.0';
+const VERSION = '4.6.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -3454,29 +3626,39 @@ const ST = {
   view: 'home', tabs: { team: 'squad', tactic: 'analyze', bible: 'roles' },
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
   saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
-  auto: { on: true, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 43 },   // carregamento automático (app instalada)
+  auto: { on: false, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 45 },   // carregamento automático (app instalada)
   lastSave: null, gen: null, lab: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames })); } catch (e) {}
 }
 
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (!d) { ST.tactic = tacticFromTemplate(TEMPLATES[0]); ST.saved = [JSON.parse(JSON.stringify(ST.tactic))]; return; }
+    if (!d) return;                                   // primeira utilização: tática nova e vazia, sem táticas guardadas
     if (d.tactic && FORMATIONS[d.tactic.ipForm] && FORMATIONS[d.tactic.oopForm]) ST.tactic = d.tactic;
     if (d.squad && Array.isArray(d.squad.players)) ST.squad = d.squad;
     if (Array.isArray(d.saved)) ST.saved = d.saved;
     if (d.theme) ST.theme = d.theme;
     if (d.opp && Array.isArray(d.opp.players)) ST.opp = d.opp;
     if (d.myClub) ST.myClub = d.myClub;
-    if (d.auto) { ST.auto = Object.assign(ST.auto, d.auto); if (!d.auto.v || d.auto.v < 43) { ST.auto.save = false; ST.auto.v = 43; } }   // v4.3: ler o save passa a ser opcional
+    if (d.auto) {
+      ST.auto = Object.assign(ST.auto, d.auto);
+      if (!d.auto.v || d.auto.v < 43) ST.auto.save = false;   // v4.3: ler o save passa a ser opcional
+      if (!d.auto.v || d.auto.v < 45) ST.auto.on = false;     // v4.5: carregar o F9 sozinho também passa a ser opcional
+      ST.auto.v = 45;
+    }
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
     if (d.gen) ST.gen = d.gen;
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
+    if (d.sheetNames) ST.sheetNames = d.sheetNames;
+    // v4.4: a tática de exemplo “Cenas v2” deixou de vir com a app — sai das guardadas e, se for a activa, dá lugar a uma nova
+    const isCenas = (t) => t && typeof t.name === 'string' && /^Cenas v2\b/.test(t.name);
+    ST.saved = ST.saved.filter(t => !isCenas(t));
+    if (isCenas(ST.tactic)) { ST.tactic = newTactic(); }
     if (d.ui) ST.ui = { collapsed: d.ui.collapsed || {}, navMini: !!d.ui.navMini };
     if (d.lab) ST.lab = { port: d.lab.port || 8765, more: d.lab.more || 100, status: null, jobs: [], job: null, err: '', busy: false };
     [ST.tactic, ...ST.saved].forEach(t => { if (t && t.ti && t.ti.loe > 2) t.ti.loe = 2; if (t && t.ti && t.ti.short_gk > 1) t.ti.short_gk = 1; });
@@ -3666,7 +3848,7 @@ function vSim() {
   const fr = sim.focus != null ? t.slots[sim.focus] : null;
   const fRole = fr ? [ROLE_BY_ID[fr.ip], ROLE_BY_ID[fr.oop]] : null;
   return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : '<span>' + L('Campo animado', 'Animated pitch') + '</span> — ' + esc(t.name)}</h2>
-      <p class="muted small" style="margin:0">${esc(t.ipForm)} com bola → ${esc(t.oopForm)} sem bola · ${esc(t.ment)}. Clique num jogador para o seguir.</p></div>
+      <p class="muted small" style="margin:0">${esc(t.ipForm)} <span>com bola</span> → ${esc(t.oopForm)} <span>sem bola</span> · ${esc(t.ment)}. <span>Clique num jogador para o seguir.</span></p></div>
     <div class="row">${sim.src === 'demo' ? '<button class="btn" onclick="A.simBack()">Voltar à minha tática</button>' : '<button class="btn" onclick="A.tab(\'tactic\',\'analyze\')">Editar no analisador</button>'}</div></div>
   <div class="simgrid">
     <div>
@@ -3680,14 +3862,14 @@ function vSim() {
     </div>
     <div class="grid simside">
       ${fr ? `<div class="panel"><h3>${esc(fr.ipCode)} → ${esc(fr.oopCode)}</h3>
-        ${fRole.map(r => r ? `<p class="small"><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> <b>${esc(r.name)}</b> — ${esc(r.desc)}</p>` : '').join('')}
+        ${fRole.map(r => r ? `<p class="small"><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> <b>${esc(roleName(r))}</b> — ${esc(r.desc)}</p>` : '').join('')}
         ${sim.src === 'demo' ? '' : `<div class="grid g2">
-          <label class="f">Papel com bola${selectHTML(rolesFor(slotInfo(t.ipForm, fr.ipCode).group, 'IP', slotInfo(t.ipForm, fr.ipCode).wideCB).map(r => [r.id, r.name]), fr.ip, `A.simRole('IP',this.value)`)}</label>
-          <label class="f">Papel sem bola${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode).wideCB).map(r => [r.id, r.name]), fr.oop, `A.simRole('OOP',this.value)`)}</label></div>`}
+          <label class="f">Papel com bola${selectHTML(rolesFor(slotInfo(t.ipForm, fr.ipCode).group, 'IP', slotInfo(t.ipForm, fr.ipCode)).map(r => [r.id, roleName(r)]), fr.ip, `A.simRole('IP',this.value)`)}</label>
+          <label class="f">Papel sem bola${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode)).map(r => [r.id, roleName(r)]), fr.oop, `A.simRole('OOP',this.value)`)}</label></div>`}
         <button class="btn sm" onclick="A.simFocus(${sim.focus})">Deixar de seguir</button></div>` : ''}
       <div class="panel grid">
         <h3>Experimente as instruções</h3>
-        <p class="small muted" style="margin:0">Cada mudança redesenha o movimento na hora${sim.src === 'demo' ? ' (só nesta demonstração)' : ' e fica gravada na tática'}.</p>
+        <p class="small muted" style="margin:0">${sim.src === 'demo' ? L('Cada mudança redesenha o movimento na hora (só nesta demonstração).', 'Every change redraws the movement instantly (in this demo only).') : L('Cada mudança redesenha o movimento na hora e fica gravada na tática.', 'Every change redraws the movement instantly and is saved to the tactic.')}</p>
         <label class="f">Mentalidade${selectHTML(MENTALITIES.map(m => [m, m]), t.ment, 'A.simMent(this.value)')}</label>
         ${sim.src === 'demo' ? '' : `<div class="grid g2"><label class="f">Formação com bola${selectHTML(forms, t.ipForm, "A.setForm('IP',this.value)")}</label><label class="f">Sem bola${selectHTML(forms, t.oopForm, "A.setForm('OOP',this.value)")}</label></div>`}
         <details open><summary>Com bola</summary><div class="grid g2" style="margin-top:6px">${['buildup','goal_kicks','passing','tempo','width','support_runs','progress','att_trans'].map(ctl).join('')}</div></details>
@@ -3791,7 +3973,7 @@ function clipModelTI(k, v) {
   const t = newTactic('4-3-3 DM Wide', '4-1-4-1 DM Wide');
   // papéis de base neutros mas com largura e profundidade, para o efeito ser visível
   const set = (code, ip, oop) => { const s = t.slots.find(x => x.ipCode === code); if (s) { if (ip) s.ip = ip; if (oop) s.oop = oop; } };
-  set('DL', 'wb_ip'); set('DR', 'wb_ip'); set('AML', 'if_ip'); set('AMR', 'w_ip'); set('MCL', 'b2b', null); set('ST', 'cf_ip', 'tcf');
+  set('DL', 'wb_ip'); set('DR', 'wb_ip'); set('AML', 'if_ip'); set('AMR', 'w_ip'); set('MCL', 'chm', null); set('ST', 'cf_ip', 'tcf');
   t.ment = 'Balanced'; t.ti = {}; if (v !== TI_BY_KEY[k].def) t.ti[k] = v;
   const i = TI_PHASE[k] ?? 0, ph = PHASES[i].k, prev = PHASES[(i + PHASES.length - 1) % PHASES.length].k;
   return { M: simModel(t), phases: [prev, ph], focus: null, ti: k };
@@ -3866,7 +4048,7 @@ function vHome() {
   if (op.length) { const rep = opponentReport(t, ps, op); ST._oppRep = rep; oppBox = `<div class="panel"><h3><span>Próximo adversário:</span> ${esc(rep.club || '')}</h3>${rep.plan.slice(0, 2).map(x => `<p class="small">• <b>${esc(TI_BY_KEY[x.ti].n)} → ${esc(TI_BY_KEY[x.ti].opts[x.v])}</b>: ${esc(x.why)}</p>`).join('') || '<p class="small muted">Sem ajustes necessários.</p>'}<button class="btn" onclick="A.tab('team','opp')">Ver relatório</button></div>`; }
   return `<div class="top"><div><h1>Olá! Vamos preparar o próximo jogo.</h1><p class="muted">Três passos. Tudo corre neste computador${DESKTOP ? ' e o plantel actualiza sozinho quando carrega F9 no FM' : ''}.</p></div></div>
   <div class="grid g3">
-    ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${L(`${ps.length} jogadores`, `${ps.length} players`)}</b>${ST.myClub ? ' · ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.save ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Plantel.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : ST.f9Found ? 'Carregue F9 no ecrã do plantel no FM27.' : 'Ligue a leitura do save ou instale o plugin do F9 — veja Plantel.') : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
+    ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${L(`${ps.length} jogadores`, `${ps.length} players`)}</b>${ST.myClub ? ' · ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.save ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Plantel.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : ST.f9Found ? (ST.auto.on ? 'Carregue F9 no ecrã do plantel no FM27.' : 'Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.') : 'Ligue a leitura do save ou instale o plugin do F9 — veja Plantel.') : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
       ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : `<button class="btn primary" onclick="A.tab('team','squad')">Como carregar</button>` + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
     ${step(2, true, 'Tática', `<div class="score-ring" style="gap:12px">${ring(au.overall, 64)}<div><b>${esc(t.name)}</b><br><span class="muted">${esc(t.ipForm)} → ${esc(t.oopForm)} · ${esc(t.ment)}</span></div></div>`,
       (ps.length >= 11 ? `<button class="btn primary" onclick="A.tab('team','gen')">Gerar tática para o plantel</button>` : '') + `<button class="btn ${ps.length >= 11 ? '' : 'primary'}" onclick="A.tab('tactic','analyze')">Analisar</button><button class="btn" onclick="A.simOpen()">▶ Ver em campo</button>`)}
@@ -3932,7 +4114,7 @@ function vSuggest() {
       <div class="bars" style="max-width:420px">
         ${[['XI', x.xiAvg], ['Estilo', x.fit], ['Profundidade', x.depth], ['Coerência', x.audit.overall]].map(([n, v]) => `<div class="bar"><span>${n}</span><div class="t"><i style="width:${v}%;background:${fitColor(v)}"></i></div><b>${v}</b></div>`).join('')}
       </div>
-      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} como ${esc(ROLE_BY_ID[y.s.ip].name)} (${y.sc})`).join(' · ')}</p>
+      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} como ${esc(roleName(ROLE_BY_ID[y.s.ip]))} (${y.sc})`).join(' · ')}</p>
       <p class="small"><b>Pontos fracos:</b> ${x.weakest.map(y => `${esc(y.p ? y.p.name : '?')} em ${esc(y.s.ipCode)} (${y.sc})`).join(' · ')} — alvo de recrutamento/treino.</p>
       <button class="btn primary sm" onclick="A.useSuggestion(${i})">Abrir no analisador</button></div></div></div>`).join('')}</div>`;
 }
@@ -3948,13 +4130,13 @@ function vXI() {
   const rows = t.slots.map((s, i) => {
     const a = slotInfo(t.ipForm, s.ipCode), p = pm[s.pid], ri = ROLE_BY_ID[s.ip], ro = ROLE_BY_ID[s.oop];
     const sc = p ? slotScore(p, t, s) : null;
-    const alt = p ? bestRolesForPlayer(p, a.group, 'IP', a.wideCB, 1)[0] : null;
+    const alt = p ? bestRolesForPlayer(p, a.group, 'IP', a, 1)[0] : null;
     const cur = p ? (roleScore(p, ri) || { score: 0 }).score : 0;
     const recs = p ? recommendPIs(p, ri, ro, a.group) : [];
     const b = bs[i];
     return `<tr><td><b>${esc(s.ipCode)}</b></td>
       <td>${p ? `${fitBadge(sc)} <b>${esc(p.name)}</b>${p.age ? ` <span class="muted small">${p.age}a</span>` : ''}` : '<span class="muted">vazio</span>'}
-        <div class="small muted">${esc(ri.name)} / ${esc(ro.name)}${alt && alt.r.id !== ri.id && alt.s >= cur + 5 ? ` · <span style="color:var(--warn)"><span>melhor como</span> ${esc(alt.r.name)} (${alt.s})</span>` : ''}</div></td>
+        <div class="small muted">${esc(roleName(ri))} / ${esc(roleName(ro))}${alt && alt.r.id !== ri.id && alt.s >= cur + 5 ? ` · <span style="color:var(--warn)"><span>melhor como</span> ${esc(roleName(alt.r))} (${alt.s})</span>` : ''}</div></td>
       <td>${recs.map(r => (s.pis || []).includes(r.pi) ? `<span class="chip ip" title="${esc(r.why)}">✓ ${esc(r.pi)}</span>` : `<button class="chip btnchip" title="${esc(r.why)}" onclick="A.applyPI(${i}, '${r.pi.replace(/'/g, "\\'")}')">+ ${esc(r.pi)}</button>`).join('') || '<span class="muted small">—</span>'}</td>
       <td class="small">${b.bench ? `${esc(b.bench.p.name)} ${fitBadge(b.bench.sc)}` : '—'}</td>
       <td class="small">${b.succ ? `${esc(b.succ.p.name)} <span class="muted">${b.succ.p.age}a</span> ${fitBadge(b.succ.sc)}` : '—'}</td></tr>`;
@@ -4030,7 +4212,7 @@ function vGen() {
       ${sec(1, 'Estilo e mentalidade', `<p><b>Style:</b> Clean Slate · <b>Mentality:</b> ${esc(t.ment)}</p><p class="small muted">${esc(r.mentWhy)}</p>`)}
       ${sec(2, 'Formas e XI', `<div class="grid g2"><div><p class="small"><b>Com bola:</b> ${esc(t.ipForm)}</p>${pitchSVG(t, 'IP', null, { static: true })}</div><div><p class="small"><b>Sem bola:</b> ${esc(t.oopForm)}</p>${pitchSVG(t, 'OOP', null, { static: true })}</div></div>
         <div class="table-wrap" style="margin-top:10px;max-height:none"><table><thead><tr><th>Pos</th><th>Jogador</th><th>In Possession</th><th>Out of Possession</th><th>Adequação</th></tr></thead><tbody>
-        ${t.slots.map(s => { const p = pm[s.pid]; return `<tr><td><b>${esc(s.ipCode)}</b>${s.oopCode !== s.ipCode ? ` <span class="muted small">→ ${esc(s.oopCode)}</span>` : ''}</td><td>${p ? esc(p.name) : '—'}${p && g.youth.includes(p.id) ? ' <span class="chip new">jovem</span>' : ''}${p && g.star === p.id ? ' <span class="chip new">estrela</span>' : ''}</td><td>${esc(ROLE_BY_ID[s.ip].name)}</td><td>${esc(ROLE_BY_ID[s.oop].name)}</td><td>${fitBadge(p ? slotScore(p, t, s) : null)}</td></tr>`; }).join('')}
+        ${t.slots.map(s => { const p = pm[s.pid]; return `<tr><td><b>${esc(s.ipCode)}</b>${s.oopCode !== s.ipCode ? ` <span class="muted small">→ ${esc(s.oopCode)}</span>` : ''}</td><td>${p ? esc(p.name) : '—'}${p && g.youth.includes(p.id) ? ' <span class="chip new">jovem</span>' : ''}${p && g.star === p.id ? ' <span class="chip new">estrela</span>' : ''}</td><td>${esc(roleName(ROLE_BY_ID[s.ip]))}</td><td>${esc(roleName(ROLE_BY_ID[s.oop]))}</td><td>${fitBadge(p ? slotScore(p, t, s) : null)}</td></tr>`; }).join('')}
         </tbody></table></div>`)}
       ${sec(3, 'Instruções de equipa', FM_SECTIONS.map(([n, keys]) => `<h4 style="margin:10px 0 4px">${esc(n)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k], v = tiVal(t, k), ch = v !== d.def;
           return `<tr class="${ch ? '' : 'dim'}"><td style="width:34%">${esc(d.n)}</td><td style="width:22%">${ch ? `<b>${esc(d.opts[v])}</b>` : esc(d.opts[v])}</td><td class="small muted">${esc(r.reasons[k] || '')}</td></tr>`; }).join('')}</tbody></table>`).join(''))}
@@ -4043,7 +4225,7 @@ function vGen() {
           <table><tbody>${sp.attack.filter(x => ['far', 'centre', 'near'].includes(x.k)).map(x => `<tr><td><span>Alvo aéreo</span> — ${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td></tr>`).join('')}</tbody></table></div>
           <button class="btn sm" onclick="A.genUse(false,'setpieces')">Ver diagramas dos cantos</button>`) : ''}
       ${sec(6, 'Profundidade por posição', `<div class="depth">${dc.map(d => `<div><b>${esc(d.code)}</b>${d.list.map((x, i) => `<div class="small">${i + 1}. ${esc(x.p.name)} ${fitBadge(x.sc)}</div>`).join('')}</div>`).join('')}</div>`)}
-      ${sec(7, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(w.role.name)}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}
+      ${sec(7, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(roleName(w.role))}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}
       ${sec(8, 'Treino', `<ol class="clean small">${tp.areas.slice(0, 4).map(a => `<li><b>${esc(TRAINING.areas[a.k].n)}</b> — ${esc([...new Set(a.why)][0])}</li>`).join('')}</ol><button class="btn sm" onclick="A.genUse(false,'training')">Plano de treino completo</button>`)}
     </div>
   </div>`;
@@ -4114,11 +4296,11 @@ function vSlotEditor(i) {
   const t = ST.tactic, s = t.slots[i];
   const a = slotInfo(t.ipForm, s.ipCode), b = slotInfo(t.oopForm, s.oopCode);
   const p = pById(s.pid);
-  const ipRoles = rolesFor(a.group, 'IP', a.wideCB), oopRoles = rolesFor(b.group, 'OOP', b.wideCB);
-  const lab = (r) => { const sc = p ? (roleScore(p, r) || {}).score : null; return r.name + (sc != null ? ` — ${sc}` : ''); };
+  const ipRoles = rolesFor(a.group, 'IP', a), oopRoles = rolesFor(b.group, 'OOP', b);
+  const lab = (r) => { const sc = p ? (roleScore(p, r) || {}).score : null; return roleName(r) + (sc != null ? ` — ${sc}` : ''); };
   const ri = ROLE_BY_ID[s.ip], ro = ROLE_BY_ID[s.oop];
   const plist = players().map(q => ({ q, sc: slotScore(q, t, s) })).sort((x, y) => y.sc - x.sc);
-  const roleBox = (r) => r ? `<div class="role-card"><b>${esc(r.name)}</b> <span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> ${srcTag(r)}
+  const roleBox = (r) => r ? `<div class="role-card"><b>${esc(roleName(r))}</b> <span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> ${srcTag(r)}
     <p class="small">${esc(r.desc)}</p><p class="small muted">💡 ${esc(r.tip)}</p>
     <div class="attrs"><b>Chave:</b> ${r.key.map(k => attrChip(k, p)).join('')}</div>
     <div class="attrs"><b>Preferidos:</b> ${r.pref.map(k => attrChip(k, p)).join('')}</div></div>` : '';
@@ -4128,7 +4310,7 @@ function vSlotEditor(i) {
       <label class="f"><span>Papel com bola</span> (<span>${GROUPS[a.group]}</span>)${selectHTML(ipRoles.map(r => [r.id, lab(r)]), s.ip, `A.setRole(${i},'IP',this.value)`)}</label>
       <label class="f"><span>Papel sem bola</span> (<span>${GROUPS[b.group]}</span>)${selectHTML(oopRoles.map(r => [r.id, lab(r)]), s.oop, `A.setRole(${i},'OOP',this.value)`)}</label>
     </div>
-    ${p ? `<div class="small"><span>Adequação:</span> ${fitBadge(slotScore(p, t, s))} · <span>melhores papéis IP aqui:</span> ${bestRolesForPlayer(p, a.group, 'IP', a.wideCB).map(x => `${esc(x.r.name)} ${x.s}`).join(' · ')}</div>` : ''}
+    ${p ? `<div class="small"><span>Adequação:</span> ${fitBadge(slotScore(p, t, s))} · <span>melhores papéis IP aqui:</span> ${bestRolesForPlayer(p, a.group, 'IP', a).map(x => `${esc(x.r.name)} ${x.s}`).join(' · ')}</div>` : ''}
     ${roleBox(ri)}${roleBox(ro)}
     ${p ? (() => { const rec = recommendPIs(p, ri, ro, a.group); return rec.length ? `<div class="recs"><b class="small"><span>Recomendadas para</span> ${esc(p.name)}</b>${rec.map(r => `<div class="rec"><div><b>${esc(r.pi)}</b><span class="small muted"> — ${esc(r.why)}</span></div>${(s.pis || []).includes(r.pi) ? '<span class="chip ip">aplicada</span>' : `<button class="btn sm" onclick="A.applyPI(${i}, '${r.pi.replace(/'/g, "\\'")}')">Aplicar</button>`}</div>`).join('')}</div>` : ''; })() : ''}
     <details><summary>${L(`Todas as instruções individuais (${(s.pis || []).length} activas) — cada uma soma complexidade`, `All player instructions (${(s.pis || []).length} active) — each one adds complexity`)}</summary>
@@ -4187,8 +4369,8 @@ function vSheet() {
   const changed = TEAM_INSTRUCTIONS.filter(d => tiVal(t, d.k) !== d.def).length;
   return `<div class="top"><div><h2><span>Ficha para o FM27</span> — ${esc(t.name)}</h2>
     <p class="muted small" style="margin:0">Recrie a tática no jogo por esta ordem e guarde-a lá: o FM27 gera o .fmf. Marque cada passo à medida que avança.</p></div>
-    <div class="row no-print"><button class="btn" onclick="A.print()">Imprimir/PDF</button><button class="btn" onclick="A.copySheet()">Copiar texto</button><button class="btn" onclick="A.tab('tactic','analyze')">Voltar</button></div></div>
-  <div class="grid g2 sheet">
+    <div class="row no-print">${LANG === 'pt' ? `<div class="seg" role="group" aria-label="Nomes na ficha"><button class="${ST.sheetNames !== 'pt' ? 'on' : ''}" onclick="A.sheetNames('en')" title="Como aparecem no FM27 em inglês">Nomes do jogo (EN)</button><button class="${ST.sheetNames === 'pt' ? 'on' : ''}" onclick="A.sheetNames('pt')">Português</button></div>` : ''}<button class="btn" onclick="A.print()">Imprimir/PDF</button><button class="btn" onclick="A.copySheet()">Copiar texto</button><button class="btn" onclick="A.tab('tactic','analyze')">Voltar</button></div></div>
+  <div class="grid g2 sheet" data-gameterms="${ST.sheetNames === 'pt' ? 'pt' : 'en'}">
     <div class="panel"><h3>1. Topo do ecrã de táticas</h3>
       <table><tbody>
         <tr><td>${ck}</td><td>Style</td><td><b>Clean Slate</b> (para começar sem instruções pré-definidas)</td></tr>
@@ -4221,9 +4403,9 @@ function vSheet() {
 }
 
 function sheetText(t) {
-  const L = [`${t.name}`, `Style: Clean Slate | Mentality: ${t.ment}`, `In Possession: ${t.ipForm} | Out of Possession: ${t.oopForm}`, '', 'PAPÉIS (IP / OOP)'];
+  const L = [`${t.name}`, `Style: Clean Slate | Mentality: ${t.ment}`, `In Possession: ${t.ipForm} | Out of Possession: ${t.oopForm}`, '', L('PAPÉIS (IP / OOP)', 'ROLES (IP / OOP)')];
   t.slots.forEach(s => L.push(`${s.ipCode}${s.oopCode !== s.ipCode ? '→' + s.oopCode : ''}: ${ROLE_BY_ID[s.ip].name} / ${ROLE_BY_ID[s.oop].name}${s.pis && s.pis.length ? ' [' + s.pis.join('; ') + ']' : ''}`));
-  L.push('', 'INSTRUÇÕES DE EQUIPA (só as que mudam)');
+  L.push('', L('INSTRUÇÕES DE EQUIPA (só as que mudam)', 'TEAM INSTRUCTIONS (changes only)'));
   FM_SECTIONS.forEach(([sec, keys]) => { const ch = keys.filter(k => tiVal(t, k) !== TI_BY_KEY[k].def); if (ch.length) L.push(sec + ': ' + ch.map(k => `${TI_BY_KEY[k].n} = ${TI_BY_KEY[k].opts[tiVal(t, k)]}`).join(', ')); });
   return L.join('\n');
 }
@@ -4309,7 +4491,7 @@ function vTraining() {
   </div>
   <div class="panel" style="margin-top:16px"><h3>Desenvolvimento individual do XI</h3>
     ${plan.indiv.length ? `<div class="table-wrap"><table><thead><tr><th>Jogador</th><th>Pos</th><th>IP</th><th>OOP</th><th>Role Training</th><th>Foco adicional</th></tr></thead><tbody>
-      ${plan.indiv.map(x => `<tr><td><b>${esc(x.p.name)}</b></td><td>${x.slot}</td><td>${fitBadge(x.si)}</td><td>${fitBadge(x.so)}</td><td>${esc(x.role.name)}</td><td>${x.weak.map(k => `<span class="chip">${esc(attrName(k))} ${Math.round(x.p.a[k])}</span>`).join('')}</td></tr>`).join('')}
+      ${plan.indiv.map(x => `<tr><td><b>${esc(x.p.name)}</b></td><td>${x.slot}</td><td>${fitBadge(x.si)}</td><td>${fitBadge(x.so)}</td><td>${esc(roleName(x.role))}</td><td>${x.weak.map(k => `<span class="chip">${esc(attrName(k))} ${Math.round(x.p.a[k])}</span>`).join('')}</td></tr>`).join('')}
     </tbody></table></div>` : '<p class="muted">Atribua jogadores ao XI (Plantel → Analisador → Auto XI) para recomendações individuais.</p>'}
     ${plan.mentors.length && plan.youth.length ? `<h4 style="margin-top:12px">Mentoria</h4><p class="small">Mentores (Determinação ≥ 15, ≥ 26 anos): ${plan.mentors.slice(0, 4).map(p => esc(p.name)).join(', ')}. Jovens ≤ 21: ${plan.youth.slice(0, 8).map(p => esc(p.name)).join(', ')}.</p>` : ''}
   </div>`;
@@ -4323,7 +4505,7 @@ function vTraining() {
 function vRoles() {
   const q = ST.rq.toLowerCase();
   const list = ROLES.filter(r => (!ST.rg || r.groups.includes(ST.rg)) && (!ST.rp || r.phase === ST.rp) &&
-    (!q || (r.name + ' ' + r.desc + ' ' + r.tip + ' ' + r.ab).toLowerCase().includes(q)));
+    (!q || [r.name, PT_TERMS[r.name] || '', PT_ROLE_ID[r.id] || '', r.desc, r.tip, r.ab, T(r.desc), T(r.tip)].join(' ').toLowerCase().includes(q)));
   const tagNames = { W:'dá largura', IN:'entra por dentro', RD:'fica atrás', BOX:'ataca a área', CR:'criativo', LINK:'liga jogo', RUN:'profundidade', DROP:'baixa', AIR:'aéreo', ADV:'sobe', TOCB:'vira central', TODM:'vira médio def.', HP:'pressiona alto', LOW:'cauteloso', OUT:'outlet', CW:'cobre flanco', TRK:'acompanha recuo' };
   return `<div class="top"><div><h2>Papéis — com bola e sem bola</h2>
     <p class="muted small">${ROLES.length} papéis. Desde o FM26 não há duties: cada jogador tem um papel IP e um OOP. <span class="tag v">CONF</span> atributos confirmados · <span class="tag e">EST</span> estimados.</p></div></div>
@@ -4333,7 +4515,7 @@ function vRoles() {
     ${selectHTML([['', 'IP + OOP'], ['IP', 'Com bola (IP)'], ['OOP', 'Sem bola (OOP)']], ST.rp, 'A.rp(this.value)')}
     <span class="small muted">${list.length} resultado(s)</span></div>
   <div class="grid g2">${list.map(r => `<div class="role-card">
-    <div class="row" style="justify-content:space-between"><div><b>${esc(r.name)}</b> <span class="muted small">(${esc(r.ab)})</span></div><div><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span>${srcTag(r)}</div></div>
+    <div class="row" style="justify-content:space-between"><div><b>${esc(roleName(r))}</b> <span class="muted small">(${esc(r.ab)})</span></div><div><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span>${srcTag(r)}</div></div>
     <div class="small muted">${r.groups.map(g => `<span>${GROUPS[g]}</span>`).join(' · ')}${r.wideCB ? ` · <span>só central do lado numa linha de 3</span>` : ''}</div>
     <p class="small">${esc(r.desc)}</p><p class="small">💡 ${esc(r.tip)}</p>
     <div class="attrs"><b>Chave:</b> ${r.key.map(k => `<span class="chip">${esc(attrName(k))}</span>`).join('')}</div>
@@ -4511,13 +4693,13 @@ function vLab() {
   const howto = `<ol class="clean small"><li>Abra o <b>FM27 Tactics Lab</b> (o Steam tem de estar aberto com a conta do FM27).</li><li>Lá, carregue o save ou monte as equipas, defina a tática <b>A</b> (referência) e <b>B</b> (alteração) e corra 30–100 jogos com “comparar”.</li><li>Aqui aparecem os resultados com intervalo de confiança e veredicto; pode correr mais jogos ou exportar o .fmf da vencedora.</li></ol>`;
   const left = DESKTOP ? `<div class="panel grid">
       <h3>Ligação</h3>
-      <div class="row"><span class="dot ${LS.status ? 'ok' : ''}"></span><b>${LS.status ? 'Ligado ao Tactics Lab' : 'Desligado'}</b>${LS.status ? `<span class="small muted">motor ${esc(LS.status.engine || '')} · ${LS.status.roles || '?'} papéis</span>` : ''}</div>
+      <div class="row"><span class="dot ${LS.status ? 'ok' : ''}"></span><b>${LS.status ? 'Ligado ao Tactics Lab' : 'Desligado'}</b>${LS.status ? `<span class="small muted">${L(`motor ${esc(LS.status.engine || '')} · ${LS.status.roles || '?'} papéis`, `engine ${esc(LS.status.engine || '')} · ${LS.status.roles || '?'} roles`)}</span>` : ''}</div>
       ${LS.err ? `<div class="notice warn small">${esc(LS.err)}</div>` : ''}
       <div class="row"><label class="f" style="flex:1">Porta<input type="number" value="${LS.port}" min="1024" max="65535" onchange="A.labSet('port',+this.value)"></label><button class="btn primary" data-busy="lab-connect" onclick="A.labConnect()">${LS.status ? 'Actualizar' : 'Ligar'}</button></div>
       ${LS.status ? `<button class="btn sm" data-busy="lab-cat" onclick="A.labCatalog()">Exportar catálogo do motor (diagnóstico)</button>` : ''}
     </div>
     <div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Experiências</h3>${LS.status ? '<button class="btn sm" onclick="A.labJobs()">↻</button>' : ''}</div>
-      ${LS.jobs.length ? LS.jobs.map(j => { const st = { complete: 'concluída', running: 'a correr', queued: 'em fila', error: 'erro', cancelled: 'cancelada' }[j.status] || j.status;
+      ${LS.jobs.length ? LS.jobs.map(j => { const st = { complete: L('concluída', 'finished'), running: L('a correr', 'running'), queued: L('em fila', 'queued'), error: L('erro', 'error'), cancelled: L('cancelada', 'cancelled') }[j.status] || j.status;
         return `<button class="jobitem ${LS.job && LS.job.id === j.id ? 'on' : ''}" onclick="A.labOpen('${esc(j.id)}')"><b>${esc(j.name || j.id)}</b><span class="st ${esc(j.status)}">${esc(st)}</span><span class="small">${j.completed || 0}/${j.total || 0} jogos</span><div class="small muted">${j.created ? new Date(j.created * 1000).toLocaleString('pt-PT') : ''}</div></button>`; }).join('') : `<p class="small muted">${LS.status ? 'Ainda não há experiências no Tactics Lab.' : 'Ligue-se para ver as experiências.'}</p>`}
     </div>` : `<div class="panel"><h3>Ligação directa</h3><p class="small">Na <b>app instalada</b> (Windows) a app liga-se ao Tactics Lab, lista as experiências, corre mais jogos e exporta .fmf. No browser, importe o JSON exportado de uma experiência.</p></div>`;
   return `<div class="top"><div><h2>Laboratório — motor do FM27</h2><p class="muted small" style="margin:0">Testa táticas com o motor de jogo original através do <a href="https://github.com/lqf0624/fm-tactics-lab" target="_blank" rel="noopener">FM Tactics Lab</a> (MIT) e decide com estatística, não com palpites.</p></div>
@@ -4576,7 +4758,7 @@ const A = {
   applyPI(i, n) { const s = ST.tactic.slots[i]; s.pis = s.pis || []; if (!s.pis.includes(n)) s.pis.push(n); save(); render(); toast(n + ' aplicado'); },
   applyAllPIs() { const pm = Object.fromEntries(players().map(p => [p.id, p])); let n = 0;
     ST.tactic.slots.forEach(s => { const a = slotInfo(ST.tactic.ipForm, s.ipCode); recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], a.group).slice(0, 1).forEach(r => { s.pis = s.pis || []; if (!s.pis.includes(r.pi)) { s.pis.push(r.pi); n++; } }); });
-    save(); render(); toast(n + ' instruções aplicadas (a principal de cada jogador — mais instruções = mais complexidade)'); },
+    save(); render(); toast(L(n + ' instruções aplicadas (a principal de cada jogador — mais instruções = mais complexidade)', n + ' instructions applied (each player’s main one — more instructions = more complexity)')); },
   applyPlan(list) { const rep = ST._oppRep; if (!rep) return; const items = list === 'all' ? rep.plan : [rep.plan[list]];
     items.forEach(x => { const d = TI_BY_KEY[x.ti]; if (x.v === d.def) delete ST.tactic.ti[x.ti]; else ST.tactic.ti[x.ti] = x.v; });
     save(); render(); toast(items.length === 1 ? `${TI_BY_KEY[items[0].ti].n}: ${TI_BY_KEY[items[0].ti].opts[items[0].v]}` : 'Plano aplicado à tática'); },
@@ -4588,13 +4770,13 @@ const A = {
     const t0 = performance.now();
     g.res = await withBusy('gen', 'A gerar a tática', (prog) => generateTacticAsync(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth },
       (s) => prog(s.total ? s.done / s.total : null, `${s.label}${s.total > 1 ? ` (${Math.min(s.done + 1, s.total)}/${s.total})` : ''}`)));
-    g.pick = 0; save(); render(); toast(`Tática gerada em ${(performance.now() - t0) / 1000 < 1 ? Math.round(performance.now() - t0) + ' ms' : ((performance.now() - t0) / 1000).toFixed(1) + ' s'}`);
+    g.pick = 0; save(); render(); toast(L('Tática gerada em ', 'Tactic generated in ') + ((performance.now() - t0) / 1000 < 1 ? Math.round(performance.now() - t0) + ' ms' : ((performance.now() - t0) / 1000).toFixed(1) + ' s'));
   },
   genPick(i) { genOpts().pick = i; save(); render(); },
   genTactic() { const g = genOpts(); const all = [g.res.main, ...g.res.alts]; const t = JSON.parse(JSON.stringify((all[g.pick] || all[0]).t));
     const pm = Object.fromEntries(players().map(p => [p.id, p]));
     t.slots.forEach(s => { const r = recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], slotInfo(t.ipForm, s.ipCode).group)[0]; s.pis = r ? [r.pi] : []; });
-    t.name = `${t.ipForm} — gerada para ${ST.myClub || 'o plantel'}`; t.source = 'gerador'; return t; },
+    t.name = L(`${t.ipForm} — gerada para ${ST.myClub || 'o plantel'}`, `${t.ipForm} — generated for ${ST.myClub || 'the squad'}`); t.source = 'gerador'; return t; },
   genUse(sim, tab) { const t = A.genTactic(); ST.tactic = t; ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(JSON.parse(JSON.stringify(t))); ST.sugg = null; save();
     if (sim) return A.simOpen(); if (tab === 'training') return A.go('training'); A.tab('tactic', tab || 'analyze'); toast('Tática gerada carregada e guardada'); },
   genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
@@ -4616,7 +4798,7 @@ const A = {
   async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
   async labMore(id) {
     const LS = labState(), n = LS.more || 100; if (BUSY['lab-more']) return;
-    busyStart('lab-more', `A pedir mais ${n} jogos ao motor do FM27`, { detail: 'a preparar as táticas A e B' });
+    busyStart('lab-more', L(`A pedir mais ${n} jogos ao motor do FM27`, `Asking the FM27 engine for ${n} more matches`), { detail: L('a preparar as táticas A e B', 'preparing tactics A and B') });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
       const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
@@ -4630,10 +4812,10 @@ const A = {
   },
   async labFmf(id, g) {
     if (BUSY['lab-fmf']) return;
-    busyStart('lab-fmf', `A exportar o .fmf da tática ${g}`, { detail: 'o próprio jogo gera e verifica o ficheiro', slow: 'o motor do FM27 está a serializar e a reler a tática — até 45 s', slowAfter: 8 });
+    busyStart('lab-fmf', L(`A exportar o .fmf da tática ${g}`, `Exporting tactic ${g}’s .fmf`), { detail: L('o próprio jogo gera e verifica o ficheiro', 'the game itself writes and verifies the file'), slow: L('o motor do FM27 está a serializar e a reler a tática — até 45 s', 'the FM27 engine is serialising and re-reading the tactic — up to 45 s'), slowAfter: 8 });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
-      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error('Tática ' + g + ' indisponível');
+      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error(L('Tática ' + g + ' indisponível', 'Tactic ' + g + ' unavailable'));
       const r = await labCall('POST', '/api/export-fmf', { side: 0, scenario: sc, name: `${(pkg.summary && pkg.summary.name) || 'Tatica'} ${g}`.slice(0, 90) }, 60000);
       const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
@@ -4652,6 +4834,7 @@ const A = {
     if (ST.gen && ST.gen.res && players().length >= 11) [ST.gen.res.main, ...ST.gen.res.alts].forEach(r => { const g = generateTIs(r.t, players(), ST.gen.res.expect); r.reasons = g.reasons; r.mentWhy = g.mentWhy; });
     save(); render();
   },
+  sheetNames(v) { ST.sheetNames = v; save(); render(); },
   navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
   clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },
@@ -4702,7 +4885,7 @@ const A = {
   // plantel
   squadText(force) { const txt = document.getElementById('sqtext').value; ingestSquadText(txt, 'texto colado', { force }); render(); },
   squadFile(input, force) { const f = input.files[0]; if (!f) return; f.text().then(txt => { ingestSquadText(txt, f.name, { force }); render(); }); },
-  sampleSquad() { ST.squad = { ...EMPTY_SQUAD(), players: makeSample(), source: 'exemplo (fictício)' }; ST.myClub = null; ST.sugg = null; autoPickXI(ST.tactic, ST.squad.players); save(); render(); toast('Plantel de exemplo carregado (fictício)'); },
+  sampleSquad() { ST.squad = { ...EMPTY_SQUAD(), players: makeSample(), source: L('exemplo (fictício)', 'sample (fictional)') }; ST.myClub = null; ST.sugg = null; autoPickXI(ST.tactic, ST.squad.players); save(); render(); toast('Plantel de exemplo carregado (fictício)'); },
   clearSquad() { ST.squad = EMPTY_SQUAD(); ST.myClub = null; ST.tactic.slots.forEach(s => s.pid = null); ST.sugg = null; save(); render(); },
   runSuggest() { ST.sugg = suggestTactics(players()); render(); },
   // bíblia

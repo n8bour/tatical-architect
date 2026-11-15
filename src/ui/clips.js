@@ -15,7 +15,7 @@ function clipModelTI(k, v) {
   const t = newTactic('4-3-3 DM Wide', '4-1-4-1 DM Wide');
   // papéis de base neutros mas com largura e profundidade, para o efeito ser visível
   const set = (code, ip, oop) => { const s = t.slots.find(x => x.ipCode === code); if (s) { if (ip) s.ip = ip; if (oop) s.oop = oop; } };
-  set('DL', 'wb_ip'); set('DR', 'wb_ip'); set('AML', 'if_ip'); set('AMR', 'w_ip'); set('MCL', 'b2b', null); set('ST', 'cf_ip', 'tcf');
+  set('DL', 'wb_ip'); set('DR', 'wb_ip'); set('AML', 'if_ip'); set('AMR', 'w_ip'); set('MCL', 'chm', null); set('ST', 'cf_ip', 'tcf');
   t.ment = 'Balanced'; t.ti = {}; if (v !== TI_BY_KEY[k].def) t.ti[k] = v;
   const i = TI_PHASE[k] ?? 0, ph = PHASES[i].k, prev = PHASES[(i + PHASES.length - 1) % PHASES.length].k;
   return { M: simModel(t), phases: [prev, ph], focus: null, ti: k };

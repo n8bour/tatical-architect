@@ -61,11 +61,11 @@ function vSlotEditor(i) {
   const t = ST.tactic, s = t.slots[i];
   const a = slotInfo(t.ipForm, s.ipCode), b = slotInfo(t.oopForm, s.oopCode);
   const p = pById(s.pid);
-  const ipRoles = rolesFor(a.group, 'IP', a.wideCB), oopRoles = rolesFor(b.group, 'OOP', b.wideCB);
-  const lab = (r) => { const sc = p ? (roleScore(p, r) || {}).score : null; return r.name + (sc != null ? ` — ${sc}` : ''); };
+  const ipRoles = rolesFor(a.group, 'IP', a), oopRoles = rolesFor(b.group, 'OOP', b);
+  const lab = (r) => { const sc = p ? (roleScore(p, r) || {}).score : null; return roleName(r) + (sc != null ? ` — ${sc}` : ''); };
   const ri = ROLE_BY_ID[s.ip], ro = ROLE_BY_ID[s.oop];
   const plist = players().map(q => ({ q, sc: slotScore(q, t, s) })).sort((x, y) => y.sc - x.sc);
-  const roleBox = (r) => r ? `<div class="role-card"><b>${esc(r.name)}</b> <span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> ${srcTag(r)}
+  const roleBox = (r) => r ? `<div class="role-card"><b>${esc(roleName(r))}</b> <span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> ${srcTag(r)}
     <p class="small">${esc(r.desc)}</p><p class="small muted">💡 ${esc(r.tip)}</p>
     <div class="attrs"><b>Chave:</b> ${r.key.map(k => attrChip(k, p)).join('')}</div>
     <div class="attrs"><b>Preferidos:</b> ${r.pref.map(k => attrChip(k, p)).join('')}</div></div>` : '';
@@ -75,7 +75,7 @@ function vSlotEditor(i) {
       <label class="f"><span>Papel com bola</span> (<span>${GROUPS[a.group]}</span>)${selectHTML(ipRoles.map(r => [r.id, lab(r)]), s.ip, `A.setRole(${i},'IP',this.value)`)}</label>
       <label class="f"><span>Papel sem bola</span> (<span>${GROUPS[b.group]}</span>)${selectHTML(oopRoles.map(r => [r.id, lab(r)]), s.oop, `A.setRole(${i},'OOP',this.value)`)}</label>
     </div>
-    ${p ? `<div class="small"><span>Adequação:</span> ${fitBadge(slotScore(p, t, s))} · <span>melhores papéis IP aqui:</span> ${bestRolesForPlayer(p, a.group, 'IP', a.wideCB).map(x => `${esc(x.r.name)} ${x.s}`).join(' · ')}</div>` : ''}
+    ${p ? `<div class="small"><span>Adequação:</span> ${fitBadge(slotScore(p, t, s))} · <span>melhores papéis IP aqui:</span> ${bestRolesForPlayer(p, a.group, 'IP', a).map(x => `${esc(x.r.name)} ${x.s}`).join(' · ')}</div>` : ''}
     ${roleBox(ri)}${roleBox(ro)}
     ${p ? (() => { const rec = recommendPIs(p, ri, ro, a.group); return rec.length ? `<div class="recs"><b class="small"><span>Recomendadas para</span> ${esc(p.name)}</b>${rec.map(r => `<div class="rec"><div><b>${esc(r.pi)}</b><span class="small muted"> — ${esc(r.why)}</span></div>${(s.pis || []).includes(r.pi) ? '<span class="chip ip">aplicada</span>' : `<button class="btn sm" onclick="A.applyPI(${i}, '${r.pi.replace(/'/g, "\\'")}')">Aplicar</button>`}</div>`).join('')}</div>` : ''; })() : ''}
     <details><summary>${L(`Todas as instruções individuais (${(s.pis || []).length} activas) — cada uma soma complexidade`, `All player instructions (${(s.pis || []).length} active) — each one adds complexity`)}</summary>
@@ -134,8 +134,8 @@ function vSheet() {
   const changed = TEAM_INSTRUCTIONS.filter(d => tiVal(t, d.k) !== d.def).length;
   return `<div class="top"><div><h2><span>Ficha para o FM27</span> — ${esc(t.name)}</h2>
     <p class="muted small" style="margin:0">Recrie a tática no jogo por esta ordem e guarde-a lá: o FM27 gera o .fmf. Marque cada passo à medida que avança.</p></div>
-    <div class="row no-print"><button class="btn" onclick="A.print()">Imprimir/PDF</button><button class="btn" onclick="A.copySheet()">Copiar texto</button><button class="btn" onclick="A.tab('tactic','analyze')">Voltar</button></div></div>
-  <div class="grid g2 sheet">
+    <div class="row no-print">${LANG === 'pt' ? `<div class="seg" role="group" aria-label="Nomes na ficha"><button class="${ST.sheetNames !== 'pt' ? 'on' : ''}" onclick="A.sheetNames('en')" title="Como aparecem no FM27 em inglês">Nomes do jogo (EN)</button><button class="${ST.sheetNames === 'pt' ? 'on' : ''}" onclick="A.sheetNames('pt')">Português</button></div>` : ''}<button class="btn" onclick="A.print()">Imprimir/PDF</button><button class="btn" onclick="A.copySheet()">Copiar texto</button><button class="btn" onclick="A.tab('tactic','analyze')">Voltar</button></div></div>
+  <div class="grid g2 sheet" data-gameterms="${ST.sheetNames === 'pt' ? 'pt' : 'en'}">
     <div class="panel"><h3>1. Topo do ecrã de táticas</h3>
       <table><tbody>
         <tr><td>${ck}</td><td>Style</td><td><b>Clean Slate</b> (para começar sem instruções pré-definidas)</td></tr>
@@ -168,9 +168,9 @@ function vSheet() {
 }
 
 function sheetText(t) {
-  const L = [`${t.name}`, `Style: Clean Slate | Mentality: ${t.ment}`, `In Possession: ${t.ipForm} | Out of Possession: ${t.oopForm}`, '', 'PAPÉIS (IP / OOP)'];
+  const L = [`${t.name}`, `Style: Clean Slate | Mentality: ${t.ment}`, `In Possession: ${t.ipForm} | Out of Possession: ${t.oopForm}`, '', L('PAPÉIS (IP / OOP)', 'ROLES (IP / OOP)')];
   t.slots.forEach(s => L.push(`${s.ipCode}${s.oopCode !== s.ipCode ? '→' + s.oopCode : ''}: ${ROLE_BY_ID[s.ip].name} / ${ROLE_BY_ID[s.oop].name}${s.pis && s.pis.length ? ' [' + s.pis.join('; ') + ']' : ''}`));
-  L.push('', 'INSTRUÇÕES DE EQUIPA (só as que mudam)');
+  L.push('', L('INSTRUÇÕES DE EQUIPA (só as que mudam)', 'TEAM INSTRUCTIONS (changes only)'));
   FM_SECTIONS.forEach(([sec, keys]) => { const ch = keys.filter(k => tiVal(t, k) !== TI_BY_KEY[k].def); if (ch.length) L.push(sec + ': ' + ch.map(k => `${TI_BY_KEY[k].n} = ${TI_BY_KEY[k].opts[tiVal(t, k)]}`).join(', ')); });
   return L.join('\n');
 }

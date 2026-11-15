@@ -44,7 +44,7 @@ function vSim() {
   const fr = sim.focus != null ? t.slots[sim.focus] : null;
   const fRole = fr ? [ROLE_BY_ID[fr.ip], ROLE_BY_ID[fr.oop]] : null;
   return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : '<span>' + L('Campo animado', 'Animated pitch') + '</span> — ' + esc(t.name)}</h2>
-      <p class="muted small" style="margin:0">${esc(t.ipForm)} com bola → ${esc(t.oopForm)} sem bola · ${esc(t.ment)}. Clique num jogador para o seguir.</p></div>
+      <p class="muted small" style="margin:0">${esc(t.ipForm)} <span>com bola</span> → ${esc(t.oopForm)} <span>sem bola</span> · ${esc(t.ment)}. <span>Clique num jogador para o seguir.</span></p></div>
     <div class="row">${sim.src === 'demo' ? '<button class="btn" onclick="A.simBack()">Voltar à minha tática</button>' : '<button class="btn" onclick="A.tab(\'tactic\',\'analyze\')">Editar no analisador</button>'}</div></div>
   <div class="simgrid">
     <div>
@@ -58,14 +58,14 @@ function vSim() {
     </div>
     <div class="grid simside">
       ${fr ? `<div class="panel"><h3>${esc(fr.ipCode)} → ${esc(fr.oopCode)}</h3>
-        ${fRole.map(r => r ? `<p class="small"><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> <b>${esc(r.name)}</b> — ${esc(r.desc)}</p>` : '').join('')}
+        ${fRole.map(r => r ? `<p class="small"><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> <b>${esc(roleName(r))}</b> — ${esc(r.desc)}</p>` : '').join('')}
         ${sim.src === 'demo' ? '' : `<div class="grid g2">
-          <label class="f">Papel com bola${selectHTML(rolesFor(slotInfo(t.ipForm, fr.ipCode).group, 'IP', slotInfo(t.ipForm, fr.ipCode).wideCB).map(r => [r.id, r.name]), fr.ip, `A.simRole('IP',this.value)`)}</label>
-          <label class="f">Papel sem bola${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode).wideCB).map(r => [r.id, r.name]), fr.oop, `A.simRole('OOP',this.value)`)}</label></div>`}
+          <label class="f">Papel com bola${selectHTML(rolesFor(slotInfo(t.ipForm, fr.ipCode).group, 'IP', slotInfo(t.ipForm, fr.ipCode)).map(r => [r.id, roleName(r)]), fr.ip, `A.simRole('IP',this.value)`)}</label>
+          <label class="f">Papel sem bola${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode)).map(r => [r.id, roleName(r)]), fr.oop, `A.simRole('OOP',this.value)`)}</label></div>`}
         <button class="btn sm" onclick="A.simFocus(${sim.focus})">Deixar de seguir</button></div>` : ''}
       <div class="panel grid">
         <h3>Experimente as instruções</h3>
-        <p class="small muted" style="margin:0">Cada mudança redesenha o movimento na hora${sim.src === 'demo' ? ' (só nesta demonstração)' : ' e fica gravada na tática'}.</p>
+        <p class="small muted" style="margin:0">${sim.src === 'demo' ? L('Cada mudança redesenha o movimento na hora (só nesta demonstração).', 'Every change redraws the movement instantly (in this demo only).') : L('Cada mudança redesenha o movimento na hora e fica gravada na tática.', 'Every change redraws the movement instantly and is saved to the tactic.')}</p>
         <label class="f">Mentalidade${selectHTML(MENTALITIES.map(m => [m, m]), t.ment, 'A.simMent(this.value)')}</label>
         ${sim.src === 'demo' ? '' : `<div class="grid g2"><label class="f">Formação com bola${selectHTML(forms, t.ipForm, "A.setForm('IP',this.value)")}</label><label class="f">Sem bola${selectHTML(forms, t.oopForm, "A.setForm('OOP',this.value)")}</label></div>`}
         <details open><summary>Com bola</summary><div class="grid g2" style="margin-top:6px">${['buildup','goal_kicks','passing','tempo','width','support_runs','progress','att_trans'].map(ctl).join('')}</div></details>

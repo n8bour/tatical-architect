@@ -49,7 +49,7 @@ function* generateTacticSteps(players, opts = {}) {
   // ---------- 1. pré-selecção rápida
   const bestPair = (p, a, b) => {
     let best = 0;
-    const ipR = rolesFor(a.group, 'IP', a.wideCB), opR = rolesFor(b.group, 'OOP', b.wideCB);
+    const ipR = rolesFor(a.group, 'IP', a), opR = rolesFor(b.group, 'OOP', b);
     const bi = Math.max(...ipR.map(r => S.rs(p, r))), bo = Math.max(...opR.map(r => S.rs(p, r)));
     best = (bi * 0.55 + bo * 0.45) * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side));
     return best;
@@ -95,7 +95,7 @@ function* generateTacticSteps(players, opts = {}) {
         for (const phase of ['IP', 'OOP']) {
           const key = phase === 'IP' ? 'ip' : 'oop', grp = phase === 'IP' ? a : b;
           let best = s[key], bestV = -1;
-          for (const r of rolesFor(grp.group, phase, grp.wideCB)) { s[key] = r.id; const o = objective(t, pmap).v; if (o > bestV + 1e-9) { bestV = o; best = r.id; } }
+          for (const r of rolesFor(grp.group, phase, grp)) { s[key] = r.id; const o = objective(t, pmap).v; if (o > bestV + 1e-9) { bestV = o; best = r.id; } }
           s[key] = best;
         }
       });

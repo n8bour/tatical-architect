@@ -47,7 +47,7 @@ function vSuggest() {
       <div class="bars" style="max-width:420px">
         ${[['XI', x.xiAvg], ['Estilo', x.fit], ['Profundidade', x.depth], ['Coerência', x.audit.overall]].map(([n, v]) => `<div class="bar"><span>${n}</span><div class="t"><i style="width:${v}%;background:${fitColor(v)}"></i></div><b>${v}</b></div>`).join('')}
       </div>
-      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} como ${esc(ROLE_BY_ID[y.s.ip].name)} (${y.sc})`).join(' · ')}</p>
+      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} como ${esc(roleName(ROLE_BY_ID[y.s.ip]))} (${y.sc})`).join(' · ')}</p>
       <p class="small"><b>Pontos fracos:</b> ${x.weakest.map(y => `${esc(y.p ? y.p.name : '?')} em ${esc(y.s.ipCode)} (${y.sc})`).join(' · ')} — alvo de recrutamento/treino.</p>
       <button class="btn primary sm" onclick="A.useSuggestion(${i})">Abrir no analisador</button></div></div></div>`).join('')}</div>`;
 }
@@ -63,13 +63,13 @@ function vXI() {
   const rows = t.slots.map((s, i) => {
     const a = slotInfo(t.ipForm, s.ipCode), p = pm[s.pid], ri = ROLE_BY_ID[s.ip], ro = ROLE_BY_ID[s.oop];
     const sc = p ? slotScore(p, t, s) : null;
-    const alt = p ? bestRolesForPlayer(p, a.group, 'IP', a.wideCB, 1)[0] : null;
+    const alt = p ? bestRolesForPlayer(p, a.group, 'IP', a, 1)[0] : null;
     const cur = p ? (roleScore(p, ri) || { score: 0 }).score : 0;
     const recs = p ? recommendPIs(p, ri, ro, a.group) : [];
     const b = bs[i];
     return `<tr><td><b>${esc(s.ipCode)}</b></td>
       <td>${p ? `${fitBadge(sc)} <b>${esc(p.name)}</b>${p.age ? ` <span class="muted small">${p.age}a</span>` : ''}` : '<span class="muted">vazio</span>'}
-        <div class="small muted">${esc(ri.name)} / ${esc(ro.name)}${alt && alt.r.id !== ri.id && alt.s >= cur + 5 ? ` · <span style="color:var(--warn)"><span>melhor como</span> ${esc(alt.r.name)} (${alt.s})</span>` : ''}</div></td>
+        <div class="small muted">${esc(roleName(ri))} / ${esc(roleName(ro))}${alt && alt.r.id !== ri.id && alt.s >= cur + 5 ? ` · <span style="color:var(--warn)"><span>melhor como</span> ${esc(roleName(alt.r))} (${alt.s})</span>` : ''}</div></td>
       <td>${recs.map(r => (s.pis || []).includes(r.pi) ? `<span class="chip ip" title="${esc(r.why)}">✓ ${esc(r.pi)}</span>` : `<button class="chip btnchip" title="${esc(r.why)}" onclick="A.applyPI(${i}, '${r.pi.replace(/'/g, "\\'")}')">+ ${esc(r.pi)}</button>`).join('') || '<span class="muted small">—</span>'}</td>
       <td class="small">${b.bench ? `${esc(b.bench.p.name)} ${fitBadge(b.bench.sc)}` : '—'}</td>
       <td class="small">${b.succ ? `${esc(b.succ.p.name)} <span class="muted">${b.succ.p.age}a</span> ${fitBadge(b.succ.sc)}` : '—'}</td></tr>`;

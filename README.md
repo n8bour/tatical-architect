@@ -5,7 +5,7 @@ Analisador tático, campo animado e bíblia de papéis e instruções para o Foo
 ## Como usar (3 passos)
 
 1. **Plantel.** Há duas vias, ambas opcionais e ambas dependentes de uma ferramenta externa gratuita. Os cartões em **Plantel** e **Definições › Integrações** dizem o que cada uma **requer**, têm o link de download e mostram o estado no seu PC.
-   A leitura automática do save vem **desligada** por defeito. Ligue-a no cartão ou use "Ler o save agora".
+   A leitura automática do save e o carregamento automático do F9 vêm **desligados** por defeito. Ligue-os nos cartões, ou use "Ler o save agora" e "Carregar o último F9".
 
    **Plantel, lido do save:**
    - **App instalada:** grave o jogo no FM27 e a app lê o save sozinha (verifica a cada 10 segundos). Na primeira vez é preciso instalar o leitor:
@@ -15,7 +15,7 @@ Analisador tático, campo animado e bíblia de papéis e instruções para o Foo
      Reinicie a app depois de instalar. Na primeira leitura o `uv` descarrega o [fmsave](https://github.com/rhiever/fmsave) e precisa de internet só nessa vez.
    - **Browser:** abra o [fmsave online](https://rhiever.github.io/fmsave/app/), largue lá o seu `.fm` (o save é lido no seu PC e nunca é enviado), descarregue o CSV do plantel e arraste-o para a app.
    - **Alternativa:** carregue em F9 no jogo com o plugin [FM View Exporter](https://github.com/ElectroHugin/FM-View-Exporter). Na app instalada também é automático.
-2. **Tática.** Em **A minha equipa › Gerar tática** a app monta uma tática completa para o plantel. A "Cenas v2" (4-2-4 DM Wide) também vem carregada. Em **Tática › Analisar** clique num jogador para mudar papéis e instruções. **Campo animado** mostra a tática em movimento.
+2. **Tática.** Em **A minha equipa › Gerar tática** a app monta uma tática completa para o plantel. Também pode criar a sua em **Tática › Analisar**. Em **Tática › Analisar** clique num jogador para mudar papéis e instruções. **Campo animado** mostra a tática em movimento.
 3. **Adversário.** Abra o plantel do próximo adversário no FM e carregue **F9**. A app vê que é outro clube e gera o relatório em **A minha equipa › Adversário**. O plano de jogo aplica-se à tática com um clique.
 
 Para levar a tática para o jogo, use **Tática › Ficha para o FM27**. A ficha segue a ordem do ecrã de táticas e tem caixas para ir marcando.
@@ -63,7 +63,10 @@ A ligação passa pelo lado nativo da app, porque o servidor do Tactics Lab recu
 A app abre em **inglês** por defeito. O português escolhe-se no seletor **EN/PT** no fundo do menu, e a escolha fica guardada.
 - **Tradução completa:** cobre a interface, a Bíblia (descrições e dicas dos 77 papéis, instruções, conceitos, treino) e as mensagens do diagnóstico, do gerador, do relatório do adversário, das bolas paradas e do Laboratório.
 - **Gerador:** ao trocar de idioma, as razões do relatório são recalculadas na nova língua.
-- **Teste automático:** `tests/ui_i18n.py` falha o build se algum texto ficar em português com a app em inglês.
+- **Nomes do FM em português:** com a app em português, os papéis, as instruções e as respetivas opções, as mentalidades, as instruções individuais e de adversário, os Tactical Tweaks e as áreas de treino aparecem com nomes portugueses, também dentro das frases. Nos papéis, 34 nomes estão **confirmados no FM26 em português**, a partir de táticas publicadas pelo Salão de Jogos, e estão marcados com ✓ em `src/i18n/pt_terms.js`. Os restantes seguem o mesmo padrão de nomes do jogo. O FM27 pode ter acertos pontuais.
+- **Ficha para o FM27 em português:** por defeito mantém os nomes como aparecem no jogo em inglês, para recriar a tática sem enganos. O botão **Português** mostra-a com os nomes traduzidos.
+- **Pesquisa da Bíblia:** encontra os papéis pelo nome nas duas línguas.
+- **Testes automáticos:** `tests/ui_i18n.py` falha o build se algum texto ficar em português com a app em inglês, incluindo erros e mensagens temporárias. `tests/ui_pt_terms.py` falha se algum termo do FM ficar em inglês com a app em português. `tests/i18n_audit.py` é uma auditoria estática de apoio.
 
 ## Interface
 - **Painéis recolhíveis:** clique no ▾ (ou no título) de qualquer painel para o fechar ou abrir. A app lembra-se do estado em cada ecrã.
@@ -72,6 +75,13 @@ A app abre em **inglês** por defeito. O português escolhe-se no seletor **EN/P
 - **Atividade sempre visível:** tudo o que demora mostra que está a trabalhar. Aparece uma barra fina no topo da janela e um cartão na barra lateral com o que está a acontecer, o tempo decorrido e, quando se sabe, a percentagem. O cartão nunca tapa conteúdo. Os botões dessa tarefa mostram um spinner e ficam bloqueados até acabar. Está ligado à leitura do save (com aviso quando a primeira leitura demora), ao F9, a ficheiros grandes, ao Gerador (progresso par a par), à análise de `.fmf` e ao Laboratório (procurar o servidor, abrir experiências, exportar `.fmf` e jogos a correr no motor).
 - **Testes de interface no GitHub:** `ui_layout.py` corre em inglês completo e numa passagem rápida em português. `ui_busy.py` verifica os indicadores de atividade e `ui_i18n.py` a cobertura de idioma.
 - **Portão de layout:** `tests/ui_layout.py` percorre os 17 ecrãs em 6 larguras e 3 modos (normal, menu recolhido, painéis fechados) com um plantel de 62 jogadores de nomes longos. Corre no GitHub em cada build, e o Release não é publicado se encontrar sobreposições ou erros.
+
+## Papéis disponíveis por posição
+- **Casa exata:** no FM26/27 alguns papéis só existem na casa central de uma linha (DM, MC, AMC, ST) ou só nas casas deslocadas (DML/DMR, MCL/MCR…). A app respeita isto no analisador, no campo animado, no Gerador e nos modelos. Um papel que o jogo não permite naquela casa não aparece na lista e é assinalado como inválido.
+- **Confirmado:**
+  - O Box-To-Box Midfielder e o Box-To-Box Playmaker não existem no médio centro, só na linha de DM.
+  - O Box-To-Box Midfielder só existe no DM deslocado (DML/DMR).
+- **Validação completa:** o catálogo do motor do FM27 (Tactics Lab › Laboratório › "Exportar catálogo do motor") traz a lista exata de papéis por posição. A app tem o ponto de ligação preparado (`ROLE_AVAIL_ENGINE`) para aplicar essa lista a todos os 77 papéis.
 
 ## Limitações
 
