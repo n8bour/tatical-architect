@@ -43,6 +43,7 @@ function vTactic() {
       <div class="panel"><h3>Diagnóstico</h3>
         ${au.findings.map(f => `<div class="finding"><div class="sev ${f.sev}">${{ crit: '!', warn: '▲', info: 'i', good: '✓' }[f.sev]}</div><div><b>${esc(f.title)} <span class="chip">${esc(f.cat)}</span></b><span class="small">${esc(f.text)}</span>${f.fix ? `<div class="fix">→ ${esc(f.fix)}</div>` : ''}</div></div>`).join('')}
       </div>
+      <div class="panel"><h3>${L('Sinergia entre papéis — todas as fases', 'Role synergy — every phase')}</h3>${synergyPanel(t, players())}</div>
     </div>
   </div>
   <div class="panel" style="margin-top:16px">

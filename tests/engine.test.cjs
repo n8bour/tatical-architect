@@ -1,5 +1,5 @@
 const fs=require('fs'), vm=require('vm');
-const code=['i18n/i18n.js','core/roles.js','core/tactics_data.js','core/engine.js','core/insights.js'].map(f=>fs.readFileSync(require('path').join(__dirname,'..','src',f),'utf8')).join('\n;\n');
+const code=['i18n/i18n.js','core/roles.js','core/tactics_data.js','core/engine.js','core/insights.js','core/synergy.js'].map(f=>fs.readFileSync(require('path').join(__dirname,'..','src',f),'utf8')).join('\n;\n');
 const ctx={console}; vm.createContext(ctx); vm.runInContext(code+';this.X={ROLES,ROLE_BY_ID,FORMATIONS,TEMPLATES,TEAM_INSTRUCTIONS,newTactic,matchFormations,tacticFromTemplate,auditTactic,parseSquad,parsePositions,suggestTactics,validRole,slotInfo,retargetTactic,trainingPlan,ATTRS,hungarian,complexityOf,rolesFor,GROUPS};',ctx);
 const X=ctx.X; let fails=0; const ok=(c,m)=>{ if(!c){fails++;console.log('FAIL',m);} };
 // 1. atributos dos papéis existem
@@ -204,5 +204,44 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
   chk(!at('4-3-3 DM Wide','DM').includes('b2b'),'BBM não pode estar no DM central');
   chk(at('4-2-4 DM Wide','DML').includes('b2b'),'BBM tem de estar no DM deslocado');
   console.log('casa exacta: modelos, 77 demonstrações e casos confirmados verificados');
+  if(bad) process.exitCode=1;
+}
+
+// 18. sinergia ofensiva: o gerador com sinergia cria mais ligações e mais presença na área, sem sacrificar a adequação
+{
+  const c9={console,Math,performance}; vm.createContext(c9);
+  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','generator.js'),'utf8')+';this.S={generateTactic,parseSquad,synergyReport};',c9);
+  const S=c9.S, rd=f=>fs.readFileSync(require('path').join(__dirname,'fixtures',f),'utf8');
+  let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  let dSyn=0, dFit=0, dBox=0, n=0;
+  for (const f of ['fmsave_players.csv','squad_en.csv','squad_de.csv']) for (const ex of ['title','low']) {
+    const ps=S.parseSquad(rd(f)).players;
+    const a=S.generateTactic(ps,{expect:ex,synergy:0}).main, b=S.generateTactic(ps,{expect:ex}).main;
+    const sa=S.synergyReport(a.t,ps), sb=S.synergyReport(b.t,ps);
+    chk(sb.score>=sa.score,'sinergia não pode piorar '+f+' '+ex+': '+sa.score+' → '+sb.score);
+    chk(sb.phases.def.score>=sa.phases.def.score-4,'a defesa não pode ser sacrificada '+f+' '+ex+': '+sa.phases.def.score+' → '+sb.phases.def.score);
+    chk(b.fitAvg>=a.fitAvg-3,'adequação não pode cair mais de 3 '+f+' '+ex);
+    chk(sb.boxN>=3,'pelo menos 3 jogadores a chegar à área '+f+' '+ex+': '+sb.boxN);
+    chk(sb.creators>=1 && sb.creators<=3,'1 a 3 criativos '+f+' '+ex);
+    dSyn+=sb.score-sa.score; dFit+=b.fitAvg-a.fitAvg; dBox+=sb.boxN-sa.boxN; n++;
+  }
+  console.log(`sinergia: +${(dSyn/n).toFixed(1)} sinergia, ${(dFit/n>=0?'+':'')}${(dFit/n).toFixed(1)} adequação, +${(dBox/n).toFixed(1)} jogadores na área (média de ${n} casos)`);
+  if(bad) process.exitCode=1;
+}
+
+// 19. sinergia defensiva: casos de manual
+{
+  const c10={console,Math}; vm.createContext(c10);
+  vm.runInContext(code+';this.D={newTactic,synergyReport,ROLE_BY_ID};',c10);
+  const D=c10.D; let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  const mk=(roles)=>{ const t=D.newTactic('4-3-3 DM Wide','4-1-4-1 DM Wide'); t.slots.forEach(s=>{ if(roles[s.oopCode]) s.oop=roles[s.oopCode]; }); return t; };
+  const base=D.synergyReport(mk({}),[]);
+  const stopCover=D.synergyReport(mk({DCL:'scb',DCR:'ccb'}),[]), twoStop=D.synergyReport(mk({DCL:'scb',DCR:'scb'}),[]);
+  chk(stopCover.phases.def.parts.cb===100,'Central de Antecipação + Central de Cobertura = dupla ideal');
+  chk(twoStop.phases.def.parts.cb<50 && twoStop.issues.some(i=>i.k==='cb'),'dois centrais a sair = problema');
+  chk(!stopCover.issues.some(i=>i.k==='press' && /scb|SCD/.test(i.t)),'o central que sai está coberto pelo do lado');
+  const noScreen=D.synergyReport(mk({DM:'pdm',MCL:'pcm',MCR:'pcm'}),[]);
+  chk(noScreen.phases.def.parts.screen<50 && noScreen.issues.some(i=>i.k==='screen'),'meio-campo todo a pressionar = sem proteção à frente dos centrais');
+  console.log('sinergia defensiva: casos de manual verificados');
   if(bad) process.exitCode=1;
 }

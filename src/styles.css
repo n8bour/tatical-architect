@@ -285,3 +285,16 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
 .clip-pair .clip{margin:0}.clip-pair .clip-box{max-width:none}
 tr.cliprow td{background:var(--panel2)}
 .btn.ghost{background:transparent}
+
+/* ---------- sinergia ofensiva ---------- */
+.syn-top{display:flex;gap:14px;align-items:center}
+.syn-map{width:100%;height:auto;display:block;border-radius:10px}
+.syn-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;color:var(--muted)}
+.syn-legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.bar-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 28px;gap:8px;align-items:center;margin:5px 0;font-size:12.5px}
+.bar-row .bar{height:7px;background:var(--panel2);border-radius:6px;overflow:hidden}.bar-row .bar i{display:block;height:100%}
+.bar-row b{text-align:right}
+
+.syn-phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:12px}
+.syn-phase{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);min-width:0}
+.syn-score{font-size:20px;font-weight:800}

@@ -25,7 +25,7 @@ function vGen() {
     <div class="row"><button class="btn primary" onclick="A.genUse()">Usar esta tática</button><button class="btn" onclick="A.genUse(true)">▶ Ver em campo</button><button class="btn" onclick="A.genCopy()">Copiar como texto</button></div></div>
   <div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">
     <div class="grid">${opts}
-      <div class="panel"><h3>Opções geradas</h3>${all.map((x, i) => `<button class="genopt ${i === g.pick ? 'on' : ''}" onclick="A.genPick(${i})"><b>${i === 0 ? 'Recomendada' : 'Alternativa ' + i}</b><span>${esc(x.t.ipForm)} → ${esc(x.t.oopForm)}</span><span class="small muted">adequação ${x.fitAvg} · equilíbrio ${x.balance} · diagnóstico ${x.audit.overall}</span>${ring(x.total, 46)}</button>`).join('')}</div>
+      <div class="panel"><h3>Opções geradas</h3>${all.map((x, i) => `<button class="genopt ${i === g.pick ? 'on' : ''}" onclick="A.genPick(${i})"><b>${i === 0 ? 'Recomendada' : 'Alternativa ' + i}</b><span>${esc(x.t.ipForm)} → ${esc(x.t.oopForm)}</span><span class="small muted">${L(`adequação ${x.fitAvg} · sinergia ${x.syn ?? '—'} · diagnóstico ${x.audit.overall}`, `fit ${x.fitAvg} · synergy ${x.syn ?? '—'} · diagnosis ${x.audit.overall}`)}</span>${ring(x.total, 46)}</button>`).join('')}</div>
     </div>
     <div class="grid">
       ${sec(1, 'Estilo e mentalidade', `<p><b>Style:</b> Clean Slate · <b>Mentality:</b> ${esc(t.ment)}</p><p class="small muted">${esc(r.mentWhy)}</p>`)}
@@ -33,19 +33,20 @@ function vGen() {
         <div class="table-wrap" style="margin-top:10px;max-height:none"><table><thead><tr><th>Pos</th><th>Jogador</th><th>In Possession</th><th>Out of Possession</th><th>Adequação</th></tr></thead><tbody>
         ${t.slots.map(s => { const p = pm[s.pid]; return `<tr><td><b>${esc(s.ipCode)}</b>${s.oopCode !== s.ipCode ? ` <span class="muted small">→ ${esc(s.oopCode)}</span>` : ''}</td><td>${p ? esc(p.name) : '—'}${p && g.youth.includes(p.id) ? ' <span class="chip new">jovem</span>' : ''}${p && g.star === p.id ? ' <span class="chip new">estrela</span>' : ''}</td><td>${esc(roleName(ROLE_BY_ID[s.ip]))}</td><td>${esc(roleName(ROLE_BY_ID[s.oop]))}</td><td>${fitBadge(p ? slotScore(p, t, s) : null)}</td></tr>`; }).join('')}
         </tbody></table></div>`)}
-      ${sec(3, 'Instruções de equipa', FM_SECTIONS.map(([n, keys]) => `<h4 style="margin:10px 0 4px">${esc(n)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k], v = tiVal(t, k), ch = v !== d.def;
+      ${sec(3, L('Sinergia entre papéis — todas as fases', 'Role synergy — every phase'), synergyPanel(t, ps, { labHint: true }))}
+      ${sec(4, 'Instruções de equipa', FM_SECTIONS.map(([n, keys]) => `<h4 style="margin:10px 0 4px">${esc(n)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k], v = tiVal(t, k), ch = v !== d.def;
           return `<tr class="${ch ? '' : 'dim'}"><td style="width:34%">${esc(d.n)}</td><td style="width:22%">${ch ? `<b>${esc(d.opts[v])}</b>` : esc(d.opts[v])}</td><td class="small muted">${esc(r.reasons[k] || '')}</td></tr>`; }).join('')}</tbody></table>`).join(''))}
-      ${sec(4, 'Instruções individuais', pis.length ? `<table><tbody>${pis.map(x => `<tr><td><b>${esc(x.s.ipCode)}</b> ${esc(x.p.name)}</td><td>${x.rec.map(r2 => `<span class="chip" title="${esc(r2.why)}">${esc(r2.pi)}</span>`).join('')}</td><td class="small muted">${esc(x.rec[0].why)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">Nenhum atributo pede instruções individuais.</p>')}
-      ${sp ? sec(5, 'Bolas paradas e capitães', `<div class="grid g2"><table><tbody>
+      ${sec(5, 'Instruções individuais', pis.length ? `<table><tbody>${pis.map(x => `<tr><td><b>${esc(x.s.ipCode)}</b> ${esc(x.p.name)}</td><td>${x.rec.map(r2 => `<span class="chip" title="${esc(r2.why)}">${esc(r2.pi)}</span>`).join('')}</td><td class="small muted">${esc(x.rec[0].why)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">Nenhum atributo pede instruções individuais.</p>')}
+      ${sp ? sec(6, 'Bolas paradas e capitães', `<div class="grid g2"><table><tbody>
           <tr><td>Capitão</td><td><b>${esc(sp.caps[0].p.name)}</b></td></tr><tr><td>Vice-capitão</td><td><b>${esc(sp.caps[1].p.name)}</b></td></tr>
           <tr><td>Cantos (dir./esq.)</td><td><b>${esc(sp.corners.right.x.p.name)}</b> / <b>${esc(sp.corners.left.x.p.name)}</b></td></tr>
           <tr><td>Livres</td><td><b>${esc((sp.fk.direct || sp.fk.cross).p.name)}</b>${sp.fk.direct ? ' (directos)' : ' (cruzar)'}</td></tr>
           <tr><td>Penáltis</td><td>${sp.pens.map(x => esc(x.p.name)).join(' → ')}</td></tr></tbody></table>
           <table><tbody>${sp.attack.filter(x => ['far', 'centre', 'near'].includes(x.k)).map(x => `<tr><td><span>Alvo aéreo</span> — ${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td></tr>`).join('')}</tbody></table></div>
           <button class="btn sm" onclick="A.genUse(false,'setpieces')">Ver diagramas dos cantos</button>`) : ''}
-      ${sec(6, 'Profundidade por posição', `<div class="depth">${dc.map(d => `<div><b>${esc(d.code)}</b>${d.list.map((x, i) => `<div class="small">${i + 1}. ${esc(x.p.name)} ${fitBadge(x.sc)}</div>`).join('')}</div>`).join('')}</div>`)}
-      ${sec(7, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(roleName(w.role))}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}
-      ${sec(8, 'Treino', `<ol class="clean small">${tp.areas.slice(0, 4).map(a => `<li><b>${esc(TRAINING.areas[a.k].n)}</b> — ${esc([...new Set(a.why)][0])}</li>`).join('')}</ol><button class="btn sm" onclick="A.genUse(false,'training')">Plano de treino completo</button>`)}
+      ${sec(7, 'Profundidade por posição', `<div class="depth">${dc.map(d => `<div><b>${esc(d.code)}</b>${d.list.map((x, i) => `<div class="small">${i + 1}. ${esc(x.p.name)} ${fitBadge(x.sc)}</div>`).join('')}</div>`).join('')}</div>`)}
+      ${sec(8, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(roleName(w.role))}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}
+      ${sec(9, 'Treino', `<ol class="clean small">${tp.areas.slice(0, 4).map(a => `<li><b>${esc(TRAINING.areas[a.k].n)}</b> — ${esc([...new Set(a.why)][0])}</li>`).join('')}</ol><button class="btn sm" onclick="A.genUse(false,'training')">Plano de treino completo</button>`)}
     </div>
   </div>`;
 }

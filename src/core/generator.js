@@ -39,6 +39,8 @@ function makeScorer(players) {
 // Corre por passos: cada yield devolve o progresso; o valor final é o resultado.
 function* generateTacticSteps(players, opts = {}) {
   const exp = EXPECT[opts.expect] || EXPECT.mid;
+  // pesos da nota de cada candidata: adequação de cada jogador, sinergia entre papéis, equilíbrio estrutural
+  const W_SYN = opts.synergy === 0 ? 0 : 0.30, W_FIT = opts.synergy === 0 ? 0.72 : 0.55, W_BAL = opts.synergy === 0 ? 0.28 : 0.15;
   const must = new Set(opts.must || []), youth = new Set(opts.youth || []), star = opts.star || null;
   if (players.length < 11) return null;
   yield { done: 0, total: 1, label: L('A avaliar todos os pares de formações', 'Evaluating every pair of formations') };
@@ -74,7 +76,9 @@ function* generateTacticSteps(players, opts = {}) {
     const fitAvg = wsum ? sum / wsum : 0;
     const au = auditTactic(t, []);
     const ipS = au.scores.IP, oopS = au.scores.OOP;
-    return { v: fitAvg * 0.72 + ((ipS + oopS) / 2) * 0.28, fitAvg, au };
+    // sinergia: quem serve quem, com os atributos dos jogadores escolhidos (opts.synergy = 0 desliga, para comparação)
+    const syn = W_SYN > 0 ? synergyReport(t, players).score : 0;
+    return { v: fitAvg * W_FIT + syn * W_SYN + ((ipS + oopS) / 2) * W_BAL, fitAvg, au, syn };
   };
   const assign = (t) => {
     const cost = t.slots.map(s => { const a = slotInfo(t.ipForm, s.ipCode), b = slotInfo(t.oopForm, s.oopCode), ri = ROLE_BY_ID[s.ip], ro = ROLE_BY_ID[s.oop];
@@ -102,7 +106,7 @@ function* generateTacticSteps(players, opts = {}) {
       assign(t);
     }
     const o = objective(t, pmap);
-    return { t, pair: pr, fitAvg: Math.round(o.fitAvg), balance: Math.round((o.au.scores.IP + o.au.scores.OOP) / 2), v: o.v };
+    return { t, pair: pr, fitAvg: Math.round(o.fitAvg), balance: Math.round((o.au.scores.IP + o.au.scores.OOP) / 2), syn: Math.round(o.syn), v: o.v };
   };
   const results = [];
   for (let k = 0; k < shortlist.length; k++) {
@@ -114,7 +118,8 @@ function* generateTacticSteps(players, opts = {}) {
 
   // ---------- 3. instruções de equipa com razão, para cada resultado
   results.forEach(r => { const g = generateTIs(r.t, players, exp); r.t.ti = g.ti; r.reasons = g.reasons; r.t.ment = g.ment; r.mentWhy = g.mentWhy;
-    r.audit = auditTactic(r.t, players); r.total = Math.round(r.fitAvg * 0.6 + r.audit.overall * 0.4); });
+    r.audit = auditTactic(r.t, players); r.synergy = synergyReport(r.t, players); r.syn = r.synergy.score;
+    r.total = Math.round(r.fitAvg * 0.45 + r.synergy.score * 0.30 + r.audit.overall * 0.25); });
   results.sort((a, b) => b.total - a.total);
   // alternativas com formação com bola diferente da recomendada
   const main = results[0], alts = [], seen = new Set([main.t.ipForm]);

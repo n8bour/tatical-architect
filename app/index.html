@@ -294,6 +294,19 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
 tr.cliprow td{background:var(--panel2)}
 .btn.ghost{background:transparent}
 
+/* ---------- sinergia ofensiva ---------- */
+.syn-top{display:flex;gap:14px;align-items:center}
+.syn-map{width:100%;height:auto;display:block;border-radius:10px}
+.syn-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;color:var(--muted)}
+.syn-legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.bar-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 28px;gap:8px;align-items:center;margin:5px 0;font-size:12.5px}
+.bar-row .bar{height:7px;background:var(--panel2);border-radius:6px;overflow:hidden}.bar-row .bar i{display:block;height:100%}
+.bar-row b{text-align:right}
+
+.syn-phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:12px}
+.syn-phase{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);min-width:0}
+.syn-score{font-size:20px;font-weight:800}
+
 </style>
 </head>
 <body>
@@ -1852,6 +1865,277 @@ function setPiecePlan(t, players, oppList) {
 }
 
 ;
+// ---- core/synergy.js
+// ============================================================
+// Sinergia ofensiva: quem serve quem, com os atributos reais.
+// Não basta cada jogador estar no seu melhor papel — as oportunidades
+// nascem de ligações: criador → finalizador, cruzador → alvo,
+// avançado que baixa → quem ataca o espaço, extremo por dentro ↔ lateral por fora.
+// Devolve 0–100 por componente, as ligações principais e os problemas com a correcção.
+// ============================================================
+const SYN_W = { chain: 0.30, cross: 0.15, front: 0.12, box: 0.15, flank: 0.16, load: 0.12 };
+const SYN_PHASE_W = { build: 0.15, att: 0.40, def: 0.30, trans: 0.15 };
+
+function synergyAttack(t, players) {
+  const pm = Object.fromEntries((players || []).map(p => [p.id, p]));
+  const a = (p, k) => (p && p.a && p.a[k] != null ? p.a[k] : 10);
+  const q = (p, ks) => ks.reduce((s, k) => s + a(p, k), 0) / ks.length / 20;          // 0–1
+  const Q = {
+    create: (p) => q(p, ['pas', 'vis', 'tec', 'dec', 'fir']),
+    run: (p) => q(p, ['otb', 'acc', 'pac', 'ant']),
+    finish: (p) => q(p, ['fin', 'cmp', 'otb', 'ant']),
+    air: (p) => q(p, ['hea', 'jum', 'str', 'bra']),
+    cross: (p) => q(p, ['cro', 'tec', 'dec']),
+    dribble: (p) => q(p, ['dri', 'agi', 'acc', 'fla']),
+  };
+  // jogadores com o papel com bola e a posição
+  const X = t.slots.map(s => {
+    const r = ROLE_BY_ID[s.ip], si = slotInfo(t.ipForm, s.ipCode), p = pm[s.pid];
+    return r && si ? { s, r, si, p, tag: (k) => r.tags.includes(k), code: s.ipCode } : null;
+  }).filter(Boolean);
+  const out = X.filter(x => x.si.group !== 'GK');
+  const lane = (x) => (x.si.x < 38 ? 'L' : x.si.x > 62 ? 'R' : 'C');
+  const sameLane = (c, r) => lane(c) === 'C' || lane(r) === 'C' || lane(c) === lane(r);
+  const label = (x) => `${x.r.ab} ${x.p ? surname(x.p.name) : x.code}`;
+  const links = [], issues = [];
+  const pct = (v) => Math.max(0, Math.min(100, Math.round(v * 100)));
+
+  // ---- 1. criador → finalizador (criativos de meio-campo e ataque; construtores de trás não contam aqui)
+  const creators = out.filter(x => x.tag('CR') && !['DC', 'GK'].includes(x.si.group));
+  const receivers = out.filter(x => x.tag('RUN') || x.tag('BOX'));
+  const chains = [];
+  creators.forEach(c => {
+    const opts = receivers.filter(r => r !== c && r.si.y >= c.si.y - 4 && sameLane(c, r))
+      .map(r => ({ r, v: Math.sqrt(Q.create(c.p) * Math.max(Q.run(r.p), Q.finish(r.p))) }))
+      .sort((m, n) => n.v - m.v);
+    if (opts[0]) { chains.push(opts[0].v); links.push({ type: 'chain', from: c, to: opts[0].r, v: opts[0].v,
+      why: L(`${label(c)} serve ${label(opts[0].r)}`, `${label(c)} feeds ${label(opts[0].r)}`) }); }
+    else issues.push({ k: 'chain', t: L(`${label(c)} não tem ninguém à frente a atacar o espaço no seu corredor.`, `${label(c)} has nobody ahead attacking the space in his channel.`),
+      fix: L('Ponha um Avançado Interior, Channel Midfielder ou Segundo Avançado à frente dele.', 'Put an Inside Forward, Channel Midfielder or Second Striker ahead of him.') });
+  });
+  chains.sort((m, n) => n - m);
+  let chain = chains.length ? chains.slice(0, 3).reduce((s, v) => s + v, 0) / Math.min(3, chains.length) : 0;
+  if (chains.length === 1) chain *= 0.8;
+  // todos a servir o mesmo jogador é previsível: o adversário anula-o e a criação pára
+  const chainLinks = links.filter(l => l.type === 'chain'), distinct = new Set(chainLinks.map(l => l.to)).size;
+  if (chainLinks.length >= 2 && distinct === 1) {
+    chain *= 0.8;
+    issues.push({ k: 'chain', t: L(`Todos os criativos servem o mesmo jogador (${label(chainLinks[0].to)}): previsível e fácil de anular.`, `Every creator feeds the same player (${label(chainLinks[0].to)}): predictable and easy to shut down.`),
+      fix: L('Dê um segundo alvo em movimento: Avançado Interior no outro flanco, Channel Midfielder ou Segundo Avançado.', 'Give them a second moving target: an Inside Forward on the other flank, a Channel Midfielder or a Second Striker.') });
+  }
+  if (!creators.length) issues.push({ k: 'chain', t: L('Ninguém cria no meio-campo ou no ataque.', 'Nobody creates in midfield or attack.'),
+    fix: L('Um Construtor de Jogo (DLP, AP, MP) ou um Extremo Construtor dá a primeira peça da ligação.', 'A playmaker (DLP, AP, MP) or a Playmaking Winger provides the first link.') });
+  if (!receivers.length) issues.push({ k: 'chain', t: L('Ninguém ataca o espaço nem a área.', 'Nobody attacks the space or the box.'),
+    fix: L('Avançado Interior, Avançado de Corredor, Ponta-de-Lança Fixo ou Médio Área-a-Área.', 'Inside Forward, Channel Forward, Poacher or Box-to-Box Midfielder.') });
+
+  // ---- 2. cruzamentos → alvos
+  const wides = out.filter(x => x.tag('W') && x.si.side !== 'C' && x.si.group !== 'DC');
+  const targets = out.filter(x => x.tag('BOX') && ['ST', 'AMC', 'MC'].includes(x.si.group));
+  const bestTarget = targets.map(x => ({ x, v: Math.max(Q.air(x.p), Q.finish(x.p) * 0.9) })).sort((m, n) => n.v - m.v)[0];
+  let cross = 0;
+  if (wides.length && bestTarget) {
+    const bestW = wides.map(x => ({ x, v: Q.cross(x.p) })).sort((m, n) => n.v - m.v)[0];
+    cross = Math.sqrt(bestW.v * bestTarget.v) * Math.min(1, 0.55 + 0.25 * targets.length);
+    links.push({ type: 'cross', from: bestW.x, to: bestTarget.x, v: cross, why: L(`${label(bestW.x)} cruza para ${label(bestTarget.x)}`, `${label(bestW.x)} crosses for ${label(bestTarget.x)}`) });
+    if (Q.cross(bestW.x.p) < 0.55) issues.push({ k: 'cross', t: L(`Quem dá largura cruza mal (${label(bestW.x)}).`, `The width providers cross poorly (${label(bestW.x)}).`), fix: L('Low Crosses, ou um ala/extremo com melhores Cruzamentos.', 'Low Crosses, or a wide player with better Crossing.') });
+  } else if (wides.length && !bestTarget) {
+    issues.push({ k: 'cross', t: L('Há largura mas ninguém ataca a área para os cruzamentos.', 'There is width but nobody attacks the box for crosses.'), fix: L('Ponta-de-Lança, Avançado de Referência ou um médio que chegue à área.', 'A Centre Forward, Target Forward or a midfielder who arrives in the box.') });
+  }
+
+  // ---- 3. dupla / referência da frente
+  const sts = out.filter(x => x.si.group === 'ST');
+  let front = 0.6;
+  if (sts.length >= 2) {
+    const drop = sts.filter(x => x.tag('DROP') || x.tag('AIR')), run = sts.filter(x => x.tag('RUN') && !x.tag('DROP'));
+    const complete = sts.filter(x => x.tag('LINK') && x.tag('BOX') && !x.tag('DROP') && !x.tag('AIR'));
+    if (!drop.length && complete.length && run.length && complete[0] !== run[0]) { front = 0.82; links.push({ type: 'front', from: complete[0], to: run[0], v: front, why: L(`${label(complete[0])} segura e ${label(run[0])} ataca a profundidade`, `${label(complete[0])} holds it up and ${label(run[0])} runs in behind`) }); }
+    else if (drop.length && run.length && drop[0] !== run[0]) { front = 0.9 + 0.1 * Math.min(Q.run(run[0].p), 1); links.push({ type: 'front', from: drop[0], to: run[0], v: front, why: L(`${label(drop[0])} baixa e abre espaço para ${label(run[0])}`, `${label(drop[0])} drops and opens space for ${label(run[0])}`) }); }
+    else { front = 0.45; issues.push({ k: 'front', t: L('Os dois avançados têm o mesmo perfil e ocupam o mesmo espaço.', 'Both strikers have the same profile and occupy the same space.'), fix: L('Um que baixe (Avançado Recuado, Avançado de Referência) e outro que ataque o espaço (Avançado de Corredor, Ponta-de-Lança Fixo).', 'One who drops (Deep-Lying Forward, Target Forward) and one who runs in behind (Channel Forward, Poacher).') }); }
+  } else if (sts.length === 1) {
+    const st = sts[0];
+    if (st.tag('DROP')) {
+      const beyond = out.filter(x => x !== st && (x.tag('RUN') || (x.tag('BOX') && x.si.group !== 'ST')) && x.si.y >= 55);
+      front = Math.min(1, 0.4 + 0.25 * beyond.length);
+      if (beyond.length < 2) issues.push({ k: 'front', t: L(`${label(st)} baixa, mas quase ninguém ataca o espaço que ele abre.`, `${label(st)} drops, but hardly anyone attacks the space he opens.`), fix: L('Dois corredores por trás dele: Avançado Interior, Channel Midfielder ou Segundo Avançado.', 'Two runners behind him: Inside Forward, Channel Midfielder or Second Striker.') });
+      else links.push({ type: 'front', from: st, to: beyond[0], v: front, why: L(`${label(st)} baixa e ${label(beyond[0])} ataca o espaço`, `${label(st)} drops and ${label(beyond[0])} attacks the space`) });
+    } else front = 0.55 + 0.35 * Math.max(Q.finish(st.p), Q.run(st.p));
+  } else front = 0.35;
+
+  // ---- 4. presença na área (3–4 é o ideal)
+  const boxN = out.filter(x => x.tag('BOX') || (x.tag('IN') && x.tag('RUN'))).length;
+  const box = { 0: 0, 1: 0.15, 2: 0.45, 3: 0.85, 4: 1, 5: 0.85 }[boxN] ?? 0.6;
+  if (boxN <= 2) issues.push({ k: 'box', t: L(`Só ${boxN} jogador(es) chegam à área: poucas finalizações.`, `Only ${boxN} player(s) arrive in the box: few shots.`), fix: L('Troque um papel de apoio por Avançado Interior, Channel Midfielder ou Médio Área-a-Área.', 'Swap a support role for an Inside Forward, Channel Midfielder or Box-to-Box Midfielder.') });
+
+  // ---- 5. combinações de flanco
+  let flank = 0, fl = 0;
+  ['L', 'R'].forEach(side => {
+    const att = out.filter(x => x.si.side === side && ['AM_LR', 'M_LR'].includes(x.si.group));
+    const back = out.filter(x => x.si.side === side && ['D_LR', 'WB_LR'].includes(x.si.group));
+    if (!att.length && !back.length) return;
+    fl++;
+    const aIn = att.some(x => x.tag('IN')), aW = att.some(x => x.tag('W')), bW = back.some(x => x.tag('W') || x.tag('ADV')), bIn = back.some(x => x.tag('IN') || x.tag('RD'));
+    const nm = side === 'L' ? L('esquerdo', 'left') : L('direito', 'right');
+    if (aIn && bW) { flank += 1; const f = back.find(x => x.tag('W') || x.tag('ADV')), g = att.find(x => x.tag('IN')); links.push({ type: 'flank', from: f, to: g, v: 1, why: L(`Flanco ${nm}: ${label(f)} por fora, ${label(g)} por dentro`, `${side === 'L' ? 'Left' : 'Right'} flank: ${label(f)} outside, ${label(g)} inside`) }); }
+    else if (aW && bIn) flank += 0.9;
+    else if (aW && bW) { flank += 0.45; issues.push({ k: 'flank', t: L(`Flanco ${nm}: dois jogadores abertos no mesmo corredor.`, `${side === 'L' ? 'Left' : 'Right'} flank: two wide players in the same channel.`), fix: L('Um deles por dentro (Extremo de Apoio Interior / Ala Invertido) ou Supporting Runs em Underlap.', 'One of them inside (Inside Winger / Inside Wing-Back) or Supporting Runs set to Underlap.') }); }
+    else if (aIn && bIn) { flank += 0.35; issues.push({ k: 'flank', t: L(`Flanco ${nm}: ninguém dá largura.`, `${side === 'L' ? 'Left' : 'Right'} flank: nobody provides width.`), fix: L('Lateral/ala por fora (Wing-Back, Ala Projetado) ou um Extremo aberto.', 'A full-back/wing-back outside (Wing-Back, Advanced Wing-Back) or a wide Winger.') }); }
+    else flank += 0.7;
+  });
+  flank = fl ? flank / fl : 0.6;
+
+  // ---- 6. carga criativa
+  const nCr = creators.length;
+  const load = { 0: 0, 1: 0.65, 2: 1, 3: 0.9 }[nCr] ?? 0.5;
+  if (nCr === 1) issues.push({ k: 'load', t: L(`Só ${label(creators[0])} cria: se for anulado, a equipa deixa de criar.`, `Only ${label(creators[0])} creates: if he is shut down, the team stops creating.`), fix: L('Um segundo criativo noutra zona (Construtor de Jogo Recuado atrás, ou Extremo Construtor numa ala).', 'A second creator in another zone (a Deep-Lying Playmaker behind, or a Playmaking Winger out wide).') });
+  if (nCr > 3) issues.push({ k: 'load', t: L(`${nCr} criativos pedem todos a bola; falta quem a receba em movimento.`, `${nCr} creators all want the ball; nobody receives it on the move.`), fix: L('Troque um criativo por um papel de movimento (corredor/finalizador).', 'Swap one creator for a movement role (runner/finisher).') });
+
+  // ameaça individual (bónus pequeno): o melhor driblador da frente
+  const drib = Math.max(0, ...out.filter(x => ['AM_LR', 'AMC', 'ST', 'M_LR'].includes(x.si.group)).map(x => Q.dribble(x.p)));
+  const parts = { chain: pct(chain), cross: pct(cross), front: pct(front), box: pct(box), flank: pct(flank), load: pct(load) };
+  let score = Object.entries(SYN_W).reduce((s, [k, w]) => s + parts[k] * w, 0);
+  score = Math.round(Math.min(100, score * 0.95 + drib * 100 * 0.05));
+  links.sort((m, n) => n.v - m.v);
+  links.forEach(l => l.phase = 'att'); issues.forEach(i => i.phase = 'att');
+  return { score, parts, links: links.slice(0, 8), issues, creators: nCr, boxN };
+}
+const SYN_NAMES_ATT = () => ({ chain: L('Criador → finalizador', 'Creator → finisher'), cross: L('Cruzamentos → alvos', 'Crosses → targets'), front: L('Dupla / referência da frente', 'Front line partnership'),
+  box: L('Presença na área', 'Box presence'), flank: L('Combinações de flanco', 'Flank combinations'), load: L('Carga criativa', 'Creative load') });
+
+// ============================================================
+// Construção, defesa e transições — as sinergias das outras fases
+// ============================================================
+function synergyReport(t, players) {
+  const pm = Object.fromEntries((players || []).map(p => [p.id, p]));
+  const a = (p, k) => (p && p.a && p.a[k] != null ? p.a[k] : 10);
+  const q = (p, ks) => ks.reduce((s, k) => s + a(p, k), 0) / ks.length / 20;
+  const pct = (v) => Math.max(0, Math.min(100, Math.round(v * 100)));
+  const IPX = t.slots.map(s => { const r = ROLE_BY_ID[s.ip], si = slotInfo(t.ipForm, s.ipCode); return r && si ? { s, r, si, p: pm[s.pid], code: s.ipCode, tag: (k) => r.tags.includes(k) } : null; }).filter(Boolean);
+  const OOX = t.slots.map(s => { const r = ROLE_BY_ID[s.oop], si = slotInfo(t.oopForm, s.oopCode); return r && si ? { s, r, si, p: pm[s.pid], code: s.oopCode, tag: (k) => r.tags.includes(k) } : null; }).filter(Boolean);
+  const label = (x) => `${x.r.ab} ${x.p ? surname(x.p.name) : x.code}`;
+  const sideName = (side) => side === 'L' ? L('esquerdo', 'left') : L('direito', 'right');
+  const ti = (k) => tiVal(t, k);
+
+  // ---------------- ATAQUE (modelo anterior)
+  const att = synergyAttack(t, players);
+
+  // ---------------- CONSTRUÇÃO
+  const bIss = [], bLinks = [];
+  const back = IPX.filter(x => ['GK', 'DC'].includes(x.si.group) || x.tag('TOCB'));
+  const recv = IPX.filter(x => ['DM', 'MC'].includes(x.si.group) || x.tag('TODM') || x.tag('IN') && ['D_LR', 'WB_LR'].includes(x.si.group));
+  const passQ = (p) => q(p, ['pas', 'fir', 'cmp', 'dec']);
+  const bestBack = back.map(x => ({ x, v: passQ(x.p) * (x.tag('CR') ? 1.05 : 1) })).sort((m, n) => n.v - m.v)[0];
+  const bestRecv = recv.map(x => ({ x, v: q(x.p, ['fir', 'pas', 'cmp', 'ant', 'dec']) })).sort((m, n) => n.v - m.v)[0];
+  let bShort = bestBack && bestRecv ? Math.sqrt(bestBack.v * bestRecv.v) : 0.3;
+  if (bestBack && bestRecv) bLinks.push({ type: 'build', from: bestBack.x, to: bestRecv.x, v: bShort, phase: 'build', why: L(`${label(bestBack.x)} sai a jogar para ${label(bestRecv.x)}`, `${label(bestBack.x)} plays out to ${label(bestRecv.x)}`) });
+  const supportN = IPX.filter(x => x.tag('TODM') || x.tag('TOCB') || x.tag('DROP') && x.si.group === 'DM' || x.si.group === 'DM').length;
+  const bSupport = { 0: 0.3, 1: 0.75, 2: 1, 3: 1 }[supportN] ?? 0.85;
+  if (supportN === 0) bIss.push({ k: 'build', phase: 'build', t: L('Ninguém se oferece entre linhas na saída de bola: os centrais ficam sem linha de passe.', 'Nobody offers himself between the lines in the build-up: the centre-backs have no passing option.'), fix: L('Um Médio Defensivo, Construtor de Jogo Recuado ou um lateral que feche por dentro (Lateral Invertido / Ala Invertido).', 'A Defensive Midfielder, Deep-Lying Playmaker or a full-back who tucks inside (Inside Full-Back / Inside Wing-Back).') });
+  const firstLine = IPX.filter(x => ['GK', 'DC', 'DM'].includes(x.si.group));
+  const resist = firstLine.length ? firstLine.reduce((s, x) => s + q(x.p, ['fir', 'cmp', 'pas', 'dec']), 0) / firstLine.length : 0.5;
+  const through = ti('buildup') === 0, bypass = ti('buildup') === 2 || ti('goal_kicks') === 2;
+  let bLong = 0.7;
+  if (bypass) {
+    const tgt = IPX.filter(x => x.si.group === 'ST').map(x => ({ x, v: q(x.p, ['hea', 'jum', 'str', 'bra']) * (x.tag('AIR') ? 1.08 : 1) })).sort((m, n) => n.v - m.v)[0];
+    bLong = tgt ? Math.min(1, tgt.v) : 0.2;
+    if (!tgt || tgt.v < 0.6) bIss.push({ k: 'build', phase: 'build', t: L('Saltar a pressão com bola longa, mas sem uma referência forte no ar.', 'Bypassing the press with long balls, but without a strong aerial target.'), fix: L('Avançado de Referência na frente, ou sair a jogar curto.', 'A Target Forward up front, or play out short.') });
+  }
+  if (through && resist < 0.62) bIss.push({ k: 'build', phase: 'build', t: L(`Sair a jogar contra a pressão com uma primeira linha pouco resistente (${Math.round(resist * 20 * 10) / 10}).`, `Playing through the press with a first line that is not press-resistant (${Math.round(resist * 20 * 10) / 10}).`), fix: L('Balanced ou Contornar a Pressão, ou centrais/GR melhores com bola.', 'Balanced or Bypass Press, or centre-backs/keeper better on the ball.') });
+  const build = { parts: { short: pct(bShort), support: pct(bSupport), resist: pct(through ? resist * 1.05 : Math.max(resist, 0.6)), long: pct(bLong) } };
+  build.score = Math.round(build.parts.short * 0.35 + build.parts.support * 0.25 + build.parts.resist * 0.25 + build.parts.long * 0.15);
+
+  // ---------------- DEFESA (sem bola, na forma sem bola)
+  const dIss = [], dLinks = [];
+  const outf = OOX.filter(x => x.si.group !== 'GK');
+  const lane = (x) => (x.si.x < 38 ? 'L' : x.si.x > 62 ? 'R' : 'C');
+  const pressQ = (p) => q(p, ['wor', 'sta', 'acc', 'agg', 'ant']), coverQ = (p) => q(p, ['pos', 'ant', 'pac', 'cnt']);
+  // 1. quem sai a pressionar tem cobertura atrás
+  const pressers = outf.filter(x => x.tag('HP'));
+  let pCover = 0.65;
+  if (pressers.length) {
+    const vals = pressers.map(pr => {
+      const cov = outf.filter(c => c !== pr && !c.tag('HP') && !c.tag('OUT') && (
+          // um central que sai é coberto pelo central ao lado (Central de Cobertura); os outros por alguém atrás, no mesmo corredor
+          (pr.si.group === 'DC' && c.si.group === 'DC' && Math.abs(c.si.y - pr.si.y) <= 6) ||
+          (c.si.y < pr.si.y && (lane(c) === lane(pr) || lane(c) === 'C' || lane(pr) === 'C') && pr.si.y - c.si.y <= 30)))
+        .map(c => ({ c, v: coverQ(c.p) * (c.tag('LOW') || c.tag('CW') || c.tag('DROP') ? 1.08 : 1) })).sort((m, n) => n.v - m.v)[0];
+      if (cov) { dLinks.push({ type: 'press', from: pr, to: cov.c, v: Math.sqrt(pressQ(pr.p) * Math.min(1, cov.v)), phase: 'def', why: L(`${label(pr)} sai a pressionar, ${label(cov.c)} cobre`, `${label(pr)} steps out to press, ${label(cov.c)} covers`) }); return Math.sqrt(pressQ(pr.p) * Math.min(1, cov.v)); }
+      dIss.push({ k: 'press', phase: 'def', t: L(`${label(pr)} sai a pressionar sem ninguém a cobrir atrás dele.`, `${label(pr)} steps out to press with nobody covering behind him.`), fix: L('Um papel de cobertura atrás (Central de Cobertura, Médio Defensivo de Proteção, Médio Centro de Cobertura) ou troque-o por um papel normal.', 'A covering role behind (Covering Centre-Back, Screening Defensive Midfielder, Wide Covering Central Midfielder) or switch him to a standard role.') });
+      return 0.25;
+    });
+    pCover = vals.reduce((s, v) => s + v, 0) / vals.length;
+  } else if (ti('loe') === 2) dIss.push({ k: 'press', phase: 'def', t: L('Linha de pressão alta sem nenhum papel que saia a pressionar.', 'A high line of engagement with no role that steps out to press.'), fix: L('Médio Trabalhador, Lateral Trabalhador ou Avançado Esforçado.', 'Pressing Central Midfielder, Pressing Full-Back or Tracking Centre Forward.') });
+  // 2. dupla de centrais: um sai, outro cobre
+  const cbs = outf.filter(x => x.si.group === 'DC');
+  let cbPair = 0.8;
+  if (cbs.length >= 2) {
+    const st = cbs.filter(x => x.tag('HP')).length, cv = cbs.filter(x => x.tag('LOW') || x.tag('CW')).length;
+    if (st >= 1 && cv >= 1) cbPair = 1; else if (st >= 2) { cbPair = 0.35; dIss.push({ k: 'cb', phase: 'def', t: L('Todos os centrais saem da linha a pressionar: o espaço nas costas fica aberto.', 'Every centre-back steps out of the line: the space behind is left open.'), fix: L('Combine um Central de Antecipação com um Central de Cobertura.', 'Pair a Stopping Centre-Back with a Covering Centre-Back.') }); }
+  }
+  // 3. protecção da zona à frente dos centrais
+  const screens = outf.filter(x => ['DM', 'MC'].includes(x.si.group) && !x.tag('HP') && !x.tag('OUT'));
+  const screen = screens.length ? Math.max(...screens.map(x => q(x.p, ['pos', 'ant', 'tck', 'cnt', 'tea']))) * (screens.some(x => x.tag('LOW')) ? 1.06 : 1) : 0.3;
+  if (!screens.length) dIss.push({ k: 'screen', phase: 'def', t: L('Ninguém protege a zona à frente dos centrais: os médios saem todos a pressionar.', 'Nobody protects the zone in front of the centre-backs: every midfielder steps out to press.'), fix: L('Um Médio Defensivo de Proteção ou um Médio Centro de Proteção.', 'A Screening Defensive Midfielder or a Screening Central Midfielder.') });
+  // 4. defesa dos flancos
+  let flk = 0, nf = 0;
+  ['L', 'R'].forEach(side => {
+    const wa = outf.filter(x => x.si.side === side && ['AM_LR', 'M_LR'].includes(x.si.group));
+    const fb = outf.filter(x => x.si.side === side && ['D_LR', 'WB_LR'].includes(x.si.group));
+    if (!wa.length && !fb.length) return;
+    nf++;
+    const cwHelp = outf.some(x => x.tag('CW') && (x.si.side === side || lane(x) === 'C'));
+    if (wa.some(x => x.tag('OUT'))) {
+      const fbHold = fb.some(x => x.tag('LOW')), fbPress = fb.some(x => x.tag('HP'));
+      if (fbPress && !cwHelp) { flk += 0.25; dIss.push({ k: 'flank', phase: 'def', t: L(`Flanco ${sideName(side)}: o extremo fica na frente e o lateral sai a pressionar — o corredor fica vazio.`, `${side === 'L' ? 'Left' : 'Right'} flank: the winger stays forward and the full-back steps out to press — the channel is left empty.`), fix: L('Lateral Fixo nesse lado, ou um Médio de Cobertura que feche o corredor.', 'A Holding Full-Back on that side, or a Wide Covering midfielder to close the channel.') }); }
+      else if (fbHold || cwHelp) { flk += 0.8; const o = wa.find(x => x.tag('OUT')), h = fb.find(x => x.tag('LOW')) || outf.find(x => x.tag('CW')); if (h) dLinks.push({ type: 'flankdef', from: o, to: h, v: 0.8, phase: 'def', why: L(`Flanco ${sideName(side)}: ${label(o)} fica na frente, ${label(h)} segura o corredor`, `${side === 'L' ? 'Left' : 'Right'} flank: ${label(o)} stays forward, ${label(h)} holds the channel`) }); }
+      else { flk += 0.5; dIss.push({ k: 'flank', phase: 'def', t: L(`Flanco ${sideName(side)}: o extremo fica na frente e o lateral fica sozinho contra dois.`, `${side === 'L' ? 'Left' : 'Right'} flank: the winger stays forward and the full-back is left alone against two.`), fix: L('Lateral Fixo, ou um Médio de Cobertura que dobre nesse lado.', 'A Holding Full-Back, or a Wide Covering midfielder doubling up on that side.') }); }
+    } else if (wa.some(x => x.tag('TRK'))) { flk += 1; const tw = wa.find(x => x.tag('TRK')), f = fb[0]; if (f) dLinks.push({ type: 'flankdef', from: tw, to: f, v: 1, phase: 'def', why: L(`Flanco ${sideName(side)}: ${label(tw)} acompanha e dobra com ${label(f)}`, `${side === 'L' ? 'Left' : 'Right'} flank: ${label(tw)} tracks back and doubles up with ${label(f)}`) }); }
+    else flk += 0.8;
+  });
+  const flankDef = nf ? flk / nf : 0.7;
+  // 5. linha defensiva compatível com os centrais e o GR
+  const dl = ti('dline'), gkSK = OOX.some(x => x.si.group === 'GK' && x.r.id === 'swk');
+  const cbPace = cbs.length ? cbs.reduce((s, x) => s + q(x.p, ['pac', 'acc']), 0) / cbs.length : 0.6;
+  const line = dl >= 3 ? Math.min(1, cbPace / 0.72) * (gkSK ? 1 : 0.72) : dl <= 1 ? 0.9 : Math.min(1, 0.75 + cbPace * 0.3);
+  if (dl >= 3 && (cbPace < 0.62 || !gkSK)) dIss.push({ k: 'line', phase: 'def', t: L('Linha alta sem os perfis para a suportar (centrais rápidos e Guarda-Redes Líbero).', 'A high line without the profiles to support it (quick centre-backs and a Sweeper Keeper).'), fix: L('Baixe a linha, ou Guarda-Redes Líbero e centrais com Velocidade/Aceleração.', 'Drop the line, or a Sweeper Keeper and centre-backs with Pace/Acceleration.') });
+  // 6. jogo aéreo defensivo
+  const airD = cbs.length ? cbs.map(x => q(x.p, ['hea', 'jum', 'str', 'pos'])).sort((m, n) => n - m).slice(0, 2).reduce((s, v, i, arr) => s + v / arr.length, 0) : 0.5;
+  if (airD < 0.6 && ti('cross_eng') === 0) dIss.push({ k: 'air', phase: 'def', t: L('Convida cruzamentos com centrais fracos no ar.', 'Inviting crosses with centre-backs weak in the air.'), fix: L('Impedir Cruzamentos, ou centrais mais fortes no ar.', 'Stop Crosses, or centre-backs stronger in the air.') });
+  const outN = outf.filter(x => x.tag('OUT')).length;
+  const def = { parts: { press: pct(pCover), cb: pct(cbPair), screen: pct(Math.min(1, screen)), flankd: pct(flankDef), line: pct(line), air: pct(airD) } };
+  def.score = Math.round(def.parts.press * 0.22 + def.parts.cb * 0.12 + def.parts.screen * 0.2 + def.parts.flankd * 0.22 + def.parts.line * 0.14 + def.parts.air * 0.10);
+
+  // ---------------- TRANSIÇÕES
+  const tIss = [], tLinks = [];
+  const rd = IPX.filter(x => x.tag('RD') && x.si.group !== 'GK');
+  const rdQ = rd.length ? rd.reduce((s, x) => s + q(x.p, ['pac', 'acc', 'pos', 'ant']), 0) / rd.length : 0.4;
+  const rdN = rd.length, rdCount = { 0: 0.1, 1: 0.3, 2: 0.65, 3: 1, 4: 1, 5: 0.8 }[rdN] ?? 0.7;
+  const loss = rdCount * (0.55 + 0.45 * rdQ);
+  if (rdN >= 3 && rdQ < 0.6) tIss.push({ k: 'loss', phase: 'trans', t: L('Quem fica atrás é lento: os contra-ataques adversários chegam em vantagem.', 'Those who stay back are slow: opposition counter-attacks arrive with the advantage.'), fix: L('Um Médio Defensivo / lateral mais rápido na rest-defence, ou linha mais baixa.', 'A quicker Defensive Midfielder / full-back in the rest-defence, or a deeper line.') });
+  const breakers = OOX.filter(x => x.tag('OUT')).concat(IPX.filter(x => x.tag('RUN') && ['ST', 'AM_LR'].includes(x.si.group)));
+  const bestRun = breakers.map(x => ({ x, v: q(x.p, ['pac', 'acc', 'otb', 'dri']) })).sort((m, n) => n.v - m.v)[0];
+  const releaser = IPX.filter(x => ['DM', 'MC', 'AMC'].includes(x.si.group) || x.tag('CR')).map(x => ({ x, v: q(x.p, ['vis', 'pas', 'dec', 'tec']) })).sort((m, n) => n.v - m.v)[0];
+  const win = bestRun && releaser ? Math.sqrt(bestRun.v * releaser.v) : 0.35;
+  if (bestRun && releaser && bestRun.x !== releaser.x) tLinks.push({ type: 'counter', from: releaser.x, to: bestRun.x, v: win, phase: 'trans', why: L(`${label(releaser.x)} lança ${label(bestRun.x)} no contra-ataque`, `${label(releaser.x)} releases ${label(bestRun.x)} on the counter`) });
+  if (ti('att_trans') === 2 && win < 0.62) tIss.push({ k: 'win', phase: 'trans', t: L('Contra-Ataque escolhido, mas sem velocidade na frente ou sem quem lance a bola.', 'Counter-Attack chosen, but without pace up front or anyone to release the ball.'), fix: L('Um Avançado de Desmarcação / Extremo de Transição rápido e um médio com Visão.', 'A quick Splitting Outlet / Wide Outlet and a midfielder with Vision.') });
+  if (outN >= 3) tIss.push({ k: 'out', phase: 'trans', t: L(`${outN} jogadores ficam na frente sem defender: o bloco fica em inferioridade.`, `${outN} players stay forward without defending: the block is outnumbered.`), fix: L('No máximo 1–2 papéis de saída.', 'At most 1–2 outlet roles.') });
+  const outBal = outN === 0 ? 0.7 : outN <= 2 ? 1 : 0.4;
+  const trans = { parts: { loss: pct(loss), win: pct(win), out: pct(outBal) } };
+  trans.score = Math.round(trans.parts.loss * 0.5 + trans.parts.win * 0.35 + trans.parts.out * 0.15);
+
+  const phases = { build, att: { score: att.score, parts: att.parts }, def, trans };
+  const score = Math.round(Object.entries(SYN_PHASE_W).reduce((s, [k, w]) => s + phases[k].score * w, 0));
+  const links = [...bLinks, ...att.links, ...dLinks.sort((m, n) => n.v - m.v).slice(0, 5), ...tLinks];
+  const issues = [...bIss, ...att.issues, ...dIss, ...tIss];
+  return { score, phases, parts: att.parts, attScore: att.score, links, issues, creators: att.creators, boxN: att.boxN, outN, rdN };
+}
+const SYN_PHASES = () => ({ build: L('Construção', 'Build-up'), att: L('Ataque', 'Attack'), def: L('Defesa', 'Defence'), trans: L('Transições', 'Transitions') });
+const SYN_NAMES = () => ({ ...SYN_NAMES_ATT(),
+  short: L('Saída curta: quem passa → quem recebe', 'Short build-up: passer → receiver'), support: L('Apoios entre linhas', 'Support between the lines'), resist: L('Resistência à pressão', 'Press resistance'), long: L('Bola longa → referência', 'Long ball → target'),
+  press: L('Pressão com cobertura', 'Pressing with cover'), cb: L('Dupla de centrais (sai + cobre)', 'Centre-back pair (step + cover)'), screen: L('Proteção à frente dos centrais', 'Screen in front of the centre-backs'),
+  flankd: L('Defesa dos flancos', 'Flank defence'), line: L('Linha vs. perfis', 'Line vs. profiles'), air: L('Jogo aéreo defensivo', 'Aerial defence'),
+  loss: L('Reação à perda (rest-defence)', 'Reaction to losing the ball (rest-defence)'), win: L('Contra-ataque: quem lança → quem arranca', 'Counter: releaser → runner'), out: L('Saídas vs. bloco', 'Outlets vs. block') });
+
+;
 // ---- core/generator.js
 // ============================================================
 // Gerador de tática: formações, XI, papéis IP/OOP e as instruções
@@ -1894,6 +2178,8 @@ function makeScorer(players) {
 // Corre por passos: cada yield devolve o progresso; o valor final é o resultado.
 function* generateTacticSteps(players, opts = {}) {
   const exp = EXPECT[opts.expect] || EXPECT.mid;
+  // pesos da nota de cada candidata: adequação de cada jogador, sinergia entre papéis, equilíbrio estrutural
+  const W_SYN = opts.synergy === 0 ? 0 : 0.30, W_FIT = opts.synergy === 0 ? 0.72 : 0.55, W_BAL = opts.synergy === 0 ? 0.28 : 0.15;
   const must = new Set(opts.must || []), youth = new Set(opts.youth || []), star = opts.star || null;
   if (players.length < 11) return null;
   yield { done: 0, total: 1, label: L('A avaliar todos os pares de formações', 'Evaluating every pair of formations') };
@@ -1929,7 +2215,9 @@ function* generateTacticSteps(players, opts = {}) {
     const fitAvg = wsum ? sum / wsum : 0;
     const au = auditTactic(t, []);
     const ipS = au.scores.IP, oopS = au.scores.OOP;
-    return { v: fitAvg * 0.72 + ((ipS + oopS) / 2) * 0.28, fitAvg, au };
+    // sinergia: quem serve quem, com os atributos dos jogadores escolhidos (opts.synergy = 0 desliga, para comparação)
+    const syn = W_SYN > 0 ? synergyReport(t, players).score : 0;
+    return { v: fitAvg * W_FIT + syn * W_SYN + ((ipS + oopS) / 2) * W_BAL, fitAvg, au, syn };
   };
   const assign = (t) => {
     const cost = t.slots.map(s => { const a = slotInfo(t.ipForm, s.ipCode), b = slotInfo(t.oopForm, s.oopCode), ri = ROLE_BY_ID[s.ip], ro = ROLE_BY_ID[s.oop];
@@ -1957,7 +2245,7 @@ function* generateTacticSteps(players, opts = {}) {
       assign(t);
     }
     const o = objective(t, pmap);
-    return { t, pair: pr, fitAvg: Math.round(o.fitAvg), balance: Math.round((o.au.scores.IP + o.au.scores.OOP) / 2), v: o.v };
+    return { t, pair: pr, fitAvg: Math.round(o.fitAvg), balance: Math.round((o.au.scores.IP + o.au.scores.OOP) / 2), syn: Math.round(o.syn), v: o.v };
   };
   const results = [];
   for (let k = 0; k < shortlist.length; k++) {
@@ -1969,7 +2257,8 @@ function* generateTacticSteps(players, opts = {}) {
 
   // ---------- 3. instruções de equipa com razão, para cada resultado
   results.forEach(r => { const g = generateTIs(r.t, players, exp); r.t.ti = g.ti; r.reasons = g.reasons; r.t.ment = g.ment; r.mentWhy = g.mentWhy;
-    r.audit = auditTactic(r.t, players); r.total = Math.round(r.fitAvg * 0.6 + r.audit.overall * 0.4); });
+    r.audit = auditTactic(r.t, players); r.synergy = synergyReport(r.t, players); r.syn = r.synergy.score;
+    r.total = Math.round(r.fitAvg * 0.45 + r.synergy.score * 0.30 + r.audit.overall * 0.25); });
   results.sort((a, b) => b.total - a.total);
   // alternativas com formação com bola diferente da recomendada
   const main = results[0], alts = [], seen = new Set([main.t.ipForm]);
@@ -3612,7 +3901,7 @@ function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_I
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.6.0';
+const VERSION = '4.8.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -4206,7 +4495,7 @@ function vGen() {
     <div class="row"><button class="btn primary" onclick="A.genUse()">Usar esta tática</button><button class="btn" onclick="A.genUse(true)">▶ Ver em campo</button><button class="btn" onclick="A.genCopy()">Copiar como texto</button></div></div>
   <div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">
     <div class="grid">${opts}
-      <div class="panel"><h3>Opções geradas</h3>${all.map((x, i) => `<button class="genopt ${i === g.pick ? 'on' : ''}" onclick="A.genPick(${i})"><b>${i === 0 ? 'Recomendada' : 'Alternativa ' + i}</b><span>${esc(x.t.ipForm)} → ${esc(x.t.oopForm)}</span><span class="small muted">adequação ${x.fitAvg} · equilíbrio ${x.balance} · diagnóstico ${x.audit.overall}</span>${ring(x.total, 46)}</button>`).join('')}</div>
+      <div class="panel"><h3>Opções geradas</h3>${all.map((x, i) => `<button class="genopt ${i === g.pick ? 'on' : ''}" onclick="A.genPick(${i})"><b>${i === 0 ? 'Recomendada' : 'Alternativa ' + i}</b><span>${esc(x.t.ipForm)} → ${esc(x.t.oopForm)}</span><span class="small muted">${L(`adequação ${x.fitAvg} · sinergia ${x.syn ?? '—'} · diagnóstico ${x.audit.overall}`, `fit ${x.fitAvg} · synergy ${x.syn ?? '—'} · diagnosis ${x.audit.overall}`)}</span>${ring(x.total, 46)}</button>`).join('')}</div>
     </div>
     <div class="grid">
       ${sec(1, 'Estilo e mentalidade', `<p><b>Style:</b> Clean Slate · <b>Mentality:</b> ${esc(t.ment)}</p><p class="small muted">${esc(r.mentWhy)}</p>`)}
@@ -4214,20 +4503,63 @@ function vGen() {
         <div class="table-wrap" style="margin-top:10px;max-height:none"><table><thead><tr><th>Pos</th><th>Jogador</th><th>In Possession</th><th>Out of Possession</th><th>Adequação</th></tr></thead><tbody>
         ${t.slots.map(s => { const p = pm[s.pid]; return `<tr><td><b>${esc(s.ipCode)}</b>${s.oopCode !== s.ipCode ? ` <span class="muted small">→ ${esc(s.oopCode)}</span>` : ''}</td><td>${p ? esc(p.name) : '—'}${p && g.youth.includes(p.id) ? ' <span class="chip new">jovem</span>' : ''}${p && g.star === p.id ? ' <span class="chip new">estrela</span>' : ''}</td><td>${esc(roleName(ROLE_BY_ID[s.ip]))}</td><td>${esc(roleName(ROLE_BY_ID[s.oop]))}</td><td>${fitBadge(p ? slotScore(p, t, s) : null)}</td></tr>`; }).join('')}
         </tbody></table></div>`)}
-      ${sec(3, 'Instruções de equipa', FM_SECTIONS.map(([n, keys]) => `<h4 style="margin:10px 0 4px">${esc(n)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k], v = tiVal(t, k), ch = v !== d.def;
+      ${sec(3, L('Sinergia entre papéis — todas as fases', 'Role synergy — every phase'), synergyPanel(t, ps, { labHint: true }))}
+      ${sec(4, 'Instruções de equipa', FM_SECTIONS.map(([n, keys]) => `<h4 style="margin:10px 0 4px">${esc(n)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k], v = tiVal(t, k), ch = v !== d.def;
           return `<tr class="${ch ? '' : 'dim'}"><td style="width:34%">${esc(d.n)}</td><td style="width:22%">${ch ? `<b>${esc(d.opts[v])}</b>` : esc(d.opts[v])}</td><td class="small muted">${esc(r.reasons[k] || '')}</td></tr>`; }).join('')}</tbody></table>`).join(''))}
-      ${sec(4, 'Instruções individuais', pis.length ? `<table><tbody>${pis.map(x => `<tr><td><b>${esc(x.s.ipCode)}</b> ${esc(x.p.name)}</td><td>${x.rec.map(r2 => `<span class="chip" title="${esc(r2.why)}">${esc(r2.pi)}</span>`).join('')}</td><td class="small muted">${esc(x.rec[0].why)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">Nenhum atributo pede instruções individuais.</p>')}
-      ${sp ? sec(5, 'Bolas paradas e capitães', `<div class="grid g2"><table><tbody>
+      ${sec(5, 'Instruções individuais', pis.length ? `<table><tbody>${pis.map(x => `<tr><td><b>${esc(x.s.ipCode)}</b> ${esc(x.p.name)}</td><td>${x.rec.map(r2 => `<span class="chip" title="${esc(r2.why)}">${esc(r2.pi)}</span>`).join('')}</td><td class="small muted">${esc(x.rec[0].why)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">Nenhum atributo pede instruções individuais.</p>')}
+      ${sp ? sec(6, 'Bolas paradas e capitães', `<div class="grid g2"><table><tbody>
           <tr><td>Capitão</td><td><b>${esc(sp.caps[0].p.name)}</b></td></tr><tr><td>Vice-capitão</td><td><b>${esc(sp.caps[1].p.name)}</b></td></tr>
           <tr><td>Cantos (dir./esq.)</td><td><b>${esc(sp.corners.right.x.p.name)}</b> / <b>${esc(sp.corners.left.x.p.name)}</b></td></tr>
           <tr><td>Livres</td><td><b>${esc((sp.fk.direct || sp.fk.cross).p.name)}</b>${sp.fk.direct ? ' (directos)' : ' (cruzar)'}</td></tr>
           <tr><td>Penáltis</td><td>${sp.pens.map(x => esc(x.p.name)).join(' → ')}</td></tr></tbody></table>
           <table><tbody>${sp.attack.filter(x => ['far', 'centre', 'near'].includes(x.k)).map(x => `<tr><td><span>Alvo aéreo</span> — ${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td></tr>`).join('')}</tbody></table></div>
           <button class="btn sm" onclick="A.genUse(false,'setpieces')">Ver diagramas dos cantos</button>`) : ''}
-      ${sec(6, 'Profundidade por posição', `<div class="depth">${dc.map(d => `<div><b>${esc(d.code)}</b>${d.list.map((x, i) => `<div class="small">${i + 1}. ${esc(x.p.name)} ${fitBadge(x.sc)}</div>`).join('')}</div>`).join('')}</div>`)}
-      ${sec(7, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(roleName(w.role))}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}
-      ${sec(8, 'Treino', `<ol class="clean small">${tp.areas.slice(0, 4).map(a => `<li><b>${esc(TRAINING.areas[a.k].n)}</b> — ${esc([...new Set(a.why)][0])}</li>`).join('')}</ol><button class="btn sm" onclick="A.genUse(false,'training')">Plano de treino completo</button>`)}
+      ${sec(7, 'Profundidade por posição', `<div class="depth">${dc.map(d => `<div><b>${esc(d.code)}</b>${d.list.map((x, i) => `<div class="small">${i + 1}. ${esc(x.p.name)} ${fitBadge(x.sc)}</div>`).join('')}</div>`).join('')}</div>`)}
+      ${sec(8, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(roleName(w.role))}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}
+      ${sec(9, 'Treino', `<ol class="clean small">${tp.areas.slice(0, 4).map(a => `<li><b>${esc(TRAINING.areas[a.k].n)}</b> — ${esc([...new Set(a.why)][0])}</li>`).join('')}</ol><button class="btn sm" onclick="A.genUse(false,'training')">Plano de treino completo</button>`)}
     </div>
+  </div>`;
+}
+
+;
+// ---- ui/views_synergy.js
+// ============================================================
+// Sinergia entre papéis — todas as fases (Gerador e Analisador)
+// ============================================================
+const SYN_COL = { build: '#14b8a6', chain: 'var(--good)', cross: '#3b82f6', front: '#d97706', flank: '#a855f7', press: '#ef4444', flankdef: '#a855f7', counter: '#f59e0b' };
+function synergyMap(t, links, form, title) {
+  const F = FORMATIONS[form] || [], pos = Object.fromEntries(F.map(z => [z.code, z]));
+  const P = (code) => { const z = pos[code]; return z ? [6 + z.y * 0.88, 4 + z.x * 0.56] : [50, 32]; };   // horizontal: ataque para a direita
+  const arrows = links.map(l => { const [x1, y1] = P(l.from.code), [x2, y2] = P(l.to.code); const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1, k = 3.2 / d;
+    return `<line x1="${(x1 + dx * k).toFixed(1)}" y1="${(y1 + dy * k).toFixed(1)}" x2="${(x2 - dx * k).toFixed(1)}" y2="${(y2 - dy * k).toFixed(1)}" stroke="${SYN_COL[l.type]}" stroke-width="${0.6 + l.v * 0.9}" marker-end="url(#ar-${l.type})" ${['flank', 'flankdef'].includes(l.type) ? 'stroke-dasharray="1.6 1"' : ''} opacity=".95"/>`; }).join('');
+  const defs = Object.entries(SYN_COL).map(([k, c]) => `<marker id="ar-${k}" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="${c}"/></marker>`).join('');
+  const phaseKey = form === t.oopForm && title === 'oop' ? 'oop' : 'ip';
+  const dots = t.slots.map(s => { const code = phaseKey === 'oop' ? s.oopCode : s.ipCode, r = ROLE_BY_ID[phaseKey === 'oop' ? s.oop : s.ip], [x, y] = P(code);
+    return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><circle r="2.9" fill="${phaseKey === 'oop' ? '#1e3a5f' : '#0b5d3a'}" stroke="#fff" stroke-width=".35"/><text y="1" text-anchor="middle" font-size="2.2" font-weight="700" fill="#fff">${esc(r ? r.ab : '')}</text></g>`; }).join('');
+  return `<svg class="syn-map" viewBox="0 0 100 64" role="img" aria-label="${L('Mapa de ligações', 'Link map')}"><defs>${defs}</defs>
+    <rect width="100" height="64" rx="2" fill="var(--pitch)"/><g fill="none" stroke="var(--pitchline)" stroke-width=".3"><rect x="2" y="2" width="96" height="60"/><line x1="50" y1="2" x2="50" y2="62"/><circle cx="50" cy="32" r="7"/><rect x="83" y="17" width="15" height="30"/><rect x="2" y="17" width="15" height="30"/></g>
+    ${arrows}${dots}</svg>`;
+}
+function synergyPanel(t, players, opts = {}) {
+  const rep = synergyReport(t, players), N = SYN_NAMES(), PH = SYN_PHASES();
+  const colr = (v) => v >= 75 ? 'var(--good)' : v >= 50 ? 'var(--warn)' : 'var(--crit)';
+  const bar = (k, v) => `<div class="bar-row"><span>${esc(N[k] || k)}</span><div class="bar"><i style="width:${v}%;background:${colr(v)}"></i></div><b>${v}</b></div>`;
+  const order = ['build', 'att', 'def', 'trans'];
+  const card = (ph) => { const P = rep.phases[ph]; return `<div class="syn-phase"><div class="row" style="justify-content:space-between"><b>${esc(PH[ph])}</b><span class="syn-score" style="color:${colr(P.score)}">${P.score}</span></div>${Object.entries(P.parts).map(([k, v]) => bar(k, v)).join('')}</div>`; };
+  const legend = (types) => `<div class="syn-legend small">${types.map(([k, n]) => `<span><i style="background:${SYN_COL[k]}"></i>${n}</span>`).join('')}</div>`;
+  const ipLinks = rep.links.filter(l => l.phase !== 'def'), oopLinks = rep.links.filter(l => l.phase === 'def');
+  const byPhase = order.map(ph => [ph, rep.issues.filter(i => i.phase === ph)]).filter(([, v]) => v.length);
+  return `<div class="syn">
+    <div class="syn-top">${ring(rep.score, 72)}<div class="small">${L(`Sinergia entre papéis em todas as fases: se os papéis se servem e se cobrem uns aos outros — não só se cada jogador está no melhor papel. ${rep.boxN} chegam à área · ${rep.creators} criativo(s) · ${rep.rdN} ficam atrás · ${rep.outN} saída(s).`, `Role synergy across every phase: whether roles serve and cover each other — not just whether each player is in his best role. ${rep.boxN} arrive in the box · ${rep.creators} creator(s) · ${rep.rdN} stay back · ${rep.outN} outlet(s).`)}${players.length ? '' : `<br><span class="muted">${L('Sem plantel: avaliação só pela estrutura dos papéis.', 'No squad: assessed on role structure only.')}</span>`}</div></div>
+    <div class="syn-phases">${order.map(card).join('')}</div>
+    <div class="grid g2" style="margin-top:12px;align-items:start">
+      <div><b class="small">${L('Com bola', 'In possession')} · ${esc(t.ipForm)}</b>${synergyMap(t, ipLinks, t.ipForm, 'ip')}${legend([['build', L('saída de bola', 'build-up')], ['chain', L('criador → finalizador', 'creator → finisher')], ['cross', L('cruzamento → alvo', 'cross → target')], ['front', L('dupla da frente', 'front pair')], ['flank', L('flanco', 'flank')], ['counter', L('contra-ataque', 'counter')]])}</div>
+      <div><b class="small">${L('Sem bola', 'Out of possession')} · ${esc(t.oopForm)}</b>${synergyMap(t, oopLinks, t.oopForm, 'oop')}${legend([['press', L('pressiona → cobre', 'presses → covers')], ['flankdef', L('flanco: dobra / segura', 'flank: doubles / holds')]])}</div>
+    </div>
+    ${rep.links.length ? `<details class="small" style="margin-top:10px"><summary>${L('Ligações principais', 'Main links')} (${rep.links.length})</summary><ul class="clean">${rep.links.map(l => `<li><span class="chip">${esc(PH[l.phase])}</span> ${esc(l.why)} <span class="muted">(${Math.round(l.v * 100)})</span></li>`).join('')}</ul></details>` : ''}
+    ${byPhase.length ? `<h4 style="margin:12px 0 4px">${L('O que está a falhar entre papéis', 'What is not working between roles')}</h4>${byPhase.map(([ph, list]) => `<div class="small muted" style="margin:8px 0 2px;text-transform:uppercase;letter-spacing:.05em">${esc(PH[ph])}</div>${list.map(i => `<div class="finding"><div class="sev warn">!</div><div><b class="small">${esc(i.t)}</b><div class="small" style="color:var(--accent)">→ ${esc(i.fix)}</div></div></div>`).join('')}`).join('')}`
+      : `<p class="small" style="margin-top:10px">${L('Os papéis encaixam em todas as fases. 👍', 'The roles fit together in every phase. 👍')}</p>`}
+    ${opts.labHint ? `<p class="small muted" style="margin-top:10px">${L('A sinergia é um modelo de estrutura e atributos. Para confirmar no motor do FM27, compare no Laboratório (Tactics Lab) esta tática com a anterior: xG criado e xG sofrido.', 'Synergy is a model of structure and attributes. To confirm it on the FM27 engine, compare this tactic with the previous one in the Lab (Tactics Lab): xG created and xG conceded.')}</p>` : ''}
   </div>`;
 }
 
@@ -4278,6 +4610,7 @@ function vTactic() {
       <div class="panel"><h3>Diagnóstico</h3>
         ${au.findings.map(f => `<div class="finding"><div class="sev ${f.sev}">${{ crit: '!', warn: '▲', info: 'i', good: '✓' }[f.sev]}</div><div><b>${esc(f.title)} <span class="chip">${esc(f.cat)}</span></b><span class="small">${esc(f.text)}</span>${f.fix ? `<div class="fix">→ ${esc(f.fix)}</div>` : ''}</div></div>`).join('')}
       </div>
+      <div class="panel"><h3>${L('Sinergia entre papéis — todas as fases', 'Role synergy — every phase')}</h3>${synergyPanel(t, players())}</div>
     </div>
   </div>
   <div class="panel" style="margin-top:16px">
