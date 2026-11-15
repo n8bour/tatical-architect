@@ -197,11 +197,89 @@ tr.dim td{color:var(--muted)}
 .jobitem .st.running,.jobitem .st.queued{background:color-mix(in srgb,var(--warn) 25%,transparent)}.jobitem .st.complete{background:color-mix(in srgb,var(--good) 22%,transparent)}
 @media (max-width:1400px){.lab-vars{grid-template-columns:1fr!important}}
 
+/* ---------- v4.0.1: nada transborda a sua coluna ---------- */
+/* itens de grelha podem encolher (por defeito o mínimo é o conteúdo, o que empurrava colunas) */
+.grid>*,.split>*,.simgrid>*,.hero>*{min-width:0}
+/* menus e campos acompanham a coluna em vez de a esticarem pela opção mais comprida */
+label.f select,label.f input,.f select{width:100%;min-width:0}
+select{min-width:0;text-overflow:ellipsis}
+/* escolhas com nomes longos */
+.chip.pick{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* campos desenhados com tamanho máximo, centrados (ecrãs largos) */
+svg.pitch{max-width:420px;margin-inline:auto}
+.g2>div>svg.pitch{max-width:380px}
+/* tabelas largas fazem scroll dentro do seu painel */
+.panel table{max-width:100%}
+.panel>table,.panel>div>table{display:block;overflow-x:auto}
+#main>*{max-width:1800px;margin-left:auto;margin-right:auto}
+
+/* ---------- v4.1: painéis recolhíveis e menu só com ícones ---------- */
+.pc-title{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
+.pc-toggle{flex:none;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);font-size:12px;line-height:1;display:inline-grid;place-items:center;cursor:pointer}
+.pc-toggle:hover{color:var(--text);border-color:var(--accent)}
+.pc-toggle:focus-visible,.nav-btn:focus-visible,.btn:focus-visible,.nav-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel.collapsed>*:not(:first-child){display:none!important}
+.panel.collapsed{padding-bottom:12px}
+.brand{position:relative}
+.nav-mini{margin-left:auto;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;flex:none}
+.nav-mini:hover{color:var(--text)}
+.nav-btn .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app{transition:grid-template-columns .15s}
+.app.mini{grid-template-columns:64px 1fr}
+.app.mini aside{padding:16px 8px;align-items:center}
+.app.mini .brand{flex-direction:column;padding:4px 0 12px;gap:8px}
+.app.mini .brand .lbl,.app.mini .nav-btn .lbl,.app.mini .aside-status,.app.mini .aside-foot{display:none}
+.app.mini .nav-btn{justify-content:center;padding:10px 0;width:44px}
+.app.mini .nav-btn .ic{width:auto;font-size:16px}
+/* ecrãs estreitos (ex.: 1366 com escala 125%): menu só com ícones automaticamente */
+@media (max-width:1150px) and (min-width:761px){
+  .app{grid-template-columns:64px 1fr}
+  aside{padding:16px 8px;align-items:center}
+  .brand{flex-direction:column;padding:4px 0 12px;gap:8px}
+  .brand .lbl,.nav-btn .lbl,.aside-status,.aside-foot,.nav-mini{display:none}
+  .nav-btn{justify-content:center;padding:10px 0;width:44px}
+}
+/* títulos longos nunca empurram os botões do cabeçalho */
+.top>div:first-child{min-width:0;flex:1 1 320px}
+.top h2{overflow-wrap:anywhere}
+.row{min-width:0}
+
+/* ---------- v4.2: actividade (loading) ---------- */
+#topbar{position:fixed;top:0;left:0;right:0;height:3px;z-index:30;pointer-events:none;opacity:0;transition:opacity .2s}
+#topbar.on{opacity:1}
+#topbar i{display:block;height:100%;width:30%;background:var(--accent);border-radius:0 3px 3px 0}
+#topbar.on:not(.det) i{animation:fm-indet 1.2s ease-in-out infinite}
+#topbar.det i{transition:width .3s}
+@keyframes fm-indet{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+#busy{display:none;flex-direction:column;gap:8px;margin-top:14px;width:100%}
+#busy.on{display:flex}
+.busy-item{display:flex;gap:9px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:9px 10px;min-width:0}
+.busy-pct{display:none;font-size:10px;font-weight:700}
+.busy-body{min-width:0;display:grid;gap:4px}
+.busy-body b{font-size:13px;overflow-wrap:anywhere}
+.busy-bar{height:5px;background:var(--line);border-radius:5px;overflow:hidden;width:100%}
+.busy-bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.spin{flex:none;width:16px;height:16px;margin-top:2px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:fm-spin .8s linear infinite}
+@keyframes fm-spin{to{transform:rotate(360deg)}}
+.btn.is-busy{position:relative;color:transparent!important;pointer-events:none}
+.btn.is-busy::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid currentColor;border-color:var(--line);border-top-color:var(--accent);animation:fm-spin .8s linear infinite}
+.btn.primary.is-busy::after{border-color:rgba(255,255,255,.35);border-top-color:#fff}
+.btn:disabled{cursor:progress}
+@media (prefers-reduced-motion: reduce){#topbar.on:not(.det) i{animation:none;width:100%;opacity:.6}.spin,.btn.is-busy::after{animation-duration:2.4s}}
+
+/* menu só com ícones: a actividade fica um spinner (com a percentagem) e o detalhe no tooltip */
+.app.mini #busy .busy-body{display:none}
+.app.mini .busy-item{flex-direction:column;align-items:center;padding:8px 4px;width:44px;gap:4px}
+.app.mini .busy-pct{display:block}
+@media (max-width:1150px) and (min-width:761px){#busy .busy-body{display:none}.busy-item{flex-direction:column;align-items:center;padding:8px 4px;width:44px;gap:4px}.busy-pct{display:block}}
+@media (max-width:760px){#busy{position:fixed;left:12px;right:12px;bottom:12px;z-index:25;margin:0}}
+
 </style>
 </head>
 <body>
 <div class="app"><aside id="nav"></aside><main id="main"></main></div>
 <div id="dropov">Largue o ficheiro — plantel (CSV/HTML/JSON), tática .fmf ou cópia .json</div>
+<div id="topbar" aria-hidden="true"><i></i></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 // ---- core/roles.js
@@ -1573,7 +1651,15 @@ const SP = {
   captain: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('ldr') * 1.6 + a('det') + a('tea') * 0.4 + a('cmp') * 0.3) / 3.3 + Math.min(4, Math.max(0, ((p.age || 24) - 22) * 0.4)); },
 };
 const footOf = (p) => { const f = String((p.meta && p.meta.foot) || '').toLowerCase(); return /left|esq/.test(f) ? 'L' : /right|dir/.test(f) ? 'R' : /either|ambos|both/.test(f) ? 'B' : null; };
-const shortName = (p) => p ? p.name.split(' ').slice(-1)[0] : '—';
+// apelido para o campo: última palavra, mantendo partículas (De Bruyn, Van der Berg, Da Silva)
+const NAME_PARTICLES = new Set(['de','da','das','do','dos','di','del','della','van','von','der','den','ten','ter','le','la','du','mac','al','el','bin','st.']);
+function surname(name) {
+  const w = String(name || '').trim().split(/\s+/); if (w.length < 2) return w[0] || '—';
+  let i = w.length - 1; if (i > 1 && /^(j[uú]nior|jr\.?|filho|neto|sobrinho|ii|iii)$/i.test(w[i])) i--;   // Silva Júnior
+  while (i > 0 && NAME_PARTICLES.has(w[i - 1].toLowerCase())) i--;
+  return w.slice(i).join(' ');
+}
+const shortName = (p) => p ? surname(p.name) : '—';
 
 function setPiecePlan(t, players, oppList) {
   const xi = players.length >= 11 ? myXI(t, players) : [];
@@ -1691,10 +1777,12 @@ function makeScorer(players) {
   return { rs, fit };
 }
 
-function generateTactic(players, opts = {}) {
+// Corre por passos: cada yield devolve o progresso; o valor final é o resultado.
+function* generateTacticSteps(players, opts = {}) {
   const exp = EXPECT[opts.expect] || EXPECT.mid;
   const must = new Set(opts.must || []), youth = new Set(opts.youth || []), star = opts.star || null;
   if (players.length < 11) return null;
+  yield { done: 0, total: 1, label: 'A avaliar todos os pares de formações' };
   const S = makeScorer(players);
   const bonus = (p) => (youth.has(p.id) ? 6 : 0);
   const weight = (p) => (p.id === star ? 1.6 : 1);
@@ -1737,7 +1825,7 @@ function generateTactic(players, opts = {}) {
     t.slots.forEach((s, i) => { s.pid = players[asg[i]] ? players[asg[i]].id : null; });
   };
   const pmap = Object.fromEntries(players.map(p => [p.id, p]));
-  const results = shortlist.map(pr => {
+  const optimise = (pr) => {
     const t = newTactic(pr.ip, pr.oop); t.ment = exp.ment; t.name = `${pr.ip} (gerada)`;
     // papéis iniciais: o melhor par para quem melhor serve cada posição
     assign(t);
@@ -1756,7 +1844,14 @@ function generateTactic(players, opts = {}) {
     }
     const o = objective(t, pmap);
     return { t, pair: pr, fitAvg: Math.round(o.fitAvg), balance: Math.round((o.au.scores.IP + o.au.scores.OOP) / 2), v: o.v };
-  }).sort((a, b) => b.v - a.v);
+  };
+  const results = [];
+  for (let k = 0; k < shortlist.length; k++) {
+    yield { done: k, total: shortlist.length, label: `A optimizar ${shortlist[k].ip} → ${shortlist[k].oop}` };
+    results.push(optimise(shortlist[k]));
+  }
+  results.sort((a, b) => b.v - a.v);
+  yield { done: shortlist.length, total: shortlist.length, label: 'A gerar instruções, bolas paradas e alternativas' };
 
   // ---------- 3. instruções de equipa com razão, para cada resultado
   results.forEach(r => { const g = generateTIs(r.t, players, exp); r.t.ti = g.ti; r.reasons = g.reasons; r.t.ment = g.ment; r.mentWhy = g.mentWhy;
@@ -1766,6 +1861,14 @@ function generateTactic(players, opts = {}) {
   const main = results[0], alts = [], seen = new Set([main.t.ipForm]);
   for (const r of results.slice(1)) { if (seen.has(r.t.ipForm)) continue; seen.add(r.t.ipForm); alts.push(r); if (alts.length === 3) break; }
   return { main, alts, considered: quick.length, optimised: shortlist.length, expect: exp };
+}
+// versão síncrona (testes, Node)
+function generateTactic(players, opts = {}) { const it = generateTacticSteps(players, opts); let r = it.next(); while (!r.done) r = it.next(); return r.value; }
+// versão assíncrona: devolve o controlo à janela entre passos e reporta o progresso
+async function generateTacticAsync(players, opts = {}, onProgress = () => {}) {
+  const it = generateTacticSteps(players, opts); let r = it.next();
+  while (!r.done) { onProgress(r.value); await new Promise(res => setTimeout(res, 0)); r = it.next(); }
+  return r.value;
 }
 
 // ---------- instruções de equipa a partir do perfil do plantel ----------
@@ -2269,7 +2372,7 @@ const SIM_TI = new Set(['buildup','goal_kicks','passing','tempo','width','suppor
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.0.0';
+const VERSION = '4.2.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -2285,12 +2388,12 @@ const ST = {
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
   saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
   auto: { on: true, dir: '', mtime: 0, last: '', save: true, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '' },   // carregamento automático (app instalada)
-  lastSave: null, gen: null, lab: null,
+  lastSave: null, gen: null, lab: null, ui: { collapsed: {}, navMini: false },
 };
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui })); } catch (e) {}
 }
 
 function load() {
@@ -2306,6 +2409,7 @@ function load() {
     if (d.auto) ST.auto = Object.assign(ST.auto, d.auto);
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
     if (d.gen) ST.gen = d.gen;
+    if (d.ui) ST.ui = { collapsed: d.ui.collapsed || {}, navMini: !!d.ui.navMini };
     if (d.lab) ST.lab = { port: d.lab.port || 8765, more: d.lab.more || 100, status: null, jobs: [], job: null, err: '', busy: false };
     [ST.tactic, ...ST.saved].forEach(t => { if (t && t.ti && t.ti.loe > 2) t.ti.loe = 2; if (t && t.ti && t.ti.short_gk > 1) t.ti.short_gk = 1; });
   } catch (e) {}
@@ -2417,7 +2521,7 @@ function pitchSVG(t, mode, selIdx, opts = {}) {
     if (mode === 'BOTH') g += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="rgba(255,255,255,.5)" stroke-width=".5" stroke-dasharray="1.5 1"/>
       <circle cx="${X(b.x)}" cy="${Y(b.y)}" r="3.2" fill="none" stroke="#9cc9ff" stroke-width=".8"/>`;
     const sel = selIdx === i;
-    const name = p ? esc(p.name.split(' ').slice(-1)[0]).slice(0, 12) : '';
+    const name = p ? esc(surname(p.name)).slice(0, 12) : '';
     g += `<g class="slot" ${opts.static ? '' : `onclick="A.sel(${i})"`}>
       <circle class="dot" cx="${X(pos.x)}" cy="${Y(pos.y)}" r="${sel ? 6 : 5.2}" fill="${fill}" stroke="${sel ? '#ffe680' : 'rgba(255,255,255,.85)'}" stroke-width="${sel ? 1.2 : .5}"/>
       <text x="${X(pos.x)}" y="${Y(pos.y) + 1.2}" text-anchor="middle" font-size="3.1" font-weight="700" fill="#fff">${esc(role ? role.ab : '?')}</text>
@@ -2481,7 +2585,7 @@ function simSVG(t) {
         ${f ? '<circle r="3.6" fill="none" stroke="#ffe27a" stroke-width=".6"/>' : ''}
         <circle r="${f ? 2.7 : 2.25}" fill="${s.ipCode === 'GK' ? '#3c3f46' : f ? '#0b5d3a' : '#123b29'}" stroke="#fff" stroke-width=".35"/>
         <text class="ab" y=".75" text-anchor="middle" font-size="${f ? 1.9 : 1.6}" font-weight="700" fill="#fff"></text>
-        ${p ? `<text y="4.9" text-anchor="middle" font-size="1.55" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width=".35" paint-order="stroke">${esc(p.name.split(' ').slice(-1)[0]).slice(0, 11)}</text>` : ''}
+        ${p ? `<text y="4.9" text-anchor="middle" font-size="1.55" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width=".35" paint-order="stroke">${esc(surname(p.name)).slice(0, 11)}</text>` : ''}
       </g>`; }).join('')}</g>
     <circle id="sim-ball" r=".95" fill="#fff" stroke="#111" stroke-width=".25"/>
   </svg>`;
@@ -2607,7 +2711,7 @@ function simFrame() {
 function vHome() {
   const t = ST.tactic, ps = players(), op = oppPlayers(), au = auditTactic(t, ps);
   const top = au.findings.filter(f => f.sev === 'crit' || f.sev === 'warn').slice(0, 3);
-  const step = (n, done, title, body, cta) => `<div class="panel step-card ${done ? 'done' : ''}"><div class="row" style="gap:10px"><div class="n">${done ? '✓' : n}</div><h3 style="margin:0">${title}</h3></div><div class="small" style="margin:8px 0 12px">${body}</div><div class="row">${cta}</div></div>`;
+  const step = (n, done, title, body, cta) => `<div class="panel step-card ${done ? 'done' : ''}" data-fixed><div class="row" style="gap:10px"><div class="n">${done ? '✓' : n}</div><h3 style="margin:0">${title}</h3></div><div class="small" style="margin:8px 0 12px">${body}</div><div class="row">${cta}</div></div>`;
   let sugg = '';
   if (ps.length >= 11) { if (!ST.sugg) ST.sugg = suggestTactics(ps); const s0 = ST.sugg[0]; sugg = `<div class="panel"><h3>Sistema que melhor serve o plantel</h3><p><b>${esc(s0.tp.n)}</b> — pontuação ${s0.total} (XI ${s0.xiAvg}, estilo ${s0.fit}, profundidade ${s0.depth}).</p><div class="row"><button class="btn" onclick="A.tab('team','xi')">Ver ranking completo</button><button class="btn" onclick="A.useSuggestion(0)">Abrir no analisador</button></div></div>`; }
   let oppBox = '';
@@ -2615,7 +2719,7 @@ function vHome() {
   return `<div class="top"><div><h1>Olá! Vamos preparar o próximo jogo.</h1><p class="muted">Três passos. Tudo corre neste computador${DESKTOP ? ' e o plantel actualiza sozinho quando carrega F9 no FM' : ''}.</p></div></div>
   <div class="grid g3">
     ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${ps.length} jogadores</b>${ST.myClub ? ' do ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Definições.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
-      ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : (DESKTOP ? `<button class="btn primary" onclick="A.saveNow()">Ler o save agora</button>` : `<button class="btn primary" onclick="A.tab('team','squad')">Como carregar</button>`) + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
+      ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : (DESKTOP ? `<button class="btn primary" data-busy="save" onclick="A.saveNow()">Ler o save agora</button>` : `<button class="btn primary" onclick="A.tab('team','squad')">Como carregar</button>`) + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
     ${step(2, true, 'Tática', `<div class="score-ring" style="gap:12px">${ring(au.overall, 64)}<div><b>${esc(t.name)}</b><br><span class="muted">${esc(t.ipForm)} → ${esc(t.oopForm)} · ${esc(t.ment)}</span></div></div>`,
       (ps.length >= 11 ? `<button class="btn primary" onclick="A.tab('team','gen')">Gerar tática para o plantel</button>` : '') + `<button class="btn ${ps.length >= 11 ? '' : 'primary'}" onclick="A.tab('tactic','analyze')">Analisar</button><button class="btn" onclick="A.simOpen()">▶ Ver em campo</button>`)}
     ${step(3, op.length > 0, 'Adversário', op.length ? `<b>${esc(ST._oppRep && ST._oppRep.club || ST.opp.source)}</b> carregado` : 'No FM27, abra o plantel do adversário e carregue <b>F9</b>. A app reconhece que é outro clube.',
@@ -2643,7 +2747,7 @@ function vSquad() {
       ${DESKTOP ? `<div class="notice"><b>Do save (recomendado):</b> grave o jogo no FM — a app lê o save sozinha${ST.auto.save ? '' : ' (automático desligado)'}.
         ${ST.lastSave ? `<br><span class="small">Último save: <b>${esc(ST.lastSave.name)}</b>${ST.auto.saveLast ? ' · lido ' + esc(ST.auto.saveLast.split(' · ')[1] || '') : ''}</span>` : ''}
         ${ST.auto.saveErr ? `<div class="small" style="color:var(--crit);margin-top:4px">${esc(ST.auto.saveErr)}</div><div class="small">Instale o leitor uma vez: <code>winget install --id=astral-sh.uv -e</code> (depois reinicie a app).</div>` : ''}
-        <div class="row" style="margin-top:8px"><button class="btn primary sm" onclick="A.saveNow()">Ler o save agora</button></div></div>`
+        <div class="row" style="margin-top:8px"><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">Ler o save agora</button></div></div>`
       : `<ol class="clean small"><li><b>Do save:</b> abra o <a href="https://rhiever.github.io/fmsave/app/" target="_blank" rel="noopener">fmsave no browser</a>, largue lá o seu <code>.fm</code> (Documentos › Sports Interactive › Football Manager 27 › games) e descarregue o CSV do plantel. Nada é enviado para a internet.</li><li>Arraste esse CSV para esta janela.</li></ol>`}
       <details style="margin-top:8px"><summary>Alternativa: F9 no jogo (FM View Exporter)</summary>
       <ol class="clean small">
@@ -2769,7 +2873,7 @@ function vGen() {
     <label class="f">Jogador-estrela (constrói à volta dele)${selectHTML([['', '— nenhum —']].concat(byName.map(p => [p.id, p.name + (p.posRaw ? ' · ' + p.posRaw : '')])), g.star, "A.genOpt('star',this.value)")}</label>
     <div class="f"><span>Titulares obrigatórios</span><div class="chips">${byName.map(p => `<button class="chip pick ${g.must.includes(p.id) ? 'on' : ''}" onclick="A.genToggle('must','${esc(p.id)}')">${esc(p.name)}</button>`).join('')}</div></div>
     ${young.length ? `<div class="f"><span>Jovens a desenvolver (≤ 21) — ganham prioridade no XI</span><div class="chips">${young.map(p => `<button class="chip pick ${g.youth.includes(p.id) ? 'on' : ''}" onclick="A.genToggle('youth','${esc(p.id)}')">${esc(p.name)} <span class="muted">${p.age}</span></button>`).join('')}</div></div>` : ''}
-    <button class="btn primary" onclick="A.genRun()">${g.res ? 'Gerar de novo' : 'Gerar tática'}</button>
+    <button class="btn primary" data-busy="gen" onclick="A.genRun()">${g.res ? 'Gerar de novo' : 'Gerar tática'}</button>
     <p class="small muted" style="margin:0">Testa todos os pares de formações, escolhe o papel de cada posição com regras de equilíbrio (rest-defence, largura, área, criadores, outlets) e o XI exacto pelo algoritmo húngaro.</p></div>`;
   if (!g.res) return `<div class="top"><div><h2>Gerar tática</h2><p class="muted small" style="margin:0">Uma tática completa feita à volta do teu plantel, pronta a copiar para o FM27.</p></div></div><div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">${opts}<div class="panel empty">Escolha o contexto e carregue em <b>Gerar tática</b>.</div></div>`;
   const all = [g.res.main, ...g.res.alts], r = all[g.pick] || all[0], t = r.t;
@@ -3153,7 +3257,7 @@ function vSettings() {
         <label class="f">Pasta dos saves (opcional)<input type="text" value="${esc(ST.auto.saveDir)}" placeholder="Documentos\\Sports Interactive\\Football Manager 27\\games" onchange="A.saveDir(this.value)"></label>
         <div class="small">${ST.lastSave ? `Último save: <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br>Lido: ${esc(ST.auto.saveLast)}` : ''}</div>
         ${ST.auto.saveErr ? `<div class="notice warn small">${esc(ST.auto.saveErr)}<br>A leitura usa o <b>fmsave</b> (MIT). Instale o <b>uv</b> uma vez — <code>winget install --id=astral-sh.uv -e</code> — e reinicie a app; na primeira leitura o uv descarrega o fmsave (precisa de internet só nessa vez).</div>` : ''}
-        <div class="row"><button class="btn" onclick="A.saveNow()">Ler o save agora</button></div>`
+        <div class="row"><button class="btn" data-busy="save" onclick="A.saveNow()">Ler o save agora</button></div>`
       : `<p class="small">No browser: use o <a href="https://rhiever.github.io/fmsave/app/" target="_blank" rel="noopener">fmsave online</a> (lê o save no seu PC, sem enviar nada), descarregue o CSV e arraste-o para aqui. Na app instalada isto é automático.</p>`}
       <h3>Carregamento automático (F9)</h3>
       ${DESKTOP ? `<label class="row"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar sozinho cada exportação nova do FM View Exporter</label>
@@ -3193,7 +3297,10 @@ async function labCall(method, path, body, timeoutMs) {
 let LAB_POLL = 0;
 function labPoll() {
   clearTimeout(LAB_POLL); const L = labState();
-  if (!L.job || !['queued', 'running'].includes(L.job.status) || ST.view !== 'lab') return;
+  if (!L.job || !['queued', 'running'].includes(L.job.status)) { busyEnd('lab-job'); return; }
+  busyStart('lab-job', 'Motor do FM27: ' + (L.job.name || 'experiência'), { p: (L.job.completed || 0) / Math.max(1, L.job.total || 1),
+    detail: `${L.job.completed || 0}/${L.job.total || 0} jogos${L.job.eta_seconds ? ' · faltam ~' + Math.ceil(L.job.eta_seconds / 60) + ' min' : ''}` });
+  if (ST.view !== 'lab') return;
   LAB_POLL = setTimeout(async () => { try { L.job = await labCall('GET', '/api/jobs/' + L.job.id);
     const it = L.jobs.find(j => j.id === L.job.id); if (it) Object.assign(it, { status: L.job.status, completed: L.job.completed, total: L.job.total });
     if (!['queued', 'running'].includes(L.job.status)) toast('Experiência concluída no motor do FM27');
@@ -3226,8 +3333,8 @@ function vLabResults(job) {
   return `<div class="panel"><div class="row" style="justify-content:space-between;align-items:flex-start">
       <div><h2 style="margin:0">${esc(a.name)}</h2><p class="small muted" style="margin:.2em 0 0">${a.type === 'save_opponents' ? 'Contra adversários reais do save' : a.mode === 'comparison' ? 'Comparação A/B com as mesmas sementes' : 'Tática única'} · ${a.completed || 0}/${a.total || a.rows.length} jogos · estado: ${esc(job.status || 'importado')}</p></div>
       <div class="row">${DESKTOP && L.status ? `${running ? `<button class="btn" onclick="A.labCancel('${esc(job.id)}')">Cancelar</button>` : ''}
-        ${free && !running && job.id ? `${selectHTML([[50, '+50 jogos'], [100, '+100 jogos'], [200, '+200 jogos']], L.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
-        ${job.id ? groups.filter(g => g === 'A' || g === 'B').map(g => `<button class="btn" onclick="A.labFmf('${esc(job.id)}','${g}')">.fmf ${g}</button>`).join('') : ''}` : ''}</div></div>
+        ${free && !running && job.id ? `${selectHTML([[50, '+50 jogos'], [100, '+100 jogos'], [200, '+200 jogos']], L.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" data-busy="lab-more" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
+        ${job.id ? groups.filter(g => g === 'A' || g === 'B').map(g => `<button class="btn" data-busy="lab-fmf" onclick="A.labFmf('${esc(job.id)}','${g}')">.fmf ${g}</button>`).join('') : ''}` : ''}</div></div>
     ${running ? `<div class="progress"><i style="width:${(job.completed || 0) / Math.max(1, job.total || 1) * 100}%"></i></div><p class="small muted">A correr no motor do FM27… ${job.matches_per_minute ? job.matches_per_minute + ' jogos/min' : ''}${job.eta_seconds ? ' · faltam ~' + Math.ceil(job.eta_seconds / 60) + ' min' : ''}</p>` : ''}
   </div>
   ${a.comparison ? `<div class="panel verdict ${a.comparison.tone}"><h3 style="margin:0 0 6px">Veredicto (${a.comparison.n} pares de jogos com a mesma semente)</h3><p style="margin:0 0 10px">${esc(a.comparison.verdict)}</p>
@@ -3244,8 +3351,8 @@ function vLab() {
       <h3>Ligação</h3>
       <div class="row"><span class="dot ${L.status ? 'ok' : ''}"></span><b>${L.status ? 'Ligado ao Tactics Lab' : 'Desligado'}</b>${L.status ? `<span class="small muted">motor ${esc(L.status.engine || '')} · ${L.status.roles || '?'} papéis</span>` : ''}</div>
       ${L.err ? `<div class="notice warn small">${esc(L.err)}</div>` : ''}
-      <div class="row"><label class="f" style="flex:1">Porta<input type="number" value="${L.port}" min="1024" max="65535" onchange="A.labSet('port',+this.value)"></label><button class="btn primary" onclick="A.labConnect()" ${L.busy ? 'disabled' : ''}>${L.busy ? 'A procurar…' : L.status ? 'Actualizar' : 'Ligar'}</button></div>
-      ${L.status ? `<button class="btn sm" onclick="A.labCatalog()">Exportar catálogo do motor (diagnóstico)</button>` : ''}
+      <div class="row"><label class="f" style="flex:1">Porta<input type="number" value="${L.port}" min="1024" max="65535" onchange="A.labSet('port',+this.value)"></label><button class="btn primary" data-busy="lab-connect" onclick="A.labConnect()">${L.status ? 'Actualizar' : 'Ligar'}</button></div>
+      ${L.status ? `<button class="btn sm" data-busy="lab-cat" onclick="A.labCatalog()">Exportar catálogo do motor (diagnóstico)</button>` : ''}
     </div>
     <div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Experiências</h3>${L.status ? '<button class="btn sm" onclick="A.labJobs()">↻</button>' : ''}</div>
       ${L.jobs.length ? L.jobs.map(j => { const st = { complete: 'concluída', running: 'a correr', queued: 'em fila', error: 'erro', cancelled: 'cancelada' }[j.status] || j.status;
@@ -3314,7 +3421,13 @@ const A = {
   applySpTip(i) { const tp = ST._sp && ST._sp.tips[i]; if (!tp || !tp.ti) return; const d = TI_BY_KEY[tp.ti]; if (tp.v === d.def) delete ST.tactic.ti[tp.ti]; else ST.tactic.ti[tp.ti] = tp.v; save(); render(); toast(`${d.n}: ${d.opts[tp.v]}`); },
   genOpt(k, v) { genOpts()[k] = v; save(); render(); },
   genToggle(k, id) { const g = genOpts(); const i = g[k].indexOf(id); if (i >= 0) g[k].splice(i, 1); else if (k !== 'youth' || g[k].length < 3) g[k].push(id); else toast('Máximo 3 jovens'); save(); render(); },
-  genRun() { const g = genOpts(); toast('A gerar…'); setTimeout(() => { const t0 = performance.now(); g.res = generateTactic(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth }); g.pick = 0; save(); render(); toast(`Tática gerada em ${Math.round(performance.now() - t0)} ms`); }, 30); },
+  async genRun() {
+    const g = genOpts(); if (BUSY.gen) return;
+    const t0 = performance.now();
+    g.res = await withBusy('gen', 'A gerar a tática', (prog) => generateTacticAsync(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth },
+      (s) => prog(s.total ? s.done / s.total : null, `${s.label}${s.total > 1 ? ` (${Math.min(s.done + 1, s.total)}/${s.total})` : ''}`)));
+    g.pick = 0; save(); render(); toast(`Tática gerada em ${(performance.now() - t0) / 1000 < 1 ? Math.round(performance.now() - t0) + ' ms' : ((performance.now() - t0) / 1000).toFixed(1) + ' s'}`);
+  },
   genPick(i) { genOpts().pick = i; save(); render(); },
   genTactic() { const g = genOpts(); const all = [g.res.main, ...g.res.alts]; const t = JSON.parse(JSON.stringify((all[g.pick] || all[0]).t));
     const pm = Object.fromEntries(players().map(p => [p.id, p]));
@@ -3325,21 +3438,23 @@ const A = {
   genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
   labSet(k, v) { labState()[k] = v; save(); },
   async labConnect() {
-    const L = labState(); L.busy = true; L.err = ''; render();
+    const L = labState(); if (BUSY['lab-connect']) return; L.busy = true; L.err = ''; render();
     const ports = [L.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
-    for (const p of ports) {
-      L.port = p;
+    busyStart('lab-connect', 'A procurar o Tactics Lab', { p: 0 });
+    for (const [i, p] of ports.entries()) {
+      L.port = p; busyUpdate('lab-connect', { p: i / ports.length, detail: 'porta ' + p });
       try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { L.status = s; break; } } catch (e) { /* tenta a seguinte */ }
     }
-    L.busy = false;
+    L.busy = false; busyEnd('lab-connect');
     if (!L.status) { L.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; L.port = ports[0]; render(); return; }
     save(); await A.labJobs();
   },
-  async labJobs() { const L = labState(); try { const j = await labCall('GET', '/api/jobs?brief=1'); L.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); L.err = ''; } catch (e) { L.err = e.message; L.status = null; } render(); },
-  async labOpen(id) { const L = labState(); try { L.job = await labCall('GET', '/api/jobs/' + id, null, 8000); L.err = ''; } catch (e) { L.err = e.message; } render(); },
+  async labJobs() { const L = labState(); busyStart('lab-jobs', 'A ler as experiências do Tactics Lab'); try { const j = await labCall('GET', '/api/jobs?brief=1'); L.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); L.err = ''; } catch (e) { L.err = e.message; L.status = null; } busyEnd('lab-jobs'); render(); },
+  async labOpen(id) { const L = labState(); try { L.job = await withBusy('lab-open', 'A abrir a experiência', () => labCall('GET', '/api/jobs/' + id, null, 15000)); L.err = ''; } catch (e) { L.err = e.message; } render(); },
   async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
   async labMore(id) {
-    const L = labState(), n = L.more || 100;
+    const L = labState(), n = L.more || 100; if (BUSY['lab-more']) return;
+    busyStart('lab-more', `A pedir mais ${n} jogos ao motor do FM27`, { detail: 'a preparar as táticas A e B' });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
       const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
@@ -3348,10 +3463,12 @@ const A = {
       const body = { scenario: sc.B, seeds, event_details: false, name: `${(pkg.summary && pkg.summary.name) || 'Experiência'} · +${n}` };
       if (sc.A) body.reference = sc.A;
       const r = await labCall('POST', '/api/run', body, 15000);
-      toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
-    } catch (e) { toast(e.message); L.err = e.message; render(); }
+      busyEnd('lab-more'); toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
+    } catch (e) { busyEnd('lab-more'); toast(e.message); L.err = e.message; render(); }
   },
   async labFmf(id, g) {
+    if (BUSY['lab-fmf']) return;
+    busyStart('lab-fmf', `A exportar o .fmf da tática ${g}`, { detail: 'o próprio jogo gera e verifica o ficheiro', slow: 'o motor do FM27 está a serializar e a reler a tática — até 45 s', slowAfter: 8 });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
       const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error('Tática ' + g + ' indisponível');
@@ -3359,13 +3476,16 @@ const A = {
       const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
       toast('.fmf exportado e verificado pelo jogo — importe-o no FM27');
-    } catch (e) { toast(e.message); }
+    } catch (e) { toast(e.message); } finally { busyEnd('lab-fmf'); }
   },
   async labCatalog() {
+    busyStart('lab-cat', 'A exportar o catálogo do motor');
     try { const cat = await labCall('GET', '/api/catalog', null, 8000), def = await labCall('GET', '/api/defaults', null, 8000);
-      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); }
+      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); } finally { busyEnd('lab-cat'); }
   },
   labImport(input) { const f = input.files[0]; if (!f) return; f.text().then(t => { try { ingestJSON(JSON.parse(t), f.name); } catch (e) { toast('JSON inválido'); } }); },
+  navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
+  collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
   setMyClub(v) { ST.myClub = v || null; save(); render(); },
   autoToggle() { ST.auto.on = !ST.auto.on; save(); render(); if (ST.auto.on) desktopPoll(true); },
@@ -3399,7 +3519,7 @@ const A = {
   async fmf(input) {
     const f = input.files ? input.files[0] : input; if (!f) return;
     ST.fmf = { loading: true, name: f.name }; render();
-    try { ST.fmf = await inspectFmf(f); } catch (e) { ST.fmf = { error: String(e), name: f.name }; }
+    try { ST.fmf = await withBusy('fmf', 'A analisar ' + f.name, () => inspectFmf(f)); } catch (e) { ST.fmf = { error: String(e), name: f.name }; }
     render();
   },
   fmfStrings() { if (!ST.fmf) return; download(ST.fmf.name + '.strings.txt', ST.fmf.strings.join('\n'), 'text/plain'); },
@@ -3448,9 +3568,11 @@ const TABS = {
 
 function renderNav() {
   const sq = players().length, op = oppPlayers().length;
-  return `<div class="brand"><div class="logo">FM27</div><div><b>Tactical Bible</b><span>v${VERSION}${DESKTOP ? ' · app' : ' · browser'}</span></div></div>` +
-    NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')"><span class="ic">${ic}</span>${label}</button>`).join('') +
-    `<div class="aside-status">
+  return `<div class="brand"><div class="logo">FM27</div><div class="lbl"><b>Tactical Bible</b><span>v${VERSION}${DESKTOP ? ' · app' : ' · browser'}</span></div>
+      <button class="nav-mini" onclick="A.navMini()" title="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'} (Ctrl+B)" aria-label="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'}">${ST.ui.navMini ? '»' : '«'}</button></div>` +
+    NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join('') +
+    `<div id="busy" aria-live="polite"></div>
+    <div class="aside-status">
       <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${sq} jogadores${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
       <div><span class="dot ${op ? 'ok' : ''}"></span>${op ? 'Adversário carregado' : 'Sem adversário'}</div>
       ${DESKTOP ? `<div><span class="dot ${ST.auto.save && !ST.auto.saveErr ? 'ok' : ''}"></span>Save: ${SAVE_BUSY ? 'a ler…' : ST.auto.saveErr ? 'erro (ver Definições)' : ST.auto.save ? 'automático' : 'manual'}</div>
@@ -3478,9 +3600,59 @@ function render(scrollTop) {
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
+  document.querySelector('.app').classList.toggle('mini', !!ST.ui.navMini);
+  decoratePanels(v + '/' + (ST.tabs[v] || ''));
+  paintBusy();
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
   if (v === 'lab') labPoll();
+}
+
+// ---------- actividade: tudo o que demora mostra que está a trabalhar ----------
+// busyStart(chave, texto) → barra no topo + cartão com tempo decorrido; busyUpdate(chave, {p: 0–1, detail}); busyEnd(chave).
+// Os botões com data-busy="chave" ficam bloqueados e com indicador enquanto a tarefa corre.
+const BUSY = {};
+let BUSY_TICK = 0;
+function busyStart(key, label, opts = {}) { BUSY[key] = { label, start: Date.now(), p: opts.p ?? null, detail: opts.detail || '', slow: opts.slow || null, slowAfter: opts.slowAfter || 12 }; paintBusy(); }
+function busyUpdate(key, patch) { if (BUSY[key]) { Object.assign(BUSY[key], patch); paintBusy(); } }
+function busyEnd(key) { delete BUSY[key]; paintBusy(); }
+async function withBusy(key, label, fn, opts) {
+  busyStart(key, label, opts);
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));   // deixa a janela desenhar o indicador antes de trabalhar
+  try { return await fn((p, detail) => busyUpdate(key, { p, ...(detail != null ? { detail } : {}) })); }
+  finally { busyEnd(key); }
+}
+function paintBusy() {
+  const keys = Object.keys(BUSY), bar = document.getElementById('topbar'), box = document.getElementById('busy');
+  if (!bar || !box) return;
+  const one = keys.length === 1 && BUSY[keys[0]].p != null ? BUSY[keys[0]].p : null;
+  bar.className = keys.length ? (one != null ? 'on det' : 'on') : '';
+  bar.firstElementChild.style.width = one != null ? Math.round(one * 100) + '%' : '';
+  box.innerHTML = keys.map(k => { const b = BUSY[k], s = Math.floor((Date.now() - b.start) / 1000);
+    const extra = b.slow && s >= b.slowAfter ? b.slow : b.detail;
+    const tip = `${b.label}${b.p != null ? ' — ' + Math.round(b.p * 100) + '%' : ''}${extra ? ' — ' + extra : ''}`;
+    return `<div class="busy-item" role="status" title="${esc(tip)}"><span class="spin" aria-hidden="true"></span>${b.p != null ? `<span class="busy-pct">${Math.round(b.p * 100)}%</span>` : ''}<div class="busy-body"><b>${esc(b.label)}</b>
+      ${b.p != null ? `<div class="busy-bar"><i style="width:${Math.round(b.p * 100)}%"></i></div>` : ''}
+      <span class="small muted">${[b.p != null ? Math.round(b.p * 100) + '%' : '', s >= 1 ? s + ' s' : '', extra ? esc(extra) : ''].filter(Boolean).join(' · ') || 'a começar…'}</span></div></div>`; }).join('');
+  box.className = keys.length ? 'on' : '';
+  document.querySelectorAll('[data-busy]').forEach(el => { const on = keys.includes(el.dataset.busy); el.disabled = on; el.classList.toggle('is-busy', on); el.setAttribute('aria-busy', String(on)); });
+  clearInterval(BUSY_TICK); if (keys.length) BUSY_TICK = setInterval(paintBusy, 500);
+}
+
+// ---------- painéis que fecham e abrem (estado guardado por ecrã e título) ----------
+function decoratePanels(scope) {
+  document.querySelectorAll('#main .panel').forEach(p => {
+    const first = p.firstElementChild; if (!first || p.classList.contains('empty') || p.hasAttribute('data-fixed')) return;
+    const h = /^H[23]$/.test(first.tagName) ? first : (first.classList.contains('row') || first.classList.contains('score-ring') ? first.querySelector('h2,h3') : null);
+    if (!h || !p.children[1]) return;                       // sem corpo, nada para recolher
+    const key = scope + '|' + h.textContent.replace(/\s+/g, ' ').trim().slice(0, 60);
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'pc-toggle'; btn.textContent = '▾';
+    const set = (c) => { p.classList.toggle('collapsed', c); btn.textContent = c ? '▸' : '▾'; btn.setAttribute('aria-expanded', String(!c)); btn.title = c ? 'Expandir' : 'Recolher'; btn.setAttribute('aria-label', btn.title + ': ' + h.textContent.trim()); };
+    btn.onclick = (e) => { e.stopPropagation(); const c = !p.classList.contains('collapsed'); set(c); if (c) ST.ui.collapsed[key] = 1; else delete ST.ui.collapsed[key]; save(); };
+    h.prepend(btn); h.classList.add('pc-title'); h.onclick = (e) => { if (e.target === h) btn.click(); };
+    p.classList.add('collapsible'); set(!!ST.ui.collapsed[key]);
+  });
 }
 
 // ---------- ficheiros: rota única para tudo o que entra ----------
@@ -3500,7 +3672,11 @@ function ingestJSON(d, name) {
 async function ingestFile(f) {
   const n = f.name.toLowerCase();
   if (n.endsWith('.fmf')) { ST.tabs.tactic = 'import'; ST.view = 'tactic'; render(true); return A.fmf(f); }
-  const txt = await f.text();
+  const txt = await withBusy('file', 'A ler ' + f.name, () => f.text(), { detail: (f.size / 1048576).toFixed(1) + ' MB' });
+  busyStart('file', 'A interpretar ' + f.name); await new Promise(r => setTimeout(r, 30));
+  try { return ingestParsed(txt, f, n); } finally { busyEnd('file'); }
+}
+function ingestParsed(txt, f, n) {
   if (n.endsWith('.json')) { try { return ingestJSON(JSON.parse(txt), f.name); } catch (e) { return toast('JSON inválido'); } }
   const where = ingestSquadText(txt, f.name);
   if (where) { ST.view = 'team'; ST.tabs.team = where === 'opp' ? 'opp' : 'squad'; }
@@ -3523,7 +3699,8 @@ async function desktopPoll(force) {
     const r = await window.__TAURI__.core.invoke('latest_export', { customDir: ST.auto.dir || null, since: ST.auto.mtime || null });
     if (r && r.content) {
       ST.auto.mtime = r.modified; ST.auto.last = r.name;
-      const where = ingestSquadText(r.content, r.name + ' (F9)');
+      busyStart('f9', 'A carregar a exportação F9', { detail: r.name }); await new Promise(res => setTimeout(res, 30));
+      let where; try { where = ingestSquadText(r.content, r.name + ' (F9)'); } finally { busyEnd('f9'); }
       save(); if (where) render();
     } else if (force) toast('Nenhuma exportação nova encontrada');
   } catch (e) { if (force) toast('Não consegui ler a pasta de exportação'); }
@@ -3539,13 +3716,14 @@ async function savePoll(force) {
   if (!info) { if (force) toast('Não encontrei saves do FM27 — indique a pasta em Definições'); return; }
   if (!force && info.modified <= (ST.auto.saveMtime || 0)) return;
   SAVE_BUSY = true; ST.auto.saveMtime = info.modified;           // marca já, para não repetir em ciclo se falhar
-  toast('A ler o save ' + info.name + '…'); render();
+  busyStart('save', 'A ler o save ' + info.name, { detail: (info.size / 1048576).toFixed(0) + ' MB · lê uma cópia, o save não é alterado',
+    slow: 'na primeira leitura o fmsave é descarregado e o save inteiro é analisado — pode demorar 1–2 minutos', slowAfter: 12 }); render();
   try {
     const r = await window.__TAURI__.core.invoke('export_save', { path: info.path });
     ST.auto.saveErr = ''; ST.auto.saveLast = `${r.save} · ${new Date(r.modified * 1000).toLocaleString('pt-PT')}`;
     ingestSquadText(r.content, r.save + ' (save)', { force: 'squad' });
   } catch (e) { ST.auto.saveErr = String(e); toast('Não consegui ler o save — veja Definições'); }
-  SAVE_BUSY = false; save(); render();
+  SAVE_BUSY = false; busyEnd('save'); save(); render();
 }
 
 async function desktopDirs() {
@@ -3553,6 +3731,7 @@ async function desktopDirs() {
   try { return await window.__TAURI__.core.invoke('export_dirs', { customDir: ST.auto.dir || null }); } catch (e) { return []; }
 }
 
+window.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); applyTheme(); render(); setupDnD();
   if (DESKTOP) { desktopPoll(); setInterval(desktopPoll, 3000); savePoll(); setInterval(savePoll, 10000); }

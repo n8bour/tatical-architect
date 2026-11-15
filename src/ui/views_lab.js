@@ -12,7 +12,10 @@ async function labCall(method, path, body, timeoutMs) {
 let LAB_POLL = 0;
 function labPoll() {
   clearTimeout(LAB_POLL); const L = labState();
-  if (!L.job || !['queued', 'running'].includes(L.job.status) || ST.view !== 'lab') return;
+  if (!L.job || !['queued', 'running'].includes(L.job.status)) { busyEnd('lab-job'); return; }
+  busyStart('lab-job', 'Motor do FM27: ' + (L.job.name || 'experiência'), { p: (L.job.completed || 0) / Math.max(1, L.job.total || 1),
+    detail: `${L.job.completed || 0}/${L.job.total || 0} jogos${L.job.eta_seconds ? ' · faltam ~' + Math.ceil(L.job.eta_seconds / 60) + ' min' : ''}` });
+  if (ST.view !== 'lab') return;
   LAB_POLL = setTimeout(async () => { try { L.job = await labCall('GET', '/api/jobs/' + L.job.id);
     const it = L.jobs.find(j => j.id === L.job.id); if (it) Object.assign(it, { status: L.job.status, completed: L.job.completed, total: L.job.total });
     if (!['queued', 'running'].includes(L.job.status)) toast('Experiência concluída no motor do FM27');
@@ -45,8 +48,8 @@ function vLabResults(job) {
   return `<div class="panel"><div class="row" style="justify-content:space-between;align-items:flex-start">
       <div><h2 style="margin:0">${esc(a.name)}</h2><p class="small muted" style="margin:.2em 0 0">${a.type === 'save_opponents' ? 'Contra adversários reais do save' : a.mode === 'comparison' ? 'Comparação A/B com as mesmas sementes' : 'Tática única'} · ${a.completed || 0}/${a.total || a.rows.length} jogos · estado: ${esc(job.status || 'importado')}</p></div>
       <div class="row">${DESKTOP && L.status ? `${running ? `<button class="btn" onclick="A.labCancel('${esc(job.id)}')">Cancelar</button>` : ''}
-        ${free && !running && job.id ? `${selectHTML([[50, '+50 jogos'], [100, '+100 jogos'], [200, '+200 jogos']], L.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
-        ${job.id ? groups.filter(g => g === 'A' || g === 'B').map(g => `<button class="btn" onclick="A.labFmf('${esc(job.id)}','${g}')">.fmf ${g}</button>`).join('') : ''}` : ''}</div></div>
+        ${free && !running && job.id ? `${selectHTML([[50, '+50 jogos'], [100, '+100 jogos'], [200, '+200 jogos']], L.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" data-busy="lab-more" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
+        ${job.id ? groups.filter(g => g === 'A' || g === 'B').map(g => `<button class="btn" data-busy="lab-fmf" onclick="A.labFmf('${esc(job.id)}','${g}')">.fmf ${g}</button>`).join('') : ''}` : ''}</div></div>
     ${running ? `<div class="progress"><i style="width:${(job.completed || 0) / Math.max(1, job.total || 1) * 100}%"></i></div><p class="small muted">A correr no motor do FM27… ${job.matches_per_minute ? job.matches_per_minute + ' jogos/min' : ''}${job.eta_seconds ? ' · faltam ~' + Math.ceil(job.eta_seconds / 60) + ' min' : ''}</p>` : ''}
   </div>
   ${a.comparison ? `<div class="panel verdict ${a.comparison.tone}"><h3 style="margin:0 0 6px">Veredicto (${a.comparison.n} pares de jogos com a mesma semente)</h3><p style="margin:0 0 10px">${esc(a.comparison.verdict)}</p>
@@ -63,8 +66,8 @@ function vLab() {
       <h3>Ligação</h3>
       <div class="row"><span class="dot ${L.status ? 'ok' : ''}"></span><b>${L.status ? 'Ligado ao Tactics Lab' : 'Desligado'}</b>${L.status ? `<span class="small muted">motor ${esc(L.status.engine || '')} · ${L.status.roles || '?'} papéis</span>` : ''}</div>
       ${L.err ? `<div class="notice warn small">${esc(L.err)}</div>` : ''}
-      <div class="row"><label class="f" style="flex:1">Porta<input type="number" value="${L.port}" min="1024" max="65535" onchange="A.labSet('port',+this.value)"></label><button class="btn primary" onclick="A.labConnect()" ${L.busy ? 'disabled' : ''}>${L.busy ? 'A procurar…' : L.status ? 'Actualizar' : 'Ligar'}</button></div>
-      ${L.status ? `<button class="btn sm" onclick="A.labCatalog()">Exportar catálogo do motor (diagnóstico)</button>` : ''}
+      <div class="row"><label class="f" style="flex:1">Porta<input type="number" value="${L.port}" min="1024" max="65535" onchange="A.labSet('port',+this.value)"></label><button class="btn primary" data-busy="lab-connect" onclick="A.labConnect()">${L.status ? 'Actualizar' : 'Ligar'}</button></div>
+      ${L.status ? `<button class="btn sm" data-busy="lab-cat" onclick="A.labCatalog()">Exportar catálogo do motor (diagnóstico)</button>` : ''}
     </div>
     <div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Experiências</h3>${L.status ? '<button class="btn sm" onclick="A.labJobs()">↻</button>' : ''}</div>
       ${L.jobs.length ? L.jobs.map(j => { const st = { complete: 'concluída', running: 'a correr', queued: 'em fila', error: 'erro', cancelled: 'cancelada' }[j.status] || j.status;

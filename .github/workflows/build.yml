@@ -101,11 +101,35 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  # Portão de layout: percorre todos os ecrãs (6 larguras × 3 modos) com um plantel de 62 jogadores.
+  # Se houver uma sobreposição ou um erro de JavaScript, este job falha e o Release não é publicado.
+  layout:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Chromium (Playwright)
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Gerar app/index.html
+        run: node build.mjs
+      - name: Verificar layout (sem sobreposições)
+        run: python tests/ui_layout.py
+      - name: Verificar indicadores de actividade
+        run: python tests/ui_busy.py
+
   # Publica os ficheiros em Releases (aparece na página principal do repositório):
   #  • push/Run workflow → pré-release "ultima" (substituída a cada build)
   #  • tag v* → release em rascunho com o nome da tag
   release:
-    needs: build
+    needs: [build, layout]
     runs-on: ubuntu-latest
     permissions:
       contents: write

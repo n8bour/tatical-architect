@@ -188,3 +188,80 @@ tr.dim td{color:var(--muted)}
 .jobitem .st{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--chip);margin-right:6px}
 .jobitem .st.running,.jobitem .st.queued{background:color-mix(in srgb,var(--warn) 25%,transparent)}.jobitem .st.complete{background:color-mix(in srgb,var(--good) 22%,transparent)}
 @media (max-width:1400px){.lab-vars{grid-template-columns:1fr!important}}
+
+/* ---------- v4.0.1: nada transborda a sua coluna ---------- */
+/* itens de grelha podem encolher (por defeito o mínimo é o conteúdo, o que empurrava colunas) */
+.grid>*,.split>*,.simgrid>*,.hero>*{min-width:0}
+/* menus e campos acompanham a coluna em vez de a esticarem pela opção mais comprida */
+label.f select,label.f input,.f select{width:100%;min-width:0}
+select{min-width:0;text-overflow:ellipsis}
+/* escolhas com nomes longos */
+.chip.pick{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* campos desenhados com tamanho máximo, centrados (ecrãs largos) */
+svg.pitch{max-width:420px;margin-inline:auto}
+.g2>div>svg.pitch{max-width:380px}
+/* tabelas largas fazem scroll dentro do seu painel */
+.panel table{max-width:100%}
+.panel>table,.panel>div>table{display:block;overflow-x:auto}
+#main>*{max-width:1800px;margin-left:auto;margin-right:auto}
+
+/* ---------- v4.1: painéis recolhíveis e menu só com ícones ---------- */
+.pc-title{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
+.pc-toggle{flex:none;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);font-size:12px;line-height:1;display:inline-grid;place-items:center;cursor:pointer}
+.pc-toggle:hover{color:var(--text);border-color:var(--accent)}
+.pc-toggle:focus-visible,.nav-btn:focus-visible,.btn:focus-visible,.nav-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel.collapsed>*:not(:first-child){display:none!important}
+.panel.collapsed{padding-bottom:12px}
+.brand{position:relative}
+.nav-mini{margin-left:auto;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;flex:none}
+.nav-mini:hover{color:var(--text)}
+.nav-btn .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app{transition:grid-template-columns .15s}
+.app.mini{grid-template-columns:64px 1fr}
+.app.mini aside{padding:16px 8px;align-items:center}
+.app.mini .brand{flex-direction:column;padding:4px 0 12px;gap:8px}
+.app.mini .brand .lbl,.app.mini .nav-btn .lbl,.app.mini .aside-status,.app.mini .aside-foot{display:none}
+.app.mini .nav-btn{justify-content:center;padding:10px 0;width:44px}
+.app.mini .nav-btn .ic{width:auto;font-size:16px}
+/* ecrãs estreitos (ex.: 1366 com escala 125%): menu só com ícones automaticamente */
+@media (max-width:1150px) and (min-width:761px){
+  .app{grid-template-columns:64px 1fr}
+  aside{padding:16px 8px;align-items:center}
+  .brand{flex-direction:column;padding:4px 0 12px;gap:8px}
+  .brand .lbl,.nav-btn .lbl,.aside-status,.aside-foot,.nav-mini{display:none}
+  .nav-btn{justify-content:center;padding:10px 0;width:44px}
+}
+/* títulos longos nunca empurram os botões do cabeçalho */
+.top>div:first-child{min-width:0;flex:1 1 320px}
+.top h2{overflow-wrap:anywhere}
+.row{min-width:0}
+
+/* ---------- v4.2: actividade (loading) ---------- */
+#topbar{position:fixed;top:0;left:0;right:0;height:3px;z-index:30;pointer-events:none;opacity:0;transition:opacity .2s}
+#topbar.on{opacity:1}
+#topbar i{display:block;height:100%;width:30%;background:var(--accent);border-radius:0 3px 3px 0}
+#topbar.on:not(.det) i{animation:fm-indet 1.2s ease-in-out infinite}
+#topbar.det i{transition:width .3s}
+@keyframes fm-indet{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+#busy{display:none;flex-direction:column;gap:8px;margin-top:14px;width:100%}
+#busy.on{display:flex}
+.busy-item{display:flex;gap:9px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:9px 10px;min-width:0}
+.busy-pct{display:none;font-size:10px;font-weight:700}
+.busy-body{min-width:0;display:grid;gap:4px}
+.busy-body b{font-size:13px;overflow-wrap:anywhere}
+.busy-bar{height:5px;background:var(--line);border-radius:5px;overflow:hidden;width:100%}
+.busy-bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.spin{flex:none;width:16px;height:16px;margin-top:2px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:fm-spin .8s linear infinite}
+@keyframes fm-spin{to{transform:rotate(360deg)}}
+.btn.is-busy{position:relative;color:transparent!important;pointer-events:none}
+.btn.is-busy::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid currentColor;border-color:var(--line);border-top-color:var(--accent);animation:fm-spin .8s linear infinite}
+.btn.primary.is-busy::after{border-color:rgba(255,255,255,.35);border-top-color:#fff}
+.btn:disabled{cursor:progress}
+@media (prefers-reduced-motion: reduce){#topbar.on:not(.det) i{animation:none;width:100%;opacity:.6}.spin,.btn.is-busy::after{animation-duration:2.4s}}
+
+/* menu só com ícones: a actividade fica um spinner (com a percentagem) e o detalhe no tooltip */
+.app.mini #busy .busy-body{display:none}
+.app.mini .busy-item{flex-direction:column;align-items:center;padding:8px 4px;width:44px;gap:4px}
+.app.mini .busy-pct{display:block}
+@media (max-width:1150px) and (min-width:761px){#busy .busy-body{display:none}.busy-item{flex-direction:column;align-items:center;padding:8px 4px;width:44px;gap:4px}.busy-pct{display:block}}
+@media (max-width:760px){#busy{position:fixed;left:12px;right:12px;bottom:12px;z-index:25;margin:0}}

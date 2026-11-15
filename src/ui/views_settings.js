@@ -15,7 +15,7 @@ function vSettings() {
         <label class="f">Pasta dos saves (opcional)<input type="text" value="${esc(ST.auto.saveDir)}" placeholder="Documentos\\Sports Interactive\\Football Manager 27\\games" onchange="A.saveDir(this.value)"></label>
         <div class="small">${ST.lastSave ? `Último save: <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br>Lido: ${esc(ST.auto.saveLast)}` : ''}</div>
         ${ST.auto.saveErr ? `<div class="notice warn small">${esc(ST.auto.saveErr)}<br>A leitura usa o <b>fmsave</b> (MIT). Instale o <b>uv</b> uma vez — <code>winget install --id=astral-sh.uv -e</code> — e reinicie a app; na primeira leitura o uv descarrega o fmsave (precisa de internet só nessa vez).</div>` : ''}
-        <div class="row"><button class="btn" onclick="A.saveNow()">Ler o save agora</button></div>`
+        <div class="row"><button class="btn" data-busy="save" onclick="A.saveNow()">Ler o save agora</button></div>`
       : `<p class="small">No browser: use o <a href="https://rhiever.github.io/fmsave/app/" target="_blank" rel="noopener">fmsave online</a> (lê o save no seu PC, sem enviar nada), descarregue o CSV e arraste-o para aqui. Na app instalada isto é automático.</p>`}
       <h3>Carregamento automático (F9)</h3>
       ${DESKTOP ? `<label class="row"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar sozinho cada exportação nova do FM View Exporter</label>

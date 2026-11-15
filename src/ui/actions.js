@@ -51,7 +51,13 @@ const A = {
   applySpTip(i) { const tp = ST._sp && ST._sp.tips[i]; if (!tp || !tp.ti) return; const d = TI_BY_KEY[tp.ti]; if (tp.v === d.def) delete ST.tactic.ti[tp.ti]; else ST.tactic.ti[tp.ti] = tp.v; save(); render(); toast(`${d.n}: ${d.opts[tp.v]}`); },
   genOpt(k, v) { genOpts()[k] = v; save(); render(); },
   genToggle(k, id) { const g = genOpts(); const i = g[k].indexOf(id); if (i >= 0) g[k].splice(i, 1); else if (k !== 'youth' || g[k].length < 3) g[k].push(id); else toast('Máximo 3 jovens'); save(); render(); },
-  genRun() { const g = genOpts(); toast('A gerar…'); setTimeout(() => { const t0 = performance.now(); g.res = generateTactic(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth }); g.pick = 0; save(); render(); toast(`Tática gerada em ${Math.round(performance.now() - t0)} ms`); }, 30); },
+  async genRun() {
+    const g = genOpts(); if (BUSY.gen) return;
+    const t0 = performance.now();
+    g.res = await withBusy('gen', 'A gerar a tática', (prog) => generateTacticAsync(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth },
+      (s) => prog(s.total ? s.done / s.total : null, `${s.label}${s.total > 1 ? ` (${Math.min(s.done + 1, s.total)}/${s.total})` : ''}`)));
+    g.pick = 0; save(); render(); toast(`Tática gerada em ${(performance.now() - t0) / 1000 < 1 ? Math.round(performance.now() - t0) + ' ms' : ((performance.now() - t0) / 1000).toFixed(1) + ' s'}`);
+  },
   genPick(i) { genOpts().pick = i; save(); render(); },
   genTactic() { const g = genOpts(); const all = [g.res.main, ...g.res.alts]; const t = JSON.parse(JSON.stringify((all[g.pick] || all[0]).t));
     const pm = Object.fromEntries(players().map(p => [p.id, p]));
@@ -62,21 +68,23 @@ const A = {
   genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
   labSet(k, v) { labState()[k] = v; save(); },
   async labConnect() {
-    const L = labState(); L.busy = true; L.err = ''; render();
+    const L = labState(); if (BUSY['lab-connect']) return; L.busy = true; L.err = ''; render();
     const ports = [L.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
-    for (const p of ports) {
-      L.port = p;
+    busyStart('lab-connect', 'A procurar o Tactics Lab', { p: 0 });
+    for (const [i, p] of ports.entries()) {
+      L.port = p; busyUpdate('lab-connect', { p: i / ports.length, detail: 'porta ' + p });
       try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { L.status = s; break; } } catch (e) { /* tenta a seguinte */ }
     }
-    L.busy = false;
+    L.busy = false; busyEnd('lab-connect');
     if (!L.status) { L.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; L.port = ports[0]; render(); return; }
     save(); await A.labJobs();
   },
-  async labJobs() { const L = labState(); try { const j = await labCall('GET', '/api/jobs?brief=1'); L.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); L.err = ''; } catch (e) { L.err = e.message; L.status = null; } render(); },
-  async labOpen(id) { const L = labState(); try { L.job = await labCall('GET', '/api/jobs/' + id, null, 8000); L.err = ''; } catch (e) { L.err = e.message; } render(); },
+  async labJobs() { const L = labState(); busyStart('lab-jobs', 'A ler as experiências do Tactics Lab'); try { const j = await labCall('GET', '/api/jobs?brief=1'); L.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); L.err = ''; } catch (e) { L.err = e.message; L.status = null; } busyEnd('lab-jobs'); render(); },
+  async labOpen(id) { const L = labState(); try { L.job = await withBusy('lab-open', 'A abrir a experiência', () => labCall('GET', '/api/jobs/' + id, null, 15000)); L.err = ''; } catch (e) { L.err = e.message; } render(); },
   async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
   async labMore(id) {
-    const L = labState(), n = L.more || 100;
+    const L = labState(), n = L.more || 100; if (BUSY['lab-more']) return;
+    busyStart('lab-more', `A pedir mais ${n} jogos ao motor do FM27`, { detail: 'a preparar as táticas A e B' });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
       const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
@@ -85,10 +93,12 @@ const A = {
       const body = { scenario: sc.B, seeds, event_details: false, name: `${(pkg.summary && pkg.summary.name) || 'Experiência'} · +${n}` };
       if (sc.A) body.reference = sc.A;
       const r = await labCall('POST', '/api/run', body, 15000);
-      toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
-    } catch (e) { toast(e.message); L.err = e.message; render(); }
+      busyEnd('lab-more'); toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
+    } catch (e) { busyEnd('lab-more'); toast(e.message); L.err = e.message; render(); }
   },
   async labFmf(id, g) {
+    if (BUSY['lab-fmf']) return;
+    busyStart('lab-fmf', `A exportar o .fmf da tática ${g}`, { detail: 'o próprio jogo gera e verifica o ficheiro', slow: 'o motor do FM27 está a serializar e a reler a tática — até 45 s', slowAfter: 8 });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
       const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error('Tática ' + g + ' indisponível');
@@ -96,13 +106,16 @@ const A = {
       const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
       toast('.fmf exportado e verificado pelo jogo — importe-o no FM27');
-    } catch (e) { toast(e.message); }
+    } catch (e) { toast(e.message); } finally { busyEnd('lab-fmf'); }
   },
   async labCatalog() {
+    busyStart('lab-cat', 'A exportar o catálogo do motor');
     try { const cat = await labCall('GET', '/api/catalog', null, 8000), def = await labCall('GET', '/api/defaults', null, 8000);
-      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); }
+      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); } finally { busyEnd('lab-cat'); }
   },
   labImport(input) { const f = input.files[0]; if (!f) return; f.text().then(t => { try { ingestJSON(JSON.parse(t), f.name); } catch (e) { toast('JSON inválido'); } }); },
+  navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
+  collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
   setMyClub(v) { ST.myClub = v || null; save(); render(); },
   autoToggle() { ST.auto.on = !ST.auto.on; save(); render(); if (ST.auto.on) desktopPoll(true); },
@@ -136,7 +149,7 @@ const A = {
   async fmf(input) {
     const f = input.files ? input.files[0] : input; if (!f) return;
     ST.fmf = { loading: true, name: f.name }; render();
-    try { ST.fmf = await inspectFmf(f); } catch (e) { ST.fmf = { error: String(e), name: f.name }; }
+    try { ST.fmf = await withBusy('fmf', 'A analisar ' + f.name, () => inspectFmf(f)); } catch (e) { ST.fmf = { error: String(e), name: f.name }; }
     render();
   },
   fmfStrings() { if (!ST.fmf) return; download(ST.fmf.name + '.strings.txt', ST.fmf.strings.join('\n'), 'text/plain'); },

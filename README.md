@@ -56,6 +56,13 @@ Duração: cerca de 6 a 8 minutos na primeira vez e 2 a 3 minutos nas seguintes,
 
 A ligação passa pelo lado nativo da app, porque o servidor do Tactics Lab recusa pedidos vindos de outras páginas. Só fala com `127.0.0.1` e só usa caminhos `/api/`.
 
+## Interface
+- **Painéis recolhíveis:** clique no ▾ (ou no título) de qualquer painel para o fechar ou abrir. A app lembra-se do estado em cada ecrã.
+- **Menu só com ícones:** botão « no topo do menu ou **Ctrl+B**. Em janelas estreitas (por exemplo, 1366 com escala de 125%) o menu passa a ícones sozinho.
+- **Arrastar e largar** qualquer ficheiro para a janela.
+- **Atividade sempre visível:** tudo o que demora mostra que está a trabalhar. Aparece uma barra fina no topo da janela e um cartão na barra lateral com o que está a acontecer, o tempo decorrido e, quando se sabe, a percentagem. O cartão nunca tapa conteúdo. Os botões dessa tarefa mostram um spinner e ficam bloqueados até acabar. Está ligado à leitura do save (com aviso quando a primeira leitura demora), ao F9, a ficheiros grandes, ao Gerador (progresso par a par), à análise de `.fmf` e ao Laboratório (procurar o servidor, abrir experiências, exportar `.fmf` e jogos a correr no motor).
+- **Portão de layout:** `tests/ui_layout.py` percorre os 17 ecrãs em 6 larguras e 3 modos (normal, menu recolhido, painéis fechados) com um plantel de 62 jogadores de nomes longos. Corre no GitHub em cada build, e o Release não é publicado se encontrar sobreposições ou erros.
+
 ## Limitações
 
 - **Leitura do save.** A leitura é feita pelo [fmsave](https://github.com/rhiever/fmsave) (MIT, de Randal S. Olson), sempre sobre uma **cópia** do save. Nunca altera o save, não lê a memória do jogo e não precisa do FM aberto. O fmsave marca como "não confirmados" alguns campos do FM27. A app usa só nome, idade, clube, posições e atributos.

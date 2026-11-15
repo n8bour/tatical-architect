@@ -31,7 +31,7 @@ function simSVG(t) {
         ${f ? '<circle r="3.6" fill="none" stroke="#ffe27a" stroke-width=".6"/>' : ''}
         <circle r="${f ? 2.7 : 2.25}" fill="${s.ipCode === 'GK' ? '#3c3f46' : f ? '#0b5d3a' : '#123b29'}" stroke="#fff" stroke-width=".35"/>
         <text class="ab" y=".75" text-anchor="middle" font-size="${f ? 1.9 : 1.6}" font-weight="700" fill="#fff"></text>
-        ${p ? `<text y="4.9" text-anchor="middle" font-size="1.55" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width=".35" paint-order="stroke">${esc(p.name.split(' ').slice(-1)[0]).slice(0, 11)}</text>` : ''}
+        ${p ? `<text y="4.9" text-anchor="middle" font-size="1.55" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width=".35" paint-order="stroke">${esc(surname(p.name)).slice(0, 11)}</text>` : ''}
       </g>`; }).join('')}</g>
     <circle id="sim-ball" r=".95" fill="#fff" stroke="#111" stroke-width=".25"/>
   </svg>`;

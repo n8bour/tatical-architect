@@ -10,7 +10,7 @@ function vSquad() {
       ${DESKTOP ? `<div class="notice"><b>Do save (recomendado):</b> grave o jogo no FM — a app lê o save sozinha${ST.auto.save ? '' : ' (automático desligado)'}.
         ${ST.lastSave ? `<br><span class="small">Último save: <b>${esc(ST.lastSave.name)}</b>${ST.auto.saveLast ? ' · lido ' + esc(ST.auto.saveLast.split(' · ')[1] || '') : ''}</span>` : ''}
         ${ST.auto.saveErr ? `<div class="small" style="color:var(--crit);margin-top:4px">${esc(ST.auto.saveErr)}</div><div class="small">Instale o leitor uma vez: <code>winget install --id=astral-sh.uv -e</code> (depois reinicie a app).</div>` : ''}
-        <div class="row" style="margin-top:8px"><button class="btn primary sm" onclick="A.saveNow()">Ler o save agora</button></div></div>`
+        <div class="row" style="margin-top:8px"><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">Ler o save agora</button></div></div>`
       : `<ol class="clean small"><li><b>Do save:</b> abra o <a href="https://rhiever.github.io/fmsave/app/" target="_blank" rel="noopener">fmsave no browser</a>, largue lá o seu <code>.fm</code> (Documentos › Sports Interactive › Football Manager 27 › games) e descarregue o CSV do plantel. Nada é enviado para a internet.</li><li>Arraste esse CSV para esta janela.</li></ol>`}
       <details style="margin-top:8px"><summary>Alternativa: F9 no jogo (FM View Exporter)</summary>
       <ol class="clean small">

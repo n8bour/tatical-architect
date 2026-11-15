@@ -36,10 +36,12 @@ function makeScorer(players) {
   return { rs, fit };
 }
 
-function generateTactic(players, opts = {}) {
+// Corre por passos: cada yield devolve o progresso; o valor final é o resultado.
+function* generateTacticSteps(players, opts = {}) {
   const exp = EXPECT[opts.expect] || EXPECT.mid;
   const must = new Set(opts.must || []), youth = new Set(opts.youth || []), star = opts.star || null;
   if (players.length < 11) return null;
+  yield { done: 0, total: 1, label: 'A avaliar todos os pares de formações' };
   const S = makeScorer(players);
   const bonus = (p) => (youth.has(p.id) ? 6 : 0);
   const weight = (p) => (p.id === star ? 1.6 : 1);
@@ -82,7 +84,7 @@ function generateTactic(players, opts = {}) {
     t.slots.forEach((s, i) => { s.pid = players[asg[i]] ? players[asg[i]].id : null; });
   };
   const pmap = Object.fromEntries(players.map(p => [p.id, p]));
-  const results = shortlist.map(pr => {
+  const optimise = (pr) => {
     const t = newTactic(pr.ip, pr.oop); t.ment = exp.ment; t.name = `${pr.ip} (gerada)`;
     // papéis iniciais: o melhor par para quem melhor serve cada posição
     assign(t);
@@ -101,7 +103,14 @@ function generateTactic(players, opts = {}) {
     }
     const o = objective(t, pmap);
     return { t, pair: pr, fitAvg: Math.round(o.fitAvg), balance: Math.round((o.au.scores.IP + o.au.scores.OOP) / 2), v: o.v };
-  }).sort((a, b) => b.v - a.v);
+  };
+  const results = [];
+  for (let k = 0; k < shortlist.length; k++) {
+    yield { done: k, total: shortlist.length, label: `A optimizar ${shortlist[k].ip} → ${shortlist[k].oop}` };
+    results.push(optimise(shortlist[k]));
+  }
+  results.sort((a, b) => b.v - a.v);
+  yield { done: shortlist.length, total: shortlist.length, label: 'A gerar instruções, bolas paradas e alternativas' };
 
   // ---------- 3. instruções de equipa com razão, para cada resultado
   results.forEach(r => { const g = generateTIs(r.t, players, exp); r.t.ti = g.ti; r.reasons = g.reasons; r.t.ment = g.ment; r.mentWhy = g.mentWhy;
@@ -111,6 +120,14 @@ function generateTactic(players, opts = {}) {
   const main = results[0], alts = [], seen = new Set([main.t.ipForm]);
   for (const r of results.slice(1)) { if (seen.has(r.t.ipForm)) continue; seen.add(r.t.ipForm); alts.push(r); if (alts.length === 3) break; }
   return { main, alts, considered: quick.length, optimised: shortlist.length, expect: exp };
+}
+// versão síncrona (testes, Node)
+function generateTactic(players, opts = {}) { const it = generateTacticSteps(players, opts); let r = it.next(); while (!r.done) r = it.next(); return r.value; }
+// versão assíncrona: devolve o controlo à janela entre passos e reporta o progresso
+async function generateTacticAsync(players, opts = {}, onProgress = () => {}) {
+  const it = generateTacticSteps(players, opts); let r = it.next();
+  while (!r.done) { onProgress(r.value); await new Promise(res => setTimeout(res, 0)); r = it.next(); }
+  return r.value;
 }
 
 // ---------- instruções de equipa a partir do perfil do plantel ----------

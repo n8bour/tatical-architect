@@ -13,7 +13,7 @@ function vGen() {
     <label class="f">Jogador-estrela (constrói à volta dele)${selectHTML([['', '— nenhum —']].concat(byName.map(p => [p.id, p.name + (p.posRaw ? ' · ' + p.posRaw : '')])), g.star, "A.genOpt('star',this.value)")}</label>
     <div class="f"><span>Titulares obrigatórios</span><div class="chips">${byName.map(p => `<button class="chip pick ${g.must.includes(p.id) ? 'on' : ''}" onclick="A.genToggle('must','${esc(p.id)}')">${esc(p.name)}</button>`).join('')}</div></div>
     ${young.length ? `<div class="f"><span>Jovens a desenvolver (≤ 21) — ganham prioridade no XI</span><div class="chips">${young.map(p => `<button class="chip pick ${g.youth.includes(p.id) ? 'on' : ''}" onclick="A.genToggle('youth','${esc(p.id)}')">${esc(p.name)} <span class="muted">${p.age}</span></button>`).join('')}</div></div>` : ''}
-    <button class="btn primary" onclick="A.genRun()">${g.res ? 'Gerar de novo' : 'Gerar tática'}</button>
+    <button class="btn primary" data-busy="gen" onclick="A.genRun()">${g.res ? 'Gerar de novo' : 'Gerar tática'}</button>
     <p class="small muted" style="margin:0">Testa todos os pares de formações, escolhe o papel de cada posição com regras de equilíbrio (rest-defence, largura, área, criadores, outlets) e o XI exacto pelo algoritmo húngaro.</p></div>`;
   if (!g.res) return `<div class="top"><div><h2>Gerar tática</h2><p class="muted small" style="margin:0">Uma tática completa feita à volta do teu plantel, pronta a copiar para o FM27.</p></div></div><div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">${opts}<div class="panel empty">Escolha o contexto e carregue em <b>Gerar tática</b>.</div></div>`;
   const all = [g.res.main, ...g.res.alts], r = all[g.pick] || all[0], t = r.t;

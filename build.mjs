@@ -22,6 +22,7 @@ ${r('styles.css')}
 <body>
 <div class="app"><aside id="nav"></aside><main id="main"></main></div>
 <div id="dropov">Largue o ficheiro — plantel (CSV/HTML/JSON), tática .fmf ou cópia .json</div>
+<div id="topbar" aria-hidden="true"><i></i></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 ${js}

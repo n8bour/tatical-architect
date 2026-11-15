@@ -18,9 +18,11 @@ const TABS = {
 
 function renderNav() {
   const sq = players().length, op = oppPlayers().length;
-  return `<div class="brand"><div class="logo">FM27</div><div><b>Tactical Bible</b><span>v${VERSION}${DESKTOP ? ' · app' : ' · browser'}</span></div></div>` +
-    NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')"><span class="ic">${ic}</span>${label}</button>`).join('') +
-    `<div class="aside-status">
+  return `<div class="brand"><div class="logo">FM27</div><div class="lbl"><b>Tactical Bible</b><span>v${VERSION}${DESKTOP ? ' · app' : ' · browser'}</span></div>
+      <button class="nav-mini" onclick="A.navMini()" title="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'} (Ctrl+B)" aria-label="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'}">${ST.ui.navMini ? '»' : '«'}</button></div>` +
+    NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join('') +
+    `<div id="busy" aria-live="polite"></div>
+    <div class="aside-status">
       <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${sq} jogadores${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
       <div><span class="dot ${op ? 'ok' : ''}"></span>${op ? 'Adversário carregado' : 'Sem adversário'}</div>
       ${DESKTOP ? `<div><span class="dot ${ST.auto.save && !ST.auto.saveErr ? 'ok' : ''}"></span>Save: ${SAVE_BUSY ? 'a ler…' : ST.auto.saveErr ? 'erro (ver Definições)' : ST.auto.save ? 'automático' : 'manual'}</div>
@@ -48,9 +50,59 @@ function render(scrollTop) {
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
+  document.querySelector('.app').classList.toggle('mini', !!ST.ui.navMini);
+  decoratePanels(v + '/' + (ST.tabs[v] || ''));
+  paintBusy();
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
   if (v === 'lab') labPoll();
+}
+
+// ---------- actividade: tudo o que demora mostra que está a trabalhar ----------
+// busyStart(chave, texto) → barra no topo + cartão com tempo decorrido; busyUpdate(chave, {p: 0–1, detail}); busyEnd(chave).
+// Os botões com data-busy="chave" ficam bloqueados e com indicador enquanto a tarefa corre.
+const BUSY = {};
+let BUSY_TICK = 0;
+function busyStart(key, label, opts = {}) { BUSY[key] = { label, start: Date.now(), p: opts.p ?? null, detail: opts.detail || '', slow: opts.slow || null, slowAfter: opts.slowAfter || 12 }; paintBusy(); }
+function busyUpdate(key, patch) { if (BUSY[key]) { Object.assign(BUSY[key], patch); paintBusy(); } }
+function busyEnd(key) { delete BUSY[key]; paintBusy(); }
+async function withBusy(key, label, fn, opts) {
+  busyStart(key, label, opts);
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));   // deixa a janela desenhar o indicador antes de trabalhar
+  try { return await fn((p, detail) => busyUpdate(key, { p, ...(detail != null ? { detail } : {}) })); }
+  finally { busyEnd(key); }
+}
+function paintBusy() {
+  const keys = Object.keys(BUSY), bar = document.getElementById('topbar'), box = document.getElementById('busy');
+  if (!bar || !box) return;
+  const one = keys.length === 1 && BUSY[keys[0]].p != null ? BUSY[keys[0]].p : null;
+  bar.className = keys.length ? (one != null ? 'on det' : 'on') : '';
+  bar.firstElementChild.style.width = one != null ? Math.round(one * 100) + '%' : '';
+  box.innerHTML = keys.map(k => { const b = BUSY[k], s = Math.floor((Date.now() - b.start) / 1000);
+    const extra = b.slow && s >= b.slowAfter ? b.slow : b.detail;
+    const tip = `${b.label}${b.p != null ? ' — ' + Math.round(b.p * 100) + '%' : ''}${extra ? ' — ' + extra : ''}`;
+    return `<div class="busy-item" role="status" title="${esc(tip)}"><span class="spin" aria-hidden="true"></span>${b.p != null ? `<span class="busy-pct">${Math.round(b.p * 100)}%</span>` : ''}<div class="busy-body"><b>${esc(b.label)}</b>
+      ${b.p != null ? `<div class="busy-bar"><i style="width:${Math.round(b.p * 100)}%"></i></div>` : ''}
+      <span class="small muted">${[b.p != null ? Math.round(b.p * 100) + '%' : '', s >= 1 ? s + ' s' : '', extra ? esc(extra) : ''].filter(Boolean).join(' · ') || 'a começar…'}</span></div></div>`; }).join('');
+  box.className = keys.length ? 'on' : '';
+  document.querySelectorAll('[data-busy]').forEach(el => { const on = keys.includes(el.dataset.busy); el.disabled = on; el.classList.toggle('is-busy', on); el.setAttribute('aria-busy', String(on)); });
+  clearInterval(BUSY_TICK); if (keys.length) BUSY_TICK = setInterval(paintBusy, 500);
+}
+
+// ---------- painéis que fecham e abrem (estado guardado por ecrã e título) ----------
+function decoratePanels(scope) {
+  document.querySelectorAll('#main .panel').forEach(p => {
+    const first = p.firstElementChild; if (!first || p.classList.contains('empty') || p.hasAttribute('data-fixed')) return;
+    const h = /^H[23]$/.test(first.tagName) ? first : (first.classList.contains('row') || first.classList.contains('score-ring') ? first.querySelector('h2,h3') : null);
+    if (!h || !p.children[1]) return;                       // sem corpo, nada para recolher
+    const key = scope + '|' + h.textContent.replace(/\s+/g, ' ').trim().slice(0, 60);
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'pc-toggle'; btn.textContent = '▾';
+    const set = (c) => { p.classList.toggle('collapsed', c); btn.textContent = c ? '▸' : '▾'; btn.setAttribute('aria-expanded', String(!c)); btn.title = c ? 'Expandir' : 'Recolher'; btn.setAttribute('aria-label', btn.title + ': ' + h.textContent.trim()); };
+    btn.onclick = (e) => { e.stopPropagation(); const c = !p.classList.contains('collapsed'); set(c); if (c) ST.ui.collapsed[key] = 1; else delete ST.ui.collapsed[key]; save(); };
+    h.prepend(btn); h.classList.add('pc-title'); h.onclick = (e) => { if (e.target === h) btn.click(); };
+    p.classList.add('collapsible'); set(!!ST.ui.collapsed[key]);
+  });
 }
 
 // ---------- ficheiros: rota única para tudo o que entra ----------
@@ -70,7 +122,11 @@ function ingestJSON(d, name) {
 async function ingestFile(f) {
   const n = f.name.toLowerCase();
   if (n.endsWith('.fmf')) { ST.tabs.tactic = 'import'; ST.view = 'tactic'; render(true); return A.fmf(f); }
-  const txt = await f.text();
+  const txt = await withBusy('file', 'A ler ' + f.name, () => f.text(), { detail: (f.size / 1048576).toFixed(1) + ' MB' });
+  busyStart('file', 'A interpretar ' + f.name); await new Promise(r => setTimeout(r, 30));
+  try { return ingestParsed(txt, f, n); } finally { busyEnd('file'); }
+}
+function ingestParsed(txt, f, n) {
   if (n.endsWith('.json')) { try { return ingestJSON(JSON.parse(txt), f.name); } catch (e) { return toast('JSON inválido'); } }
   const where = ingestSquadText(txt, f.name);
   if (where) { ST.view = 'team'; ST.tabs.team = where === 'opp' ? 'opp' : 'squad'; }
@@ -93,7 +149,8 @@ async function desktopPoll(force) {
     const r = await window.__TAURI__.core.invoke('latest_export', { customDir: ST.auto.dir || null, since: ST.auto.mtime || null });
     if (r && r.content) {
       ST.auto.mtime = r.modified; ST.auto.last = r.name;
-      const where = ingestSquadText(r.content, r.name + ' (F9)');
+      busyStart('f9', 'A carregar a exportação F9', { detail: r.name }); await new Promise(res => setTimeout(res, 30));
+      let where; try { where = ingestSquadText(r.content, r.name + ' (F9)'); } finally { busyEnd('f9'); }
       save(); if (where) render();
     } else if (force) toast('Nenhuma exportação nova encontrada');
   } catch (e) { if (force) toast('Não consegui ler a pasta de exportação'); }
@@ -109,13 +166,14 @@ async function savePoll(force) {
   if (!info) { if (force) toast('Não encontrei saves do FM27 — indique a pasta em Definições'); return; }
   if (!force && info.modified <= (ST.auto.saveMtime || 0)) return;
   SAVE_BUSY = true; ST.auto.saveMtime = info.modified;           // marca já, para não repetir em ciclo se falhar
-  toast('A ler o save ' + info.name + '…'); render();
+  busyStart('save', 'A ler o save ' + info.name, { detail: (info.size / 1048576).toFixed(0) + ' MB · lê uma cópia, o save não é alterado',
+    slow: 'na primeira leitura o fmsave é descarregado e o save inteiro é analisado — pode demorar 1–2 minutos', slowAfter: 12 }); render();
   try {
     const r = await window.__TAURI__.core.invoke('export_save', { path: info.path });
     ST.auto.saveErr = ''; ST.auto.saveLast = `${r.save} · ${new Date(r.modified * 1000).toLocaleString('pt-PT')}`;
     ingestSquadText(r.content, r.save + ' (save)', { force: 'squad' });
   } catch (e) { ST.auto.saveErr = String(e); toast('Não consegui ler o save — veja Definições'); }
-  SAVE_BUSY = false; save(); render();
+  SAVE_BUSY = false; busyEnd('save'); save(); render();
 }
 
 async function desktopDirs() {
@@ -123,6 +181,7 @@ async function desktopDirs() {
   try { return await window.__TAURI__.core.invoke('export_dirs', { customDir: ST.auto.dir || null }); } catch (e) { return []; }
 }
 
+window.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); applyTheme(); render(); setupDnD();
   if (DESKTOP) { desktopPoll(); setInterval(desktopPoll, 3000); savePoll(); setInterval(savePoll, 10000); }

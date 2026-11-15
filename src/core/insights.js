@@ -151,7 +151,15 @@ const SP = {
   captain: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('ldr') * 1.6 + a('det') + a('tea') * 0.4 + a('cmp') * 0.3) / 3.3 + Math.min(4, Math.max(0, ((p.age || 24) - 22) * 0.4)); },
 };
 const footOf = (p) => { const f = String((p.meta && p.meta.foot) || '').toLowerCase(); return /left|esq/.test(f) ? 'L' : /right|dir/.test(f) ? 'R' : /either|ambos|both/.test(f) ? 'B' : null; };
-const shortName = (p) => p ? p.name.split(' ').slice(-1)[0] : '—';
+// apelido para o campo: última palavra, mantendo partículas (De Bruyn, Van der Berg, Da Silva)
+const NAME_PARTICLES = new Set(['de','da','das','do','dos','di','del','della','van','von','der','den','ten','ter','le','la','du','mac','al','el','bin','st.']);
+function surname(name) {
+  const w = String(name || '').trim().split(/\s+/); if (w.length < 2) return w[0] || '—';
+  let i = w.length - 1; if (i > 1 && /^(j[uú]nior|jr\.?|filho|neto|sobrinho|ii|iii)$/i.test(w[i])) i--;   // Silva Júnior
+  while (i > 0 && NAME_PARTICLES.has(w[i - 1].toLowerCase())) i--;
+  return w.slice(i).join(' ');
+}
+const shortName = (p) => p ? surname(p.name) : '—';
 
 function setPiecePlan(t, players, oppList) {
   const xi = players.length >= 11 ? myXI(t, players) : [];
