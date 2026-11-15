@@ -41,7 +41,7 @@ function vGen() {
           <tr><td>Cantos (dir./esq.)</td><td><b>${esc(sp.corners.right.x.p.name)}</b> / <b>${esc(sp.corners.left.x.p.name)}</b></td></tr>
           <tr><td>Livres</td><td><b>${esc((sp.fk.direct || sp.fk.cross).p.name)}</b>${sp.fk.direct ? ' (directos)' : ' (cruzar)'}</td></tr>
           <tr><td>Penáltis</td><td>${sp.pens.map(x => esc(x.p.name)).join(' → ')}</td></tr></tbody></table>
-          <table><tbody>${sp.attack.filter(x => ['far', 'centre', 'near'].includes(x.k)).map(x => `<tr><td>Alvo aéreo — ${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td></tr>`).join('')}</tbody></table></div>
+          <table><tbody>${sp.attack.filter(x => ['far', 'centre', 'near'].includes(x.k)).map(x => `<tr><td><span>Alvo aéreo</span> — ${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td></tr>`).join('')}</tbody></table></div>
           <button class="btn sm" onclick="A.genUse(false,'setpieces')">Ver diagramas dos cantos</button>`) : ''}
       ${sec(6, 'Profundidade por posição', `<div class="depth">${dc.map(d => `<div><b>${esc(d.code)}</b>${d.list.map((x, i) => `<div class="small">${i + 1}. ${esc(x.p.name)} ${fitBadge(x.sc)}</div>`).join('')}</div>`).join('')}</div>`)}
       ${sec(7, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(w.role.name)}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}

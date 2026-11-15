@@ -12,8 +12,10 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = pathlib.Path(HERE, '..', 'app', 'index.html').resolve().as_uri()
 RIVAL = open(os.path.join(HERE, 'fixtures', 'squad_de.csv'), encoding='utf8').read().replace(';Clube;', ';Rival FC;')
+LANG = os.environ.get('LAYOUT_LANG', 'en')               # LAYOUT_LANG=pt para verificar em português
 WIDTHS = [1024, 1100, 1280, 1366, 1920, 2560]          # 1024/1100 ≈ 1366 ou 1920 com escala 125–150% no Windows
 MODES = ['normal', 'menu recolhido', 'painéis fechados']
+if os.environ.get('LAYOUT_QUICK'): WIDTHS, MODES = [1024, 1366, 1920], ['normal']   # passagem rápida (ex.: segunda língua no CI)
 VIEWS = [('home', None), ('team', 'squad'), ('team', 'gen'), ('team', 'xi'), ('team', 'opp'),
          ('tactic', 'analyze'), ('tactic', 'sim'), ('tactic', 'setpieces'), ('tactic', 'sheet'), ('tactic', 'import'),
          ('lab', None), ('training', None), ('bible', 'roles'), ('bible', 'ti'), ('bible', 'concepts'), ('bible', 'btraining'), ('settings', None)]
@@ -70,6 +72,7 @@ def main():
                 pg = b.new_page(viewport={'width': w, 'height': 900})
                 pg.on('pageerror', lambda e: errors.append(str(e)))
                 pg.goto(APP); pg.wait_for_timeout(150)
+                pg.evaluate(f"() => {{ ST.lang = LANG = '{LANG}'; }}")
                 pg.evaluate(SETUP)
                 pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", RIVAL)
                 pg.evaluate("() => { genOpts(); A.genRun(); }"); pg.wait_for_timeout(900)
@@ -83,7 +86,7 @@ def main():
                 pg.close()
         b.close()
     for k, v in problems.items(): print(k, *v, sep='\n   ')
-    print(f'{len(WIDTHS)} larguras × {len(MODES)} modos × {len(VIEWS)} ecrãs = {len(WIDTHS) * len(MODES) * len(VIEWS)} verificações')
+    print(f'[{LANG}] {len(WIDTHS)} larguras × {len(MODES)} modos × {len(VIEWS)} ecrãs = {len(WIDTHS) * len(MODES) * len(VIEWS)} verificações')
     print('ecrãs com problemas:', len(problems), '| erros JS:', len(errors))
     for e in errors[:5]: print('  JS:', e)
     return 1 if problems or errors else 0

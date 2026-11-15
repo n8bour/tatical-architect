@@ -61,7 +61,7 @@ function matchFormations(ipForm, oopForm) {
 function newTactic(ipForm = '4-3-3 DM Wide', oopForm = '4-1-4-1 DM Wide') {
   const pairs = matchFormations(ipForm, oopForm);
   return {
-    name: 'Nova tática', ment: 'Balanced', ipForm, oopForm,
+    name: L('Nova tática', 'New tactic'), ment: 'Balanced', ipForm, oopForm,
     slots: pairs.map(p => {
       const a = slotInfo(ipForm, p.ipCode), b = slotInfo(oopForm, p.oopCode);
       return { ipCode: p.ipCode, oopCode: p.oopCode, ip: DEFAULT_ROLE.IP[a.group], oop: DEFAULT_ROLE.OOP[b.group], pid: null, pis: [] };
@@ -199,16 +199,16 @@ function splitCSV(line, d) {
 
 function parseSquad(text) {
   const rows = tableFromText(text);
-  if (rows.length < 2) return { players: [], warnings: ['Não encontrei uma tabela com cabeçalho e linhas.'], mapped: [] };
+  if (rows.length < 2) return { players: [], warnings: [L('Não encontrei uma tabela com cabeçalho e linhas.', 'No table with a header and rows was found.')], mapped: [] };
   // encontrar a linha de cabeçalho: a que tem mais colunas reconhecidas
   let hi = 0, best = -1;
   rows.slice(0, 6).forEach((r, i) => { const c = r.map(headerToKey).filter(Boolean).length; if (c > best) { best = c; hi = i; } });
   const header = rows[hi].map(headerToKey);
   const mapped = rows[hi].map((h, i) => ({ h, k: header[i] }));
   const warnings = [];
-  if (!header.includes('name')) warnings.push('Sem coluna de nome reconhecida ("Name"/"Nome"). Uso a primeira coluna.');
+  if (!header.includes('name')) warnings.push(L('Sem coluna de nome reconhecida ("Name"/"Nome"). Uso a primeira coluna.', 'No recognised name column ("Name"/"Nome"). Using the first column.'));
   const attrCols = header.filter(k => k && ATTRS[k]).length;
-  if (attrCols < 10) warnings.push(`Só reconheci ${attrCols} atributos. Para análise completa exporte uma vista com todos os atributos.`);
+  if (attrCols < 10) warnings.push(L(`Só reconheci ${attrCols} atributos. Para análise completa exporte uma vista com todos os atributos.`, `Only ${attrCols} attributes recognised. For a full analysis export a view with every attribute.`));
   const players = [];
   rows.slice(hi + 1).forEach((r, idx) => {
     const p = { id: 'p' + idx + '_' + Math.random().toString(36).slice(2, 7), name: '', pos: [], posRaw: '', age: null, a: {}, meta: {} };
@@ -234,7 +234,7 @@ function parseSquad(text) {
   });
   const seen = {};
   players.forEach(p => { if (!p.meta.uid) { const base = 'n:' + p.name.trim().toLowerCase(); seen[base] = (seen[base] || 0) + 1; p.id = seen[base] > 1 ? base + '#' + seen[base] : base; } });
-  if (!players.length) warnings.push('Nenhum jogador com atributos foi lido.');
+  if (!players.length) warnings.push(L('Nenhum jogador com atributos foi lido.', 'No players with attributes were read.'));
   return { players, warnings, mapped };
 }
 
@@ -304,11 +304,11 @@ function complexityOf(t) {
   TEAM_INSTRUCTIONS.forEach(d => { const v = tiVal(t, d.k); if (v !== d.def) { const c = Math.abs(v - d.def) * d.cx; cx += c; parts.push([d.n + ': ' + d.opts[v], c]); } });
   t.slots.forEach(s => {
     const r = ROLE_BY_ID[s.ip];
-    if (r && ['fr','ocb','acb','f9'].includes(r.id)) { cx += 1; parts.push(['Papel exigente: ' + r.name, 1]); }
-    if (s.pis && s.pis.length) { cx += s.pis.length * 0.5; parts.push([`${s.pis.length} instrução(ões) individuais (${s.ipCode})`, s.pis.length * 0.5]); }
+    if (r && ['fr','ocb','acb','f9'].includes(r.id)) { cx += 1; parts.push([L('Papel exigente: ', 'Demanding role: ') + r.name, 1]); }
+    if (s.pis && s.pis.length) { cx += s.pis.length * 0.5; parts.push([L(`${s.pis.length} instrução(ões) individuais (${s.ipCode})`, `${s.pis.length} player instruction(s) (${s.ipCode})`), s.pis.length * 0.5]); }
   });
-  if (t.ois) { cx += t.ois * 0.5; parts.push([`${t.ois} instruções de adversário`, t.ois * 0.5]); }
-  const level = cx <= 6 ? 'Baixa' : cx <= 12 ? 'Média' : 'Alta';
+  if (t.ois) { cx += t.ois * 0.5; parts.push([L(`${t.ois} instruções de adversário`, `${t.ois} opposition instructions`), t.ois * 0.5]); }
+  const level = cx <= 6 ? 'Baixa' : cx <= 12 ? L('Média', 'Medium') : 'Alta';
   return { cx: Math.round(cx * 10) / 10, level, parts };
 }
 
@@ -327,8 +327,8 @@ function auditTactic(t, squad) {
 
   // 1. papéis em falta / inválidos
   S.forEach(x => {
-    if (!x.ip || !validRole(x.s.ip, x.a.group, 'IP', x.a.wideCB)) add('IP','crit',`Papel IP inválido em ${x.s.ipCode}`,'O papel não existe para esta posição.','Escolha um papel IP válido.');
-    if (!x.oop || !validRole(x.s.oop, x.b.group, 'OOP', x.b.wideCB)) add('OOP','crit',`Papel OOP inválido em ${x.s.oopCode}`,'O papel não existe para esta posição.','Escolha um papel OOP válido.');
+    if (!x.ip || !validRole(x.s.ip, x.a.group, 'IP', x.a.wideCB)) add('IP','crit',L(`Papel IP inválido em ${x.s.ipCode}`, `Invalid in-possession role at ${x.s.ipCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel IP válido.', 'Pick a valid in-possession role.'));
+    if (!x.oop || !validRole(x.s.oop, x.b.group, 'OOP', x.b.wideCB)) add('OOP','crit',L(`Papel OOP inválido em ${x.s.oopCode}`, `Invalid out-of-possession role at ${x.s.oopCode}`),L('O papel não existe para esta posição.', 'That role does not exist for this position.'),L('Escolha um papel OOP válido.', 'Pick a valid out-of-possession role.'));
   });
 
   // 2. largura por flanco
@@ -336,96 +336,96 @@ function auditTactic(t, squad) {
   for (const side of ['L', 'R']) {
     const nm = side === 'L' ? 'esquerdo' : 'direito';
     const wide = ipTag('W').filter(x => wideSide(x) === side);
-    if (!wide.length) add('IP','warn',`Sem largura no flanco ${nm}`,
-      'Nenhum papel com bola fica aberto deste lado. O adversário fecha o meio sem custo e os ataques ficam previsíveis.',
-      'Use um Winger/Wide Forward, um Wing-Back/Advanced Wing-Back, ou um Wide Central Midfielder deste lado.');
+    if (!wide.length) add('IP','warn',L(`Sem largura no flanco ${nm}`, `No width on the ${side === 'L' ? 'left' : 'right'} flank`),
+      L('Nenhum papel com bola fica aberto deste lado. O adversário fecha o meio sem custo e os ataques ficam previsíveis.', 'No in-possession role stays wide on this side. The opponent can close the middle for free and your attacks become predictable.'),
+      L('Use um Winger/Wide Forward, um Wing-Back/Advanced Wing-Back, ou um Wide Central Midfielder deste lado.', 'Use a Winger/Wide Forward, a Wing-Back/Advanced Wing-Back, or a Wide Central Midfielder on this side.'));
     const flankers = outfield.filter(x => x.a.side === side && ['D_LR','WB_LR','M_LR','AM_LR'].includes(x.a.group) || (x.a.wideCB && x.a.side === side));
     const fb = flankers.find(x => ['D_LR','WB_LR'].includes(x.a.group));
     const att = flankers.find(x => ['M_LR','AM_LR'].includes(x.a.group));
     if (fb && att && fb.ip && att.ip) {
       const fbIn = fb.ip.tags.includes('IN'), attIn = att.ip.tags.includes('IN');
       const fbW = fb.ip.tags.includes('W'), attW = att.ip.tags.includes('W');
-      if (attIn && fbW) add('IP','good',`Flanco ${nm} complementar`,`${att.ip.name} por dentro + ${fb.ip.name} por fora: largura e ameaça interior sem conflito.`);
-      else if (fbIn && attW) add('IP','good',`Flanco ${nm} complementar`,`${fb.ip.name} fecha por dentro, ${att.ip.name} dá largura — boa rest-defence neste lado.`);
-      else if (fbW && attW && fb.ip.tags.includes('ADV') && att.ip.tags.includes('RUN')) add('IP','info',`Corredor ${nm} pode ficar congestionado`,
-        `${fb.ip.name} e ${att.ip.name} querem ambos o corredor.`,'Ponha Supporting Runs em Overlap e/ou troque o extremo por Inside Forward/Inside Winger.');
+      if (attIn && fbW) add('IP','good',L(`Flanco ${nm} complementar`, `${side === 'L' ? 'Left' : 'Right'} flank is complementary`),L(`${att.ip.name} por dentro + ${fb.ip.name} por fora: largura e ameaça interior sem conflito.`, `${att.ip.name} inside + ${fb.ip.name} outside: width and an inside threat without clashing.`));
+      else if (fbIn && attW) add('IP','good',L(`Flanco ${nm} complementar`, `${side === 'L' ? 'Left' : 'Right'} flank is complementary`),L(`${fb.ip.name} fecha por dentro, ${att.ip.name} dá largura — boa rest-defence neste lado.`, `${fb.ip.name} tucks inside, ${att.ip.name} gives width — good rest-defence on this side.`));
+      else if (fbW && attW && fb.ip.tags.includes('ADV') && att.ip.tags.includes('RUN')) add('IP','info',L(`Corredor ${nm} pode ficar congestionado`, `The ${side === 'L' ? 'left' : 'right'} flank may get crowded`),
+        L(`${fb.ip.name} e ${att.ip.name} querem ambos o corredor.`, `${fb.ip.name} and ${att.ip.name} both want the same channel.`),L('Ponha Supporting Runs em Overlap e/ou troque o extremo por Inside Forward/Inside Winger.', 'Set Supporting Runs to Overlap and/or switch the winger to an Inside Forward/Inside Winger.'));
     }
   }
 
   // 3. rest-defence
   const rd = outfield.filter(x => x.ip && (x.ip.tags.includes('RD') || x.ip.tags.includes('TOCB') || ((x.s.pis || []).includes('Hold position') && !x.ip.tags.includes('ADV')))).length;
-  if (rd < 3) add('IP', mi >= 4 ? 'crit' : 'warn', `Rest-defence frágil (${rd} jogador${rd === 1 ? '' : 'es'})`,
-    'Poucos jogadores ficam atrás da linha da bola. Cada perda pode virar contra-ataque com superioridade adversária.',
-    'Garanta 3–4: dois centrais + DM/Half Back seguros, ou um lateral como Inside Full-Back/Inside Wing-Back.');
-  else if (rd >= 6) add('IP','info',`Muitos jogadores atrás (${rd})`,'Estrutura muito conservadora com bola; pode faltar gente na frente.','Liberte um lateral (Wing-Back) ou um médio (Box-To-Box).');
-  else add('IP','good',`Rest-defence equilibrada (${rd})`,'Número adequado de jogadores a proteger a transição.');
+  if (rd < 3) add('IP', mi >= 4 ? 'crit' : 'warn', L(`Rest-defence frágil (${rd} jogador${rd === 1 ? '' : 'es'})`, `Fragile rest-defence (${rd} player${rd === 1 ? '' : 's'})`),
+    L('Poucos jogadores ficam atrás da linha da bola. Cada perda pode virar contra-ataque com superioridade adversária.', 'Too few players stay behind the ball. Every turnover can become a counter-attack with the opponent outnumbering you.'),
+    L('Garanta 3–4: dois centrais + DM/Half Back seguros, ou um lateral como Inside Full-Back/Inside Wing-Back.', 'Keep 3–4 back: two centre-backs + a holding DM/Half Back, or a full-back as Inside Full-Back/Inside Wing-Back.'));
+  else if (rd >= 6) add('IP','info',L(`Muitos jogadores atrás (${rd})`, `Many players held back (${rd})`),L('Estrutura muito conservadora com bola; pode faltar gente na frente.', 'A very conservative shape in possession; you may lack bodies up front.'),L('Liberte um lateral (Wing-Back) ou um médio (Box-To-Box).', 'Free up a full-back (Wing-Back) or a midfielder (Box-To-Box).'));
+  else add('IP','good',L(`Rest-defence equilibrada (${rd})`, `Balanced rest-defence (${rd})`),L('Número adequado de jogadores a proteger a transição.', 'A suitable number of players protecting the transition.'));
 
   // 4. ocupação da área
   const box = ipTag('BOX').length;
-  if (box === 0) add('IP','crit','Ninguém ataca a área','Nenhum papel com ameaça de golo na área.','Avançado Centre Forward/Poacher, extremo Inside Forward, médio Attacking Midfielder/Box-To-Box.');
-  else if (box === 1) add('IP','warn','Pouca presença na área (1)','Um só jogador a atacar a área é fácil de neutralizar.','Adicione um Inside Forward, Attacking Midfielder ou Box-To-Box.');
-  else add('IP','good',`Presença na área (${box})`,'Vários jogadores a atacar a área.');
+  if (box === 0) add('IP','crit',L('Ninguém ataca a área', 'Nobody attacks the box'),L('Nenhum papel com ameaça de golo na área.', 'No role carries a goal threat in the box.'),L('Avançado Centre Forward/Poacher, extremo Inside Forward, médio Attacking Midfielder/Box-To-Box.', 'A Centre Forward/Poacher up front, an Inside Forward out wide, an Attacking Midfielder/Box-To-Box in midfield.'));
+  else if (box === 1) add('IP','warn',L('Pouca presença na área (1)', 'Little presence in the box (1)'),L('Um só jogador a atacar a área é fácil de neutralizar.', 'A single player attacking the box is easy to neutralise.'),L('Adicione um Inside Forward, Attacking Midfielder ou Box-To-Box.', 'Add an Inside Forward, Attacking Midfielder or Box-To-Box.'));
+  else add('IP','good',L(`Presença na área (${box})`, `Presence in the box (${box})`),L('Vários jogadores a atacar a área.', 'Several players attack the box.'));
 
   // 5. profundidade
   const st = S.filter(x => x.a.group === 'ST');
   const runners = ipTag('RUN').filter(x => x.a.group !== 'ST' || !x.ip.tags.includes('DROP'));
   if (st.length && st.every(x => x.ip && x.ip.tags.includes('DROP'))) {
     const others = ipTag('RUN').filter(x => x.a.group !== 'ST').length + ipTag('BOX').filter(x => x.a.group !== 'ST').length;
-    if (others < 2) add('IP','warn','Avançado(s) baixam e ninguém ataca o espaço',
-      'False Nine/Deep-Lying Forward arrasta centrais mas o espaço criado fica vazio.',
-      'Use Inside Forward, Channel Midfielder ou Second Striker para atacar a profundidade.');
+    if (others < 2) add('IP','warn',L('Avançado(s) baixam e ninguém ataca o espaço', 'The striker(s) drop and nobody attacks the space'),
+      L('False Nine/Deep-Lying Forward arrasta centrais mas o espaço criado fica vazio.', 'The False Nine/Deep-Lying Forward drags centre-backs out, but the space created stays empty.'),
+      L('Use Inside Forward, Channel Midfielder ou Second Striker para atacar a profundidade.', 'Use an Inside Forward, Channel Midfielder or Second Striker to attack depth.'));
   }
-  if (!runners.length) add('IP','warn','Sem ataque à profundidade','Nenhum papel ataca as costas da defesa — fácil para o adversário subir a linha.','Channel Forward, Poacher, Inside Forward, Wide Forward ou Advanced Wing-Back.');
-  if (st.length === 2 && st[0].ip && st[1].ip && st[0].ip.id === st[1].ip.id) add('IP','info','Dupla de avançados igual',
-    `Dois ${st[0].ip.name}: tendem a ocupar o mesmo espaço.`,'Combine perfis: um que baixa (DLF/TF) e um que ataca o espaço (Channel Forward/Poacher).');
+  if (!runners.length) add('IP','warn',L('Sem ataque à profundidade', 'No runs in behind'),L('Nenhum papel ataca as costas da defesa — fácil para o adversário subir a linha.', 'No role attacks the space behind the defence — easy for the opponent to push up.'),L('Channel Forward, Poacher, Inside Forward, Wide Forward ou Advanced Wing-Back.', 'Channel Forward, Poacher, Inside Forward, Wide Forward or Advanced Wing-Back.'));
+  if (st.length === 2 && st[0].ip && st[1].ip && st[0].ip.id === st[1].ip.id) add('IP','info',L('Dupla de avançados igual', 'Identical strike partnership'),
+    L(`Dois ${st[0].ip.name}: tendem a ocupar o mesmo espaço.`, `Two ${st[0].ip.name}s: they tend to occupy the same space.`),L('Combine perfis: um que baixa (DLF/TF) e um que ataca o espaço (Channel Forward/Poacher).', 'Mix profiles: one who drops (DLF/TF) and one who runs in behind (Channel Forward/Poacher).'));
 
   // 6. criatividade
   const cr = ipTag('CR').filter(x => x.a.group !== 'GK' && x.a.group !== 'DC');
-  if (!cr.length) add('IP','warn','Sem criador designado','Nenhum papel expressivo/organizador — a progressão depende só das instruções.','Deep-Lying Playmaker, Midfield Playmaker, Advanced Playmaker ou Playmaking Winger.');
-  else if (cr.length >= 4) add('IP','warn',`Demasiados criadores (${cr.length})`,`${cr.map(x => x.ip.ab).join(', ')} pedem todos a bola.`,'Mantenha 2–3 e troque os restantes por papéis de movimento (corredores/finalizadores).');
+  if (!cr.length) add('IP','warn',L('Sem criador designado', 'No designated creator'),L('Nenhum papel expressivo/organizador — a progressão depende só das instruções.', 'No expressive/playmaking role — progression relies on team instructions alone.'),L('Deep-Lying Playmaker, Midfield Playmaker, Advanced Playmaker ou Playmaking Winger.', 'Deep-Lying Playmaker, Midfield Playmaker, Advanced Playmaker or Playmaking Winger.'));
+  else if (cr.length >= 4) add('IP','warn',L(`Demasiados criadores (${cr.length})`, `Too many creators (${cr.length})`),L(`${cr.map(x => x.ip.ab).join(', ')} pedem todos a bola.`, `${cr.map(x => x.ip.ab).join(', ')} all want the ball.`),L('Mantenha 2–3 e troque os restantes por papéis de movimento (corredores/finalizadores).', 'Keep 2–3 and switch the rest to movement roles (runners/finishers).'));
 
   // 7. laterais
   const fbs = S.filter(x => ['D_LR','WB_LR'].includes(x.a.group));
   if (fbs.length === 2 && fbs.every(x => x.ip && x.ip.tags.includes('ADV')) && !outfield.some(x => x.ip && (x.ip.tags.includes('TOCB') || (x.a.group === 'DM' && x.ip.tags.includes('RD')))) && S.filter(x => x.a.group === 'DC').length < 3)
-    add('IP','warn','Os dois laterais sobem com linha de 2','Com dois alas ofensivos e só 2 centrais, os flancos ficam expostos em transição.','Half Back no DM, um Inside Full-Back, ou um papel OOP Wide Covering no médio.');
+    add('IP','warn',L('Os dois laterais sobem com linha de 2', 'Both full-backs push on with only two centre-backs'),L('Com dois alas ofensivos e só 2 centrais, os flancos ficam expostos em transição.', 'With two attacking wide defenders and only 2 centre-backs, the flanks are exposed in transition.'),L('Half Back no DM, um Inside Full-Back, ou um papel OOP Wide Covering no médio.', 'A Half Back at DM, an Inside Full-Back, or a Wide Covering out-of-possession role in midfield.'));
   const acb = outfield.filter(x => x.ip && x.ip.id === 'acb');
   if (acb.length && outfield.filter(x => x.a.group === 'DC' && x.ip && x.ip.id !== 'acb').length < 2 && !outfield.some(x => x.ip && x.ip.tags.includes('TOCB')))
-    add('IP','warn','Advanced Centre-Back sem cobertura','O ACB sobe para o meio-campo e fica só um central atrás.','Junte um Half Back ou Inside Full-Back, ou use linha de 3.');
+    add('IP','warn',L('Advanced Centre-Back sem cobertura', 'Advanced Centre-Back without cover'),L('O ACB sobe para o meio-campo e fica só um central atrás.', 'The ACB steps into midfield and leaves only one centre-back behind.'),L('Junte um Half Back ou Inside Full-Back, ou use linha de 3.', 'Add a Half Back or Inside Full-Back, or use a back three.'));
 
   // 8. OOP: outlets e pressão
   const outl = oopTag('OUT').length;
-  if (outl >= 3) add('OOP','crit',`Outlets a mais (${outl})`,'Três ou mais jogadores não defendem: o bloco fica em inferioridade.','Máximo 1–2 outlets; troque por Tracking/padrão.');
+  if (outl >= 3) add('OOP','crit',L(`Outlets a mais (${outl})`, `Too many outlets (${outl})`),L('Três ou mais jogadores não defendem: o bloco fica em inferioridade.', 'Three or more players do not defend: the block is outnumbered.'),L('Máximo 1–2 outlets; troque por Tracking/padrão.', 'At most 1–2 outlets; switch the others to Tracking/standard roles.'));
   const loe = tiVal(t,'loe') * 2, dl = tiVal(t,'dline'), trig = tiVal(t,'trigger'), dtr = tiVal(t,'def_trans'), atr = tiVal(t,'att_trans');
   const hp = oopTag('HP').length;
-  if (loe >= 3 && hp <= 1) add('OOP','warn','Pressão alta sem pressionadores','Linha de pressão alta mas quase nenhum papel OOP assertivo.','Pressing CM/DM/FB, Tracking Centre Forward, Stopping CB.');
-  if (loe <= 1 && hp >= 4) add('OOP','warn','Papéis de pressão num bloco baixo','Vários papéis assertivos com linha de pressão baixa: desorganiza o bloco.','Use Screening/Covering ou suba a Line of Engagement.');
-  if (loe - dl >= 2) add('OOP','warn','Distância entre linhas (pressão alta, defesa baixa)',`LoE ${tiLabel('loe',loe/2)} com linha ${tiLabel('dline',dl)}: espaço enorme entre médios e defesa.`,'Aproxime as linhas (suba a defesa ou baixe a pressão).');
-  if (dl - loe >= 2) add('OOP','warn','Linha alta sem pressão sobre a bola',`Linha ${tiLabel('dline',dl)} com LoE ${tiLabel('loe',loe/2)}: o portador tem tempo para lançar nas costas.`,'Suba a Line of Engagement ou baixe a linha defensiva.');
+  if (loe >= 3 && hp <= 1) add('OOP','warn',L('Pressão alta sem pressionadores', 'High press without pressers'),L('Linha de pressão alta mas quase nenhum papel OOP assertivo.', 'A high line of engagement but almost no aggressive out-of-possession roles.'),L('Pressing CM/DM/FB, Tracking Centre Forward, Stopping CB.', 'Pressing CM/DM/FB, Tracking Centre Forward, Stopping CB.'));
+  if (loe <= 1 && hp >= 4) add('OOP','warn',L('Papéis de pressão num bloco baixo', 'Pressing roles in a low block'),L('Vários papéis assertivos com linha de pressão baixa: desorganiza o bloco.', 'Several aggressive roles with a low line of engagement: it disorganises the block.'),L('Use Screening/Covering ou suba a Line of Engagement.', 'Use Screening/Covering roles or raise the Line of Engagement.'));
+  if (loe - dl >= 2) add('OOP','warn',L('Distância entre linhas (pressão alta, defesa baixa)', 'Gap between the lines (high press, deep defence)'),L(`LoE ${tiLabel('loe',loe/2)} com linha ${tiLabel('dline',dl)}: espaço enorme entre médios e defesa.`, `LoE ${tiLabel('loe',loe/2)} with a ${tiLabel('dline',dl)} line: a huge gap between midfield and defence.`),L('Aproxime as linhas (suba a defesa ou baixe a pressão).', 'Bring the lines closer (push the defence up or drop the press).'));
+  if (dl - loe >= 2) add('OOP','warn',L('Linha alta sem pressão sobre a bola', 'High line without pressure on the ball'),L(`Linha ${tiLabel('dline',dl)} com LoE ${tiLabel('loe',loe/2)}: o portador tem tempo para lançar nas costas.`, `A ${tiLabel('dline',dl)} line with LoE ${tiLabel('loe',loe/2)}: the ball carrier has time to play it over the top.`),L('Suba a Line of Engagement ou baixe a linha defensiva.', 'Raise the Line of Engagement or drop the defensive line.'));
   const gk = S.find(x => x.a.group === 'GK');
-  if (dl >= 3 && gk && gk.oop && gk.oop.id !== 'swk') add('OOP','warn','Linha alta sem Sweeper Keeper','Bolas nas costas da defesa ficam sem cobertura.','Mude o papel OOP do GR para Sweeper Keeper.');
-  if (dl <= 1 && gk && gk.oop && gk.oop.id === 'swk') add('OOP','info','Sweeper Keeper com linha baixa','Pouco espaço para varrer; o GR sai sem necessidade.','Considere Goalkeeper ou Line-Holding Keeper.');
-  if (atr === 2 && outl === 0 && !ipTag('RUN').length) add('Coerência','warn','Counter-Attack sem alvos','Transição de contra-ataque mas sem outlets nem corredores.','Adicione 1 Outlet OOP ou papéis de profundidade.');
-  if (dtr === 2 && mi <= 1) add('Coerência','info','Counter-Press com mentalidade defensiva','Instrução e mentalidade puxam em sentidos opostos.','Escolha: Regroup para bloco baixo, ou suba a mentalidade.');
-  if (dtr === 2 && tiVal(t,'width') >= 3) add('Coerência','info','Counter-Press com equipa muito larga','Jogadores longe uns dos outros na perda chegam tarde à pressão.','Balanced/Narrower na largura ou Regroup.');
+  if (dl >= 3 && gk && gk.oop && gk.oop.id !== 'swk') add('OOP','warn',L('Linha alta sem Sweeper Keeper', 'High line without a Sweeper Keeper'),L('Bolas nas costas da defesa ficam sem cobertura.', 'Balls in behind the defence are left uncovered.'),L('Mude o papel OOP do GR para Sweeper Keeper.', 'Change the goalkeeper’s out-of-possession role to Sweeper Keeper.'));
+  if (dl <= 1 && gk && gk.oop && gk.oop.id === 'swk') add('OOP','info',L('Sweeper Keeper com linha baixa', 'Sweeper Keeper with a low line'),L('Pouco espaço para varrer; o GR sai sem necessidade.', 'Little space to sweep; the keeper rushes out needlessly.'),L('Considere Goalkeeper ou Line-Holding Keeper.', 'Consider Goalkeeper or Line-Holding Keeper.'));
+  if (atr === 2 && outl === 0 && !ipTag('RUN').length) add('Coerência','warn',L('Counter-Attack sem alvos', 'Counter-Attack without targets'),L('Transição de contra-ataque mas sem outlets nem corredores.', 'A counter-attacking transition but no outlets or runners.'),L('Adicione 1 Outlet OOP ou papéis de profundidade.', 'Add 1 out-of-possession outlet or runners in behind.'));
+  if (dtr === 2 && mi <= 1) add('Coerência','info',L('Counter-Press com mentalidade defensiva', 'Counter-Press with a defensive mentality'),L('Instrução e mentalidade puxam em sentidos opostos.', 'The instruction and the mentality pull in opposite directions.'),L('Escolha: Regroup para bloco baixo, ou suba a mentalidade.', 'Choose: Regroup for a low block, or raise the mentality.'));
+  if (dtr === 2 && tiVal(t,'width') >= 3) add('Coerência','info',L('Counter-Press com equipa muito larga', 'Counter-Press with a very wide team'),L('Jogadores longe uns dos outros na perda chegam tarde à pressão.', 'Players spread far apart when the ball is lost arrive late to the press.'),L('Balanced/Narrower na largura ou Regroup.', 'Balanced/Narrower width, or Regroup.'));
   const trap = tiVal(t,'press_trap');
-  if (trap === 2 && !S.some(x => x.oop && ['pfb','prwb','tw','twm','swcb'].includes(x.oop.id))) add('OOP','info','Pressing Trap Outside sem quem feche o corredor','Força para fora mas ninguém está instruído a apertar na ala.','Pressing Full-Back/Wing-Back ou Tracking Winger.');
+  if (trap === 2 && !S.some(x => x.oop && ['pfb','prwb','tw','twm','swcb'].includes(x.oop.id))) add('OOP','info',L('Pressing Trap Outside sem quem feche o corredor', 'Pressing Trap Outside with nobody closing the channel'),L('Força para fora mas ninguém está instruído a apertar na ala.', 'It forces play wide but nobody is set to squeeze the flank.'),L('Pressing Full-Back/Wing-Back ou Tracking Winger.', 'Pressing Full-Back/Wing-Back or Tracking Winger.'));
 
   // 9. construção
   const bu = tiVal(t,'buildup');
   if (bu === 0) {
-    if (gk && gk.ip && gk.ip.id === 'nngk') add('Coerência','warn','Play Through Press com No-Nonsense GK','O GR vai bater longo contra a intenção da equipa.','Ball-Playing Goalkeeper ou Goalkeeper.');
-    if (S.some(x => x.ip && x.ip.id === 'nncb')) add('Coerência','warn','Play Through Press com No-Nonsense CB','Um central que alivia sempre quebra a construção curta.','Centre-Back ou Ball-Playing Centre-Back.');
+    if (gk && gk.ip && gk.ip.id === 'nngk') add('Coerência','warn',L('Play Through Press com No-Nonsense GK', 'Play Through Press with a No-Nonsense GK'),L('O GR vai bater longo contra a intenção da equipa.', 'The keeper will go long, against the team’s intention.'),L('Ball-Playing Goalkeeper ou Goalkeeper.', 'Ball-Playing Goalkeeper or Goalkeeper.'));
+    if (S.some(x => x.ip && x.ip.id === 'nncb')) add('Coerência','warn',L('Play Through Press com No-Nonsense CB', 'Play Through Press with a No-Nonsense CB'),L('Um central que alivia sempre quebra a construção curta.', 'A centre-back who always clears breaks the short build-up.'),L('Centre-Back ou Ball-Playing Centre-Back.', 'Centre-Back or Ball-Playing Centre-Back.'));
   }
-  if (bu === 2 && S.some(x => x.ip && ['bpgk','dlp'].includes(x.ip.id))) add('Coerência','info','Bypass Press desperdiça construtores','BPGK/DLP têm pouco impacto se a bola salta o meio-campo.','Balanced ou troque o papel.');
-  if (tiVal(t,'goal_kicks') === 0 && gk && gk.ip && gk.ip.id === 'nngk') add('Coerência','warn','Goal Kicks curtos com No-Nonsense GK','Contradição directa.','Mixed/Long ou mude o papel.');
+  if (bu === 2 && S.some(x => x.ip && ['bpgk','dlp'].includes(x.ip.id))) add('Coerência','info',L('Bypass Press desperdiça construtores', 'Bypass Press wastes your ball-players'),L('BPGK/DLP têm pouco impacto se a bola salta o meio-campo.', 'A BPGK/DLP has little impact if the ball skips midfield.'),L('Balanced ou troque o papel.', 'Balanced, or change the role.'));
+  if (tiVal(t,'goal_kicks') === 0 && gk && gk.ip && gk.ip.id === 'nngk') add('Coerência','warn',L('Goal Kicks curtos com No-Nonsense GK', 'Short goal kicks with a No-Nonsense GK'),L('Contradição directa.', 'A direct contradiction.'),L('Mixed/Long ou mude o papel.', 'Mixed/Long, or change the role.'));
   const cs = tiVal(t,'crossing');
-  if ((cs === 3) && !ipTag('AIR').length) add('Coerência','info','Cruzamentos altos sem referência aérea','Floated crosses sem Target Forward.','Low Crosses, ou um Target Forward/Centre Forward forte no ar.');
-  if (tiVal(t,'reception') === 2 && tiVal(t,'tempo') >= 4) add('Coerência','info','Passe ao pé com ritmo muito alto','Exige Primeiro Toque e Decisões muito altos.','Baixe o tempo para Higher ou Balanced.');
-  if (mi >= 5 && dl <= 1 && loe <= 1) add('Coerência','info','Mentalidade atacante com bloco baixo','Ataca com muitos mas defende muito atrás: equipa partida.','Suba linhas ou baixe a mentalidade.');
-  if (mi <= 1 && loe >= 3) add('Coerência','info','Mentalidade defensiva com pressão alta','Mensagem contraditória.','Ajuste uma das duas.');
+  if ((cs === 3) && !ipTag('AIR').length) add('Coerência','info',L('Cruzamentos altos sem referência aérea', 'High crosses without an aerial target'),L('Floated crosses sem Target Forward.', 'Floated crosses without a Target Forward.'),L('Low Crosses, ou um Target Forward/Centre Forward forte no ar.', 'Low Crosses, or a Target Forward/Centre Forward who is strong in the air.'));
+  if (tiVal(t,'reception') === 2 && tiVal(t,'tempo') >= 4) add('Coerência','info',L('Passe ao pé com ritmo muito alto', 'Passes to feet at a very high tempo'),L('Exige Primeiro Toque e Decisões muito altos.', 'It demands very high First Touch and Decisions.'),L('Baixe o tempo para Higher ou Balanced.', 'Lower the tempo to Higher or Balanced.'));
+  if (mi >= 5 && dl <= 1 && loe <= 1) add('Coerência','info',L('Mentalidade atacante com bloco baixo', 'Attacking mentality with a low block'),L('Ataca com muitos mas defende muito atrás: equipa partida.', 'It attacks with many but defends very deep: the team splits in two.'),L('Suba linhas ou baixe a mentalidade.', 'Push the lines up or lower the mentality.'));
+  if (mi <= 1 && loe >= 3) add('Coerência','info',L('Mentalidade defensiva com pressão alta', 'Defensive mentality with a high press'),L('Mensagem contraditória.', 'A contradictory message.'),L('Ajuste uma das duas.', 'Adjust one of the two.'));
 
   // 10. distância IP↔OOP
-  S.forEach(x => { if (x.a && x.b) { const d = Math.hypot(x.a.x - x.b.x, x.a.y - x.b.y); if (d > 38) add('Coerência','warn',`${x.s.ipCode} → ${x.s.oopCode}: transição longa`,`O jogador percorre uma grande distância entre a posição com e sem bola (${Math.round(d)}).`,'Escolha uma formação OOP mais próxima ou troque posições.'); } });
+  S.forEach(x => { if (x.a && x.b) { const d = Math.hypot(x.a.x - x.b.x, x.a.y - x.b.y); if (d > 38) add('Coerência','warn',L(`${x.s.ipCode} → ${x.s.oopCode}: transição longa`, `${x.s.ipCode} → ${x.s.oopCode}: long transition`),L(`O jogador percorre uma grande distância entre a posição com e sem bola (${Math.round(d)}).`, `The player covers a long distance between his in- and out-of-possession positions (${Math.round(d)}).`),L('Escolha uma formação OOP mais próxima ou troque posições.', 'Choose a closer out-of-possession formation or swap positions.')); } });
 
   // 11. complexidade
   const C = complexityOf(t);
@@ -434,10 +434,10 @@ function auditTactic(t, squad) {
   if (xiPlayers.length >= 8) {
     const iq = avgAttr(xiPlayers, ['dec','ant','tea','pos','otb','cnt']);
     cap = iq < 10 ? 6 : iq < 12 ? 9 : iq < 14 ? 12 : 16;
-    if (C.cx > cap) add('Complexidade','warn',`Tática complexa para este plantel (${C.cx} > ${cap})`,`Média tática do XI (Decisões/Antecipação/Trabalho de Equipa/…) ≈ ${iq.toFixed(1)}. No FM27 isto alonga a adaptação.`,'Remova instruções que não resolvem um problema concreto.');
-    else add('Complexidade','good',`Complexidade adequada (${C.cx} ≤ ${cap})`,'O plantel deve conseguir absorver a tática.');
-  } else if (C.cx > 12) add('Complexidade','warn',`Complexidade alta (${C.cx})`,'Muitas instruções fora do default: mais tempo de treino e jogadores mais capazes.','Comece simples; adicione instruções quando resolverem um problema identificado.');
-  else add('Complexidade','good',`Complexidade ${C.level.toLowerCase()} (${C.cx})`,'Fácil de assimilar.');
+    if (C.cx > cap) add('Complexidade','warn',L(`Tática complexa para este plantel (${C.cx} > ${cap})`, `Tactic too complex for this squad (${C.cx} > ${cap})`),L(`Média tática do XI (Decisões/Antecipação/Trabalho de Equipa/…) ≈ ${iq.toFixed(1)}. No FM27 isto alonga a adaptação.`, `The XI’s tactical average (Decisions/Anticipation/Teamwork/…) ≈ ${iq.toFixed(1)}. In FM27 this lengthens adaptation.`),L('Remova instruções que não resolvem um problema concreto.', 'Remove instructions that do not solve a specific problem.'));
+    else add('Complexidade','good',L(`Complexidade adequada (${C.cx} ≤ ${cap})`, `Suitable complexity (${C.cx} ≤ ${cap})`),L('O plantel deve conseguir absorver a tática.', 'The squad should be able to absorb the tactic.'));
+  } else if (C.cx > 12) add('Complexidade','warn',L(`Complexidade alta (${C.cx})`, `High complexity (${C.cx})`),L('Muitas instruções fora do default: mais tempo de treino e jogadores mais capazes.', 'Many non-default instructions: more training time and more capable players needed.'),L('Comece simples; adicione instruções quando resolverem um problema identificado.', 'Start simple; add instructions when they solve an identified problem.'));
+  else add('Complexidade','good',`Complexidade ${C.level.toLowerCase()} (${C.cx})`,L('Fácil de assimilar.', 'Easy to learn.'));
 
   // 12. plantel
   if (xiPlayers.length) {
@@ -447,22 +447,22 @@ function auditTactic(t, squad) {
       const ri = roleScore(x.p, x.ip), ro = roleScore(x.p, x.oop);
       if (sc < 50) {
         const alt = bestRolesForPlayer(x.p, x.a.group, 'IP', x.a.wideCB, 1)[0];
-        add('Plantel','warn',`${x.p.name} pouco adequado em ${x.s.ipCode} (${sc})`,
-          `${x.ip.name}: ${ri ? ri.score : '—'} · ${x.oop.name}: ${ro ? ro.score : '—'}.` + (Math.min(posFactor(x.p, x.a.group, x.a.side), posFactor(x.p, x.b.group, x.b.side)) < 1 ? ' Penalizado por jogar fora da posição natural (com ou sem bola).' : ''),
-          alt && alt.r.id !== x.ip.id ? `Melhor papel IP para ele aqui: ${alt.r.name} (${alt.s}).` : 'Considere outro jogador.');
+        add('Plantel','warn',L(`${x.p.name} pouco adequado em ${x.s.ipCode} (${sc})`, `${x.p.name} is a poor fit at ${x.s.ipCode} (${sc})`),
+          `${x.ip.name}: ${ri ? ri.score : '—'} · ${x.oop.name}: ${ro ? ro.score : '—'}.` + (Math.min(posFactor(x.p, x.a.group, x.a.side), posFactor(x.p, x.b.group, x.b.side)) < 1 ? L(' Penalizado por jogar fora da posição natural (com ou sem bola).', ' Penalised for playing out of his natural position (in or out of possession).') : ''),
+          alt && alt.r.id !== x.ip.id ? L(`Melhor papel IP para ele aqui: ${alt.r.name} (${alt.s}).`, `His best in-possession role here: ${alt.r.name} (${alt.s}).`) : L('Considere outro jogador.', 'Consider another player.'));
       }
     });
     const dcs = S.filter(x => x.a.group === 'DC' && x.p).map(x => x.p);
     const sp = avgAttr(dcs, ['pac','acc']);
-    if (dl >= 3 && sp != null && sp < 12) add('Plantel','crit','Linha alta com centrais lentos',`Velocidade/Aceleração média dos centrais ≈ ${sp.toFixed(1)}.`,'Baixe a linha para Standard/Lower ou mude os centrais.');
+    if (dl >= 3 && sp != null && sp < 12) add('Plantel','crit',L('Linha alta com centrais lentos', 'High line with slow centre-backs'),L(`Velocidade/Aceleração média dos centrais ≈ ${sp.toFixed(1)}.`, `Centre-backs’ average Pace/Acceleration ≈ ${sp.toFixed(1)}.`),L('Baixe a linha para Standard/Lower ou mude os centrais.', 'Drop the line to Standard/Lower or change the centre-backs.'));
     if (trig >= 3 || loe >= 3 || dtr === 2) {
       const ws = avgAttr(xiPlayers.filter((p, i) => true), ['wor','sta']);
-      if (ws != null && ws < 12) add('Plantel','warn','Pressão exigente para o físico do XI',`Índice de Trabalho/Resistência médio ≈ ${ws.toFixed(1)}.`,'Reduza Trigger Press / LoE ou use Press Less nos Tactical Tweaks.');
+      if (ws != null && ws < 12) add('Plantel','warn',L('Pressão exigente para o físico do XI', 'Pressing too demanding for the XI’s physique'),L(`Índice de Trabalho/Resistência médio ≈ ${ws.toFixed(1)}.`, `Average Work Rate/Stamina ≈ ${ws.toFixed(1)}.`),L('Reduza Trigger Press / LoE ou use Press Less nos Tactical Tweaks.', 'Reduce Trigger Press / LoE or use Press Less in Tactical Tweaks.'));
     }
-    if (bu === 0 && gk && gk.p) { const g = avgAttr([gk.p], ['pas','fir','cmp','kic']); if (g != null && g < 11) add('Plantel','warn','GR fraco com os pés para construção curta',`Passe/Primeiro Toque/Compostura/Pontapé ≈ ${g.toFixed(1)}.`,'Balanced/Bypass Press ou outro GR.'); }
-    if (tiVal(t,'cross_eng') === 0) { const h = avgAttr(dcs, ['hea','jum','str']); if (h != null && h < 13) add('Plantel','warn','Convida cruzamentos sem centrais fortes no ar',`Cabeceamento/Impulsão/Força dos centrais ≈ ${h.toFixed(1)}.`,'Balanced ou Stop Crosses.'); }
-    if (atr === 2) { const fast = xiPlayers.filter(p => (p.a.pac || 0) >= 14 || (p.a.acc || 0) >= 14).length; if (fast < 2) add('Plantel','warn','Contra-ataque sem velocidade',`Só ${fast} jogador(es) com Velocidade/Aceleração ≥ 14.`,'Hold Shape/Balanced, ou jogadores rápidos nos outlets.'); }
-    if (cs === 3) { const air = xiPlayers.filter(p => (p.a.hea || 0) >= 14 && (p.a.jum || 0) >= 13).length; if (air < 2) add('Plantel','info','Cruzamentos altos com poucos jogadores aéreos',`${air} jogador(es) com Cabeceamento ≥ 14 e Impulsão ≥ 13.`,'Low Crosses.'); }
+    if (bu === 0 && gk && gk.p) { const g = avgAttr([gk.p], ['pas','fir','cmp','kic']); if (g != null && g < 11) add('Plantel','warn',L('GR fraco com os pés para construção curta', 'Keeper weak with his feet for a short build-up'),L(`Passe/Primeiro Toque/Compostura/Pontapé ≈ ${g.toFixed(1)}.`, `Passing/First Touch/Composure/Kicking ≈ ${g.toFixed(1)}.`),L('Balanced/Bypass Press ou outro GR.', 'Balanced/Bypass Press or another keeper.')); }
+    if (tiVal(t,'cross_eng') === 0) { const h = avgAttr(dcs, ['hea','jum','str']); if (h != null && h < 13) add('Plantel','warn',L('Convida cruzamentos sem centrais fortes no ar', 'Inviting crosses without centre-backs strong in the air'),L(`Cabeceamento/Impulsão/Força dos centrais ≈ ${h.toFixed(1)}.`, `Centre-backs’ Heading/Jumping Reach/Strength ≈ ${h.toFixed(1)}.`),L('Balanced ou Stop Crosses.', 'Balanced or Stop Crosses.')); }
+    if (atr === 2) { const fast = xiPlayers.filter(p => (p.a.pac || 0) >= 14 || (p.a.acc || 0) >= 14).length; if (fast < 2) add('Plantel','warn',L('Contra-ataque sem velocidade', 'Counter-attack without pace'),L(`Só ${fast} jogador(es) com Velocidade/Aceleração ≥ 14.`, `Only ${fast} player(s) with Pace/Acceleration ≥ 14.`),L('Hold Shape/Balanced, ou jogadores rápidos nos outlets.', 'Hold Shape/Balanced, or quick players as outlets.')); }
+    if (cs === 3) { const air = xiPlayers.filter(p => (p.a.hea || 0) >= 14 && (p.a.jum || 0) >= 13).length; if (air < 2) add('Plantel','info',L('Cruzamentos altos com poucos jogadores aéreos', 'High crosses with few aerial players'),L(`${air} jogador(es) com Cabeceamento ≥ 14 e Impulsão ≥ 13.`, `${air} player(s) with Heading ≥ 14 and Jumping Reach ≥ 13.`),L('Low Crosses.', 'Low Crosses.')); }
   }
 
   // pontuação por categoria
@@ -506,17 +506,17 @@ function suggestTactics(players) {
 function trainingPlan(t, players, audit) {
   const areas = [];
   const push = (k, why, w) => { const e = areas.find(a => a.k === k); if (e) { e.w += w; e.why.push(why); } else areas.push({ k, w, why: [why] }); };
-  push('ip_shape','Base de qualquer tática (formação IP).',2); push('oop_shape','Base de qualquer tática (formação OOP).',2);
+  push('ip_shape',L('Base de qualquer tática (formação IP).', 'The base of any tactic (in-possession shape).'),2); push('oop_shape',L('Base de qualquer tática (formação OOP).', 'The base of any tactic (out-of-possession shape).'),2);
   const v = (k) => tiVal(t, k), d = (k) => TI_BY_KEY[k].def;
-  if (v('passing') !== d('passing') || v('reception') !== d('reception') || v('tempo') !== d('tempo')) push('passing','Estilo de passe fora do default.',2);
-  if (v('buildup') !== d('buildup') || v('goal_kicks') !== d('goal_kicks') || v('gk_target') !== d('gk_target')) push('buildup','Instruções de construção definidas.',2);
-  if (v('patience') !== d('patience') || v('crossing') !== d('crossing') || v('long_shots') !== d('long_shots') || v('dribbling') !== d('dribbling')) push('chance','Instruções de último terço definidas.',2);
-  if (v('trigger') !== d('trigger')) push('trigger','Trigger Press fora do default.',2 + Math.abs(v('trigger') - d('trigger')));
-  if (v('press_trap') !== d('press_trap')) push('trap','Pressing Trap definida.',2);
-  if (v('loe') !== d('loe')) push('loe','Line of Engagement fora do default.',1 + Math.abs(v('loe') - d('loe')));
+  if (v('passing') !== d('passing') || v('reception') !== d('reception') || v('tempo') !== d('tempo')) push('passing',L('Estilo de passe fora do default.', 'Passing style set away from the default.'),2);
+  if (v('buildup') !== d('buildup') || v('goal_kicks') !== d('goal_kicks') || v('gk_target') !== d('gk_target')) push('buildup',L('Instruções de construção definidas.', 'Build-up instructions set.'),2);
+  if (v('patience') !== d('patience') || v('crossing') !== d('crossing') || v('long_shots') !== d('long_shots') || v('dribbling') !== d('dribbling')) push('chance',L('Instruções de último terço definidas.', 'Final-third instructions set.'),2);
+  if (v('trigger') !== d('trigger')) push('trigger',L('Trigger Press fora do default.', 'Trigger Press set away from the default.'),2 + Math.abs(v('trigger') - d('trigger')));
+  if (v('press_trap') !== d('press_trap')) push('trap',L('Pressing Trap definida.', 'Pressing Trap set.'),2);
+  if (v('loe') !== d('loe')) push('loe',L('Line of Engagement fora do default.', 'Line of Engagement set away from the default.'),1 + Math.abs(v('loe') - d('loe')));
   (audit.findings || []).filter(f => f.sev === 'crit' || f.sev === 'warn').forEach(f => {
-    if (f.cat === 'OOP') push('oop_shape','Problema detectado: ' + f.title, 1);
-    if (f.cat === 'IP') push('ip_shape','Problema detectado: ' + f.title, 1);
+    if (f.cat === 'OOP') push('oop_shape',L('Problema detectado: ', 'Problem found: ') + f.title, 1);
+    if (f.cat === 'IP') push('ip_shape',L('Problema detectado: ', 'Problem found: ') + f.title, 1);
   });
   areas.sort((a, b) => b.w - a.w);
   const pmap = Object.fromEntries((players || []).map(p => [p.id, p]));

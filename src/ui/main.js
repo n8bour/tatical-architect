@@ -23,12 +23,13 @@ function renderNav() {
     NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join('') +
     `<div id="busy" aria-live="polite"></div>
     <div class="aside-status">
-      <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${sq} jogadores${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
+      <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${L(`${sq} jogadores`, `${sq} players`)}${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
       <div><span class="dot ${op ? 'ok' : ''}"></span>${op ? 'Adversário carregado' : 'Sem adversário'}</div>
       ${DESKTOP ? `<div><span class="dot ${ST.auto.save && !ST.auto.saveErr ? 'ok' : ''}"></span>Save: ${SAVE_BUSY ? 'a ler…' : ST.auto.saveErr ? 'erro (ver Definições)' : ST.auto.save ? 'automático' : 'manual'}</div>
-      <div><span class="dot ${ST.auto.on ? 'ok' : ''}"></span>F9 automático ${ST.auto.on ? 'ligado' : 'desligado'}</div>` : ''}
+      <div><span class="dot ${ST.auto.on && ST.f9Found ? 'ok' : ''}"></span>F9: ${!ST.f9Found ? 'plugin não encontrado' : ST.auto.on ? 'automático' : 'manual'}</div>` : ''}
     </div>
-    <div class="aside-foot">Arraste qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.</div>`;
+    <div class="aside-foot"><div class="seg lang-seg" role="group" aria-label="Idioma">${[['en', 'EN'], ['pt', 'PT']].map(([k, n]) => `<button class="${LANG === k ? 'on' : ''}" onclick="A.lang('${k}')" aria-pressed="${LANG === k}">${n}</button>`).join('')}</div>
+      <div class="lbl" style="margin-top:8px">Arraste qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.</div></div>`;
 }
 
 function tabsHTML(view) {
@@ -51,11 +52,15 @@ function render(scrollTop) {
   else body = vSettings();
   main.innerHTML = body;
   document.querySelector('.app').classList.toggle('mini', !!ST.ui.navMini);
-  decoratePanels(v + '/' + (ST.tabs[v] || ''));
   paintBusy();
+  translateDOM(document.getElementById('nav')); translateDOM(main);
+  decoratePanels(v + '/' + (ST.tabs[v] || ''));          // depois de traduzir: o rótulo de acessibilidade já vem no idioma certo
+  const ov = document.getElementById('dropov'); if (ov) ov.textContent = T('Largue o ficheiro — plantel (CSV/HTML/JSON), tática .fmf ou cópia .json');
+  document.documentElement.lang = LANG;
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
   if (v === 'lab') labPoll();
+  if (v === 'bible') initClips(); else stopClips();
 }
 
 // ---------- actividade: tudo o que demora mostra que está a trabalhar ----------
@@ -86,6 +91,7 @@ function paintBusy() {
       <span class="small muted">${[b.p != null ? Math.round(b.p * 100) + '%' : '', s >= 1 ? s + ' s' : '', extra ? esc(extra) : ''].filter(Boolean).join(' · ') || 'a começar…'}</span></div></div>`; }).join('');
   box.className = keys.length ? 'on' : '';
   document.querySelectorAll('[data-busy]').forEach(el => { const on = keys.includes(el.dataset.busy); el.disabled = on; el.classList.toggle('is-busy', on); el.setAttribute('aria-busy', String(on)); });
+  translateDOM(box);
   clearInterval(BUSY_TICK); if (keys.length) BUSY_TICK = setInterval(paintBusy, 500);
 }
 
@@ -96,9 +102,10 @@ function decoratePanels(scope) {
     const h = /^H[23]$/.test(first.tagName) ? first : (first.classList.contains('row') || first.classList.contains('score-ring') ? first.querySelector('h2,h3') : null);
     if (!h || !p.children[1]) return;                       // sem corpo, nada para recolher
     const key = scope + '|' + h.textContent.replace(/\s+/g, ' ').trim().slice(0, 60);
+    const titleText = h.textContent.replace(/\s+/g, ' ').trim().replace(/^\d+(?=\D)/, '');
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'pc-toggle'; btn.textContent = '▾';
-    const set = (c) => { p.classList.toggle('collapsed', c); btn.textContent = c ? '▸' : '▾'; btn.setAttribute('aria-expanded', String(!c)); btn.title = c ? 'Expandir' : 'Recolher'; btn.setAttribute('aria-label', btn.title + ': ' + h.textContent.trim()); };
+    const set = (c) => { p.classList.toggle('collapsed', c); btn.textContent = c ? '▸' : '▾'; btn.setAttribute('aria-expanded', String(!c)); btn.title = c ? L('Expandir', 'Expand') : L('Recolher', 'Collapse'); btn.setAttribute('aria-label', btn.title + ': ' + T(titleText)); };
     btn.onclick = (e) => { e.stopPropagation(); const c = !p.classList.contains('collapsed'); set(c); if (c) ST.ui.collapsed[key] = 1; else delete ST.ui.collapsed[key]; save(); };
     h.prepend(btn); h.classList.add('pc-title'); h.onclick = (e) => { if (e.target === h) btn.click(); };
     p.classList.add('collapsible'); set(!!ST.ui.collapsed[key]);
@@ -108,7 +115,7 @@ function decoratePanels(scope) {
 // ---------- ficheiros: rota única para tudo o que entra ----------
 function ingestJSON(d, name) {
   const job = jobFromAny(d);
-  if (job) { labState().job = job; ST.view = 'lab'; render(true); toast('Experiência importada: ' + (job.name || job.id)); return; }
+  if (job) { labState().job = job; ST.view = 'lab'; render(true); toast(L('Experiência importada: ', 'Experiment imported: ') + (job.name || job.id)); return; }
   if (d.kind === 'fm27tb-tactic' && d.tactic) { ST.tactic = d.tactic; save(); A.go('tactic', 'analyze'); toast('Tática importada'); }
   else if (d.kind === 'fm27tb-all') { Object.assign(ST, { tactic: d.tactic || ST.tactic, squad: d.squad || ST.squad, opp: d.opp || ST.opp, saved: d.saved || [], myClub: d.myClub || ST.myClub }); save(); render(true); toast('Dados restaurados'); }
   else if (Array.isArray(d) || Array.isArray(d.players)) {
@@ -122,8 +129,8 @@ function ingestJSON(d, name) {
 async function ingestFile(f) {
   const n = f.name.toLowerCase();
   if (n.endsWith('.fmf')) { ST.tabs.tactic = 'import'; ST.view = 'tactic'; render(true); return A.fmf(f); }
-  const txt = await withBusy('file', 'A ler ' + f.name, () => f.text(), { detail: (f.size / 1048576).toFixed(1) + ' MB' });
-  busyStart('file', 'A interpretar ' + f.name); await new Promise(r => setTimeout(r, 30));
+  const txt = await withBusy('file', L('A ler ', 'Reading ') + f.name, () => f.text(), { detail: (f.size / 1048576).toFixed(1) + ' MB' });
+  busyStart('file', L('A interpretar ', 'Parsing ') + f.name); await new Promise(r => setTimeout(r, 30));
   try { return ingestParsed(txt, f, n); } finally { busyEnd('file'); }
 }
 function ingestParsed(txt, f, n) {
@@ -166,8 +173,8 @@ async function savePoll(force) {
   if (!info) { if (force) toast('Não encontrei saves do FM27 — indique a pasta em Definições'); return; }
   if (!force && info.modified <= (ST.auto.saveMtime || 0)) return;
   SAVE_BUSY = true; ST.auto.saveMtime = info.modified;           // marca já, para não repetir em ciclo se falhar
-  busyStart('save', 'A ler o save ' + info.name, { detail: (info.size / 1048576).toFixed(0) + ' MB · lê uma cópia, o save não é alterado',
-    slow: 'na primeira leitura o fmsave é descarregado e o save inteiro é analisado — pode demorar 1–2 minutos', slowAfter: 12 }); render();
+  busyStart('save', L('A ler o save ', 'Reading save ') + info.name, { detail: (info.size / 1048576).toFixed(0) + ' MB · ' + L('lê uma cópia, o save não é alterado', 'reads a copy, the save is not changed'),
+    slow: L('na primeira leitura o fmsave é descarregado e o save inteiro é analisado — pode demorar 1–2 minutos', 'on the first read fmsave is downloaded and the whole save is analysed — it can take 1–2 minutes'), slowAfter: 12 }); render();
   try {
     const r = await window.__TAURI__.core.invoke('export_save', { path: info.path });
     ST.auto.saveErr = ''; ST.auto.saveLast = `${r.save} · ${new Date(r.modified * 1000).toLocaleString('pt-PT')}`;
@@ -178,11 +185,20 @@ async function savePoll(force) {
 
 async function desktopDirs() {
   if (!DESKTOP) return [];
-  try { return await window.__TAURI__.core.invoke('export_dirs', { customDir: ST.auto.dir || null }); } catch (e) { return []; }
+  try { const d = await window.__TAURI__.core.invoke('export_dirs', { customDir: ST.auto.dir || null }); return Array.isArray(d) ? d : []; } catch (e) { return []; }
 }
 
+document.addEventListener('click', (e) => {
+  const a = e.target.closest && e.target.closest('a[href^="https://"]');
+  if (!a || !DESKTOP) return;
+  e.preventDefault(); window.__TAURI__.core.invoke('open_url', { url: a.href }).catch(() => toast(a.href));
+});
 window.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
-  load(); applyTheme(); render(); setupDnD();
-  if (DESKTOP) { desktopPoll(); setInterval(desktopPoll, 3000); savePoll(); setInterval(savePoll, 10000); }
+  load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();
+  if (DESKTOP) {
+    desktopPoll(); setInterval(desktopPoll, 3000); savePoll(); setInterval(savePoll, 10000);
+    const chk = () => desktopDirs().then(d => { const f = d.some(x => x[1]); if (f !== ST.f9Found) { ST.f9Found = f; render(); } });
+    chk(); setInterval(chk, 30000);
+  }
 });

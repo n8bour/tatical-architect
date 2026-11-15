@@ -35,6 +35,15 @@ const ATTRS = {
   thr:{n:'Reposição à Mão',c:'G',a:['thr','throwing']},
 };
 
+// Nomes ingleses dos atributos (como no FM)
+const ATTR_EN = { cor:'Corners', cro:'Crossing', dri:'Dribbling', fin:'Finishing', fir:'First Touch', fre:'Free Kick Taking', hea:'Heading', lon:'Long Shots',
+  lth:'Long Throws', mar:'Marking', pas:'Passing', pen:'Penalty Taking', tck:'Tackling', tec:'Technique', agg:'Aggression', ant:'Anticipation', bra:'Bravery',
+  cmp:'Composure', cnt:'Concentration', dec:'Decisions', det:'Determination', fla:'Flair', ldr:'Leadership', otb:'Off the Ball', pos:'Positioning', tea:'Teamwork',
+  vis:'Vision', wor:'Work Rate', acc:'Acceleration', agi:'Agility', bal:'Balance', jum:'Jumping Reach', nat:'Natural Fitness', pac:'Pace', sta:'Stamina', str:'Strength',
+  aer:'Aerial Reach', cmd:'Command of Area', com:'Communication', ecc:'Eccentricity', han:'Handling', kic:'Kicking', ovo:'One on Ones', pun:'Punching (Tendency)',
+  ref:'Reflexes', tro:'Rushing Out (Tendency)', thr:'Throwing' };
+function attrName(k) { return ATTRS[k] ? L(ATTRS[k].n, ATTR_EN[k] || ATTRS[k].n) : k; }
+
 // Grupos de posição
 const GROUPS = {
   GK:'Guarda-redes', DC:'Defesa central', D_LR:'Lateral (D E/D)', WB_LR:'Ala (WB E/D)', DM:'Médio defensivo',
@@ -46,10 +55,10 @@ const GROUPS = {
 //     CR=criativo/expressivo, LINK=liga jogo, RUN=ataca a profundidade, DROP=baixa no terreno,
 //     AIR=referência aérea, ADV=sobe de linha, TOCB=passa a central, TODM=passa a médio defensivo
 // OOP: HP=pressão alta/assertivo, LOW=cauteloso, OUT=outlet (fica na frente), CW=cobre o flanco, TRK=acompanha recuo
-const T = (s) => s.split(' ').filter(Boolean);
+const TG = (s) => s.split(' ').filter(Boolean);
 
 function R(id, ab, name, phase, groups, tags, key, pref, desc, tip, src, extra) {
-  return Object.assign({ id, ab, name, phase, groups, tags: T(tags), key: T(key), pref: T(pref), desc, tip, src: src || 'e' }, extra || {});
+  return Object.assign({ id, ab, name, phase, groups, tags: TG(tags), key: TG(key), pref: TG(pref), desc, tip, src: src || 'e' }, extra || {});
 }
 
 const ROLES = [

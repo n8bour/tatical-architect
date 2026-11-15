@@ -1,6 +1,38 @@
 // ============================================================
-// Definições
+// Definições + cartões de integrações (dependências externas explícitas)
 // ============================================================
+const LINKS = {
+  fmve: 'https://github.com/ElectroHugin/FM-View-Exporter/releases',
+  fmsave: 'https://github.com/rhiever/fmsave',
+  fmsaveWeb: 'https://rhiever.github.io/fmsave/app/',
+  uv: 'https://docs.astral.sh/uv/getting-started/installation/',
+  lab: 'https://github.com/lqf0624/fm-tactics-lab/releases',
+};
+// compact: versão curta (Plantel); completa nas Definições
+function integrationsHTML(compact) {
+  const f9 = ST.f9Found, save = ST.auto.save, err = ST.auto.saveErr;
+  const pill = (ok, txtOk, txtNo) => `<span class="pill ${ok ? 'ok' : 'no'}">${ok ? txtOk : txtNo}</span>`;
+  const card = (title, pills, body, actions) => `<div class="integ"><div class="integ-h"><b>${title}</b><span class="row" style="gap:6px">${pills}</span></div>${body}<div class="row" style="margin-top:8px">${actions}</div></div>`;
+  const fmsaveCard = card('Ler o save (.fm) — fmsave',
+    DESKTOP ? pill(save, 'ligado', 'desligado') + (err ? pill(false, '', 'falta instalar') : '') : pill(false, '', 'só na app instalada'),
+    `<p class="small">Lê o plantel directamente do save, sempre sobre uma cópia, sem alterar nada. <b>Requer</b> o <a href="${LINKS.uv}" target="_blank" rel="noopener">uv</a> (instala-se uma vez com <code>winget install --id=astral-sh.uv -e</code>); o <a href="${LINKS.fmsave}" target="_blank" rel="noopener">fmsave</a> (MIT) é descarregado sozinho na primeira leitura.</p>
+     ${!DESKTOP ? `<p class="small">No browser: use o <a href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">fmsave online</a> e arraste o CSV para aqui.</p>` : ''}
+     ${DESKTOP && !compact ? `<label class="f">Pasta dos saves (opcional)<input type="text" value="${esc(ST.auto.saveDir)}" placeholder="Documentos\\Sports Interactive\\Football Manager 27\\games" onchange="A.saveDir(this.value)"></label>
+       <div class="small">${ST.lastSave ? `<span>Último save:</span> <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br><span>Lido:</span> ${esc(ST.auto.saveLast)}` : ''}</div>` : ''}
+     ${err && DESKTOP ? `<div class="notice warn small">${esc(err)}</div>` : ''}`,
+    DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn sm" data-busy="save" onclick="A.saveNow()">Ler o save agora</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
+  const f9Card = card('F9 no jogo — FM View Exporter',
+    DESKTOP ? pill(f9, 'plugin encontrado', 'plugin não encontrado') + (f9 ? pill(ST.auto.on, 'automático', 'manual') : '') : '',
+    `<p class="small"><b>Requer</b> o plugin gratuito <a href="${LINKS.fmve}" target="_blank" rel="noopener">FM View Exporter</a> (Windows + Steam): descarregue o <code>setup.exe</code>, clique Install, e no FM importe a vista <code>FM27-PlayerAnalyzer-Squad-Standard.fmf</code>. Depois, F9 no ecrã do plantel exporta-o${DESKTOP ? ' e a app carrega-o sozinha' : ''}. F9 no plantel de outro clube entra como adversário.</p>
+     ${DESKTOP && !f9 ? '<div class="notice small">Ainda não encontrei a pasta do plugin (Documentos › Sports Interactive › FM View Exporter). Instale-o e carregue F9 uma vez no FM.</div>' : ''}
+     ${DESKTOP && !compact ? `<label class="f">Pasta personalizada (opcional)<input type="text" value="${esc(ST.auto.dir)}" placeholder="ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter" onchange="A.autoDir(this.value)"></label><div id="dirs" class="grid" style="gap:4px"></div>` : ''}`,
+    `<a class="btn sm" href="${LINKS.fmve}" target="_blank" rel="noopener">Descarregar o plugin</a>${DESKTOP ? `<label class="row small"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar cada F9 automaticamente</label><button class="btn sm" data-busy="f9" onclick="A.autoNow()">Carregar o último F9</button>` : ''}`);
+  const labCard = compact ? '' : card('Testar no motor do FM27 — FM Tactics Lab',
+    DESKTOP ? pill(!!(ST.lab && ST.lab.status), 'ligado', 'não ligado') : pill(false, '', 'só na app instalada'),
+    `<p class="small"><b>Requer</b> o <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> aberto, com o Steam aberto na conta que tem o FM27. Corre jogos com o motor original e exporta .fmf verificados pelo jogo.</p>`,
+    `<a class="btn sm" href="${LINKS.lab}" target="_blank" rel="noopener">Descarregar o Tactics Lab</a><button class="btn sm" onclick="A.go('lab')">Abrir Laboratório</button>`);
+  return fmsaveCard + f9Card + labCard;
+}
 function vSettings() {
   if (DESKTOP) setTimeout(async () => {
     const el = document.getElementById('dirs'); if (!el) return;
@@ -10,19 +42,9 @@ function vSettings() {
   return `<div class="top"><div><h2>Definições</h2></div></div>
   <div class="grid g2">
     <div class="panel grid">
-      <h3>Ler o save (.fm)</h3>
-      ${DESKTOP ? `<label class="row"><input type="checkbox" ${ST.auto.save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label>
-        <label class="f">Pasta dos saves (opcional)<input type="text" value="${esc(ST.auto.saveDir)}" placeholder="Documentos\\Sports Interactive\\Football Manager 27\\games" onchange="A.saveDir(this.value)"></label>
-        <div class="small">${ST.lastSave ? `Último save: <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br>Lido: ${esc(ST.auto.saveLast)}` : ''}</div>
-        ${ST.auto.saveErr ? `<div class="notice warn small">${esc(ST.auto.saveErr)}<br>A leitura usa o <b>fmsave</b> (MIT). Instale o <b>uv</b> uma vez — <code>winget install --id=astral-sh.uv -e</code> — e reinicie a app; na primeira leitura o uv descarrega o fmsave (precisa de internet só nessa vez).</div>` : ''}
-        <div class="row"><button class="btn" data-busy="save" onclick="A.saveNow()">Ler o save agora</button></div>`
-      : `<p class="small">No browser: use o <a href="https://rhiever.github.io/fmsave/app/" target="_blank" rel="noopener">fmsave online</a> (lê o save no seu PC, sem enviar nada), descarregue o CSV e arraste-o para aqui. Na app instalada isto é automático.</p>`}
-      <h3>Carregamento automático (F9)</h3>
-      ${DESKTOP ? `<label class="row"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar sozinho cada exportação nova do FM View Exporter</label>
-        <label class="f">Pasta personalizada (opcional)<input type="text" value="${esc(ST.auto.dir)}" placeholder="ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter" onchange="A.autoDir(this.value)"></label>
-        <div id="dirs" class="grid" style="gap:4px"><span class="small muted">A procurar pastas…</span></div>
-        <div class="row"><button class="btn" onclick="A.autoNow()">Carregar a última exportação agora</button>${ST.auto.last ? `<span class="small muted">Último: ${esc(ST.auto.last)}</span>` : ''}</div>`
-      : `<p class="small">Disponível na <b>app instalada</b> (Windows). No browser, arraste o ficheiro para a janela.</p>`}
+      <h3>Integrações</h3>
+      <p class="small muted" style="margin:0">Ferramentas externas opcionais. Cada uma diz o que precisa e onde se descarrega.</p>
+      ${integrationsHTML(false)}
       <h3>O meu clube</h3>
       <p class="small muted" style="margin:0">Exportações de outro clube entram como adversário.</p>
       <label class="f">Clube<input type="text" value="${esc(ST.myClub || '')}" placeholder="detectado ao carregar o plantel" onchange="A.setMyClub(this.value)"></label>

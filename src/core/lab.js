@@ -64,12 +64,12 @@ function pairedDiff(rows) {
   const dXG = hasXG ? meanCI(pairs.map(([a, b]) => (b.xg - b.xga) - (a.xg - a.xga))) : null;
   const dPts = meanCI(pairs.map(([a, b]) => ((b.gf > b.ga ? 3 : b.gf === b.ga ? 1 : 0) - (a.gf > a.ga ? 3 : a.gf === a.ga ? 1 : 0))));
   // o xG tem muito menos ruído do que os golos: é a métrica principal do veredicto
-  const main = dXG || dGD, unit = dXG ? 'xG' : 'golos';
+  const main = dXG || dGD, unit = dXG ? 'xG' : L('golos', 'goals');
   let verdict, tone;
-  if (!main || main.n < 6 || main.lo == null) { verdict = 'Poucos jogos para concluir. Corre pelo menos 30 por tática.'; tone = 'info'; }
-  else if (main.lo > 0) { verdict = `B é melhor do que A: +${main.mean.toFixed(2)} ${unit} de saldo por jogo (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`; tone = 'good'; }
-  else if (main.hi < 0) { verdict = `A é melhor do que B: ${main.mean.toFixed(2)} ${unit} de saldo por jogo com B (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`; tone = 'crit'; }
-  else { verdict = `Sem diferença clara (${main.mean >= 0 ? '+' : ''}${main.mean.toFixed(2)} ${unit}; 95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`; tone = 'warn'; }
+  if (!main || main.n < 6 || main.lo == null) { verdict = L('Poucos jogos para concluir. Corre pelo menos 30 por tática.', 'Too few matches to conclude. Run at least 30 per tactic.'); tone = 'info'; }
+  else if (main.lo > 0) { verdict = L(`B é melhor do que A: +${main.mean.toFixed(2)} ${unit} de saldo por jogo (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`, `B is better than A: +${main.mean.toFixed(2)} ${unit} difference per match (95%: ${main.lo.toFixed(2)} to ${main.hi.toFixed(2)}).`); tone = 'good'; }
+  else if (main.hi < 0) { verdict = L(`A é melhor do que B: ${main.mean.toFixed(2)} ${unit} de saldo por jogo com B (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`, `A is better than B: ${main.mean.toFixed(2)} ${unit} difference per match with B (95%: ${main.lo.toFixed(2)} to ${main.hi.toFixed(2)}).`); tone = 'crit'; }
+  else { verdict = L(`Sem diferença clara (${main.mean >= 0 ? '+' : ''}${main.mean.toFixed(2)} ${unit}; 95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`, `No clear difference (${main.mean >= 0 ? '+' : ''}${main.mean.toFixed(2)} ${unit}; 95%: ${main.lo.toFixed(2)} to ${main.hi.toFixed(2)}).`); tone = 'warn'; }
   // jogos necessários para separar uma diferença do tamanho observada (mín. 0,15) com 95%
   let needN = null;
   if (main && main.sd) { const target = Math.max(0.15, Math.abs(main.mean)); needN = Math.ceil(Math.pow(1.96 * main.sd / target, 2)); }

@@ -228,28 +228,36 @@ function simModel(t) {
   const lineY = (gs) => { const q = P.filter(p => gs.includes(p.b.group) && !p.pressing); return q.length ? q.reduce((a, p) => a + p.pos.oop.y, 0) / q.length : null; };
   const defY = lineY(['DC']), midY = lineY(['DM','MC','M_LR']);
   const overlays = [];
-  if (defY != null && midY != null && midY - defY > 21) overlays.push({ kind: 'gap', y1: defY + 2, y2: midY - 2, label: 'espaço entre linhas' });
+  if (defY != null && midY != null && midY - defY > 21) overlays.push({ kind: 'gap', y1: defY + 2, y2: midY - 2, label: L('espaço entre linhas', 'gap between the lines') });
   const gkO = P.find(p => p.b.group === 'GK');
-  if (dl >= 3 && gkO && gkO.oop && gkO.oop.id !== 'swk' && loe < 2) overlays.push({ kind: 'behind', y1: 8, y2: (defY || dLine) - 2, label: 'espaço nas costas sem cobertura' });
+  if (dl >= 3 && gkO && gkO.oop && gkO.oop.id !== 'swk' && loe < 2) overlays.push({ kind: 'behind', y1: 8, y2: (defY || dLine) - 2, label: L('espaço nas costas sem cobertura', 'uncovered space in behind') });
   return { P, ball, opp, overlays, dLine, front, bs };
 }
 
 // ---------- texto de cada fase
 function phaseText(t, k, M) {
   const v = (x) => tiLabel(x, tiVal(t, x));
-  const T = {
-    build: `Build-up ${v('buildup')}, Goal Kicks ${v('goal_kicks')}. ${tiVal(t,'buildup') === 2 || tiVal(t,'goal_kicks') === 2 || tiVal(t,'passing') >= 3 ? 'A bola salta o meio-campo directamente para a frente.' : 'Saída curta: os centrais abrem e um médio baixa para receber.'}`,
-    prog: `Passing ${v('passing')}, Tempo ${v('tempo')}, Pass Reception ${v('reception')}. ${tiVal(t,'passing') >= 3 ? 'Jogo vertical: procura o avançado cedo.' : 'Circula pelo meio e pelo corredor do lado da bola.'}`,
-    final: `Attacking Width ${v('width')}, Supporting Runs ${v('support_runs')}, Crossing ${v('crossing')}. Repara em quem fica atrás (rest-defence) e em quem ataca a área.`,
-    loss: `Defensive Transition ${v('def_trans')}. ${tiVal(t,'def_trans') === 2 ? 'Contra-pressão: os mais próximos atacam a bola de imediato.' : tiVal(t,'def_trans') === 0 ? 'Reagrupar: a equipa recua para o bloco antes de pressionar.' : 'Os mais próximos pressionam; os restantes recuam.'}`,
-    oop: `Line of Engagement ${v('loe')}, Defensive Line ${v('dline')}, Trigger Press ${v('trigger')}, Pressing Trap ${v('press_trap')}. Os jogadores com anel vermelho saem a pressionar.`,
-    win: `Attacking Transition ${v('att_trans')}. ${tiVal(t,'att_trans') === 2 ? 'Contra-ataque: os corredores e outlets arrancam e a bola vai longa.' : tiVal(t,'att_trans') === 0 ? 'Hold Shape: a bola volta atrás e a equipa reorganiza a posse.' : 'Saída equilibrada: alguns arrancam, o resto acompanha.'}`,
+  const lbl = (k) => tiLabel(k, tiVal(t, k));
+  const TX = {
+    build: L(`Build-up ${lbl('buildup')}, Goal Kicks ${lbl('goal_kicks')}. ` + (tiVal(t,'buildup') === 2 || tiVal(t,'goal_kicks') === 2 || tiVal(t,'passing') >= 3 ? 'A bola salta o meio-campo directamente para a frente.' : 'Saída curta: os centrais abrem e um médio baixa para receber.'),
+             `Build-up ${lbl('buildup')}, Goal Kicks ${lbl('goal_kicks')}. ` + (tiVal(t,'buildup') === 2 || tiVal(t,'goal_kicks') === 2 || tiVal(t,'passing') >= 3 ? 'The ball skips midfield and goes straight forward.' : 'Short build-up: the centre-backs split and a midfielder drops to receive.')),
+    prog: L(`Passing ${lbl('passing')}, Tempo ${lbl('tempo')}, Pass Reception ${lbl('reception')}. ` + (tiVal(t,'passing') >= 3 ? 'Jogo vertical: procura o avançado cedo.' : 'Circula pelo meio e pelo corredor do lado da bola.'),
+            `Passing ${lbl('passing')}, Tempo ${lbl('tempo')}, Pass Reception ${lbl('reception')}. ` + (tiVal(t,'passing') >= 3 ? 'Vertical play: look for the striker early.' : 'Circulates through the middle and the ball-side flank.')),
+    final: L(`Attacking Width ${lbl('width')}, Supporting Runs ${lbl('support_runs')}, Crossing ${lbl('crossing')}. Repara em quem fica atrás (rest-defence) e em quem ataca a área.`,
+             `Attacking Width ${lbl('width')}, Supporting Runs ${lbl('support_runs')}, Crossing ${lbl('crossing')}. Watch who stays back (rest-defence) and who attacks the box.`),
+    loss: L(`Defensive Transition ${lbl('def_trans')}. ` + (tiVal(t,'def_trans') === 2 ? 'Contra-pressão: os mais próximos atacam a bola de imediato.' : tiVal(t,'def_trans') === 0 ? 'Reagrupar: a equipa recua para o bloco antes de pressionar.' : 'Os mais próximos pressionam; os restantes recuam.'),
+            `Defensive Transition ${lbl('def_trans')}. ` + (tiVal(t,'def_trans') === 2 ? 'Counter-press: the nearest players attack the ball immediately.' : tiVal(t,'def_trans') === 0 ? 'Regroup: the team drops into its block before pressing.' : 'The nearest players press; the rest drop back.')),
+    oop: L(`Line of Engagement ${lbl('loe')}, Defensive Line ${lbl('dline')}, Trigger Press ${lbl('trigger')}, Pressing Trap ${lbl('press_trap')}. Os jogadores com anel vermelho saem a pressionar.`,
+           `Line of Engagement ${lbl('loe')}, Defensive Line ${lbl('dline')}, Trigger Press ${lbl('trigger')}, Pressing Trap ${lbl('press_trap')}. Players with a red ring step out to press.`),
+    win: L(`Attacking Transition ${lbl('att_trans')}. ` + (tiVal(t,'att_trans') === 2 ? 'Contra-ataque: os corredores e outlets arrancam e a bola vai longa.' : tiVal(t,'att_trans') === 0 ? 'Hold Shape: a bola volta atrás e a equipa reorganiza a posse.' : 'Saída equilibrada: alguns arrancam, o resto acompanha.'),
+           `Attacking Transition ${lbl('att_trans')}. ` + (tiVal(t,'att_trans') === 2 ? 'Counter-attack: runners and outlets break forward and the ball goes long.' : tiVal(t,'att_trans') === 0 ? 'Hold Shape: the ball goes back and the team resets possession.' : 'A balanced break: some run, the rest follow.')),
   };
+
   const notes = [];
   M.P.forEach(p => {
-    [p.ip, p.oop].forEach(r => { if (!r) return; const n = MOVE_NOTES[r.id]; if (n && n[0] === k) notes.push(`<b>${esc(r.ab)}</b> (${esc(p.s.ipCode)}) ${esc(n[1])}`); });
+    [p.ip, p.oop].forEach(r => { if (!r) return; const n = MOVE_NOTES[r.id]; if (n && n[0] === k) notes.push(`<b>${esc(r.ab)}</b> (${esc(p.s.ipCode)}) <span>${esc(n[1])}</span>`); });
   });
-  return { text: T[k], notes };
+  return { text: TX[k], notes };
 }
 
 // demonstração de um papel: tática simples com o papel em destaque

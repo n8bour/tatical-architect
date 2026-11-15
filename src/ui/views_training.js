@@ -3,7 +3,7 @@
 // ============================================================
 function vTraining() {
   const t = ST.tactic, au = auditTactic(t, players()), plan = trainingPlan(t, players(), au);
-  return `<div class="top"><div><h2>Plano de treino para “${esc(t.name)}”</h2>
+  return `<div class="top"><div><h2><span>Plano de treino para</span> “${esc(t.name)}”</h2>
     <p class="muted small">Ligado às áreas de Tactical Understanding do FM27: treine primeiro o que a sua tática mais exige.</p></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Prioridades de Tactical Understanding</h3>

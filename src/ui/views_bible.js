@@ -15,12 +15,13 @@ function vRoles() {
     <span class="small muted">${list.length} resultado(s)</span></div>
   <div class="grid g2">${list.map(r => `<div class="role-card">
     <div class="row" style="justify-content:space-between"><div><b>${esc(r.name)}</b> <span class="muted small">(${esc(r.ab)})</span></div><div><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span>${srcTag(r)}</div></div>
-    <div class="small muted">${r.groups.map(g => GROUPS[g]).join(' · ')}${r.wideCB ? ' · só central do lado numa linha de 3' : ''}</div>
+    <div class="small muted">${r.groups.map(g => `<span>${GROUPS[g]}</span>`).join(' · ')}${r.wideCB ? ` · <span>só central do lado numa linha de 3</span>` : ''}</div>
     <p class="small">${esc(r.desc)}</p><p class="small">💡 ${esc(r.tip)}</p>
     <div class="attrs"><b>Chave:</b> ${r.key.map(k => `<span class="chip">${esc(attrName(k))}</span>`).join('')}</div>
     <div class="attrs"><b>Preferidos:</b> ${r.pref.map(k => `<span class="chip">${esc(attrName(k))}</span>`).join('')}</div>
-    ${r.tags.length ? `<div class="attrs muted">Comportamento: ${r.tags.map(x => tagNames[x] || x).join(', ')}</div>` : ''}
-    <button class="btn sm" style="margin-top:8px" onclick="A.roleDemo('${r.id}')">▶ Ver em campo</button>
+    ${r.tags.length ? `<div class="attrs muted"><span>Comportamento:</span> ${r.tags.map(x => `<span>${tagNames[x] || x}</span>`).join(', ')}</div>` : ''}
+    <div class="row" style="margin-top:8px"><button class="btn sm" onclick="A.clipToggle('role:${r.id}')" aria-expanded="${!!(ST.openClips || {})['role:' + r.id]}">${(ST.openClips || {})['role:' + r.id] ? '■ Fechar clip' : '▶ Clip do papel'}</button><button class="btn sm ghost" onclick="A.roleDemo('${r.id}')" title="Abrir no campo animado completo">Campo completo</button></div>
+    ${(ST.openClips || {})['role:' + r.id] ? clipHTML('role:' + r.id, (() => { const n = MOVE_NOTES[r.id], ph = `<span>${r.phase === 'IP' ? 'construção → progressão → último terço' : 'último terço → perda → bloco'}</span>`; return n ? `<b>${esc(r.ab)}</b> <span>${esc(n[1])}</span> · ${ph}` : ph; })()) : ''}
   </div>`).join('')}</div>`;
 }
 
@@ -29,14 +30,14 @@ function vTI() {
   <div class="panel"><h3>Mentalidade</h3><div class="grid g2">${MENTALITIES.map(m => `<div><b>${m}</b><p class="small muted">${esc(MENTALITY_INFO[m])}</p></div>`).join('')}</div></div>
   ${['IP','OOP'].map(ph => `<div class="panel" style="margin-top:16px"><h3>Instruções de equipa — ${ph === 'IP' ? 'com bola' : 'sem bola'}</h3>
     <div class="table-wrap" style="max-height:none"><table><thead><tr><th>Instrução</th><th>Opções</th><th>O que faz</th><th>Prós</th><th>Contras</th></tr></thead><tbody>
-    ${TEAM_INSTRUCTIONS.filter(d => d.ph === ph).map(d => `<tr><td><b>${esc(d.n)}</b>${d.fm27 ? ' <span class="chip new">FM27</span>' : ''}<div class="small muted">${esc(d.area)}${d.unconf ? ' · opções a confirmar no jogo' : ''}</div>${SIM_TI.has(d.k) ? `<button class="btn sm" style="margin-top:4px" onclick="A.tiDemo('${d.k}')">▶ Ver em campo</button>` : ''}</td><td class="small">${d.opts.map((o, i) => i === d.def ? `<u>${esc(o)}</u>` : esc(o)).join(' · ')}</td><td class="small">${esc(d.d)}</td><td class="small">${esc(d.pro)}</td><td class="small">${esc(d.con)}</td></tr>`).join('')}
+    ${TEAM_INSTRUCTIONS.filter(d => d.ph === ph).map(d => `<tr><td><b>${esc(d.n)}</b>${d.fm27 ? ' <span class="chip new">FM27</span>' : ''}<div class="small muted"><span>${esc(d.area)}</span>${d.unconf ? ` · <span>opções a confirmar no jogo</span>` : ''}</div>${SIM_TI.has(d.k) ? `<button class="btn sm" style="margin-top:4px" onclick="A.clipToggle('ti:${d.k}')" aria-expanded="${!!(ST.openClips || {})['ti:' + d.k]}">${(ST.openClips || {})['ti:' + d.k] ? '■ Fechar' : '▶ Ver efeito'}</button>` : ''}</td><td class="small">${d.opts.map((o, i) => i === d.def ? `<u>${esc(o)}</u>` : esc(o)).join(' · ')}</td><td class="small">${esc(d.d)}</td><td class="small">${esc(d.pro)}</td><td class="small">${esc(d.con)}</td></tr>${(ST.openClips || {})['ti:' + d.k] ? `<tr class="cliprow"><td colspan="5"><div class="clip-pair">${[0, d.opts.length - 1].map(v => clipHTML('ti:' + d.k + ':' + v, `<b>${esc(d.opts[v])}</b>${v === d.def ? ' (default)' : ''}`)).join('')}</div><p class="small muted" style="margin:6px 0 0"><span>${L('Mesma equipa e mesma fase', 'Same team, same phase')}</span> (<span>${esc(PHASES[TI_PHASE[d.k] ?? 0].n)}</span>)<span>${L('; só muda', '; only')}</span> <b>${esc(d.n)}</b> ${L('', '<span>changes.</span>')} <span>${d.ph === 'IP' ? 'Instrução com bola.' : 'Instrução sem bola.'}</span></p></td></tr>` : ''}`).join('')}
     </tbody></table></div></div>`).join('')}
   <div class="grid g2" style="margin-top:16px">
     <div class="panel"><h3>Instruções individuais</h3>${PLAYER_INSTRUCTIONS.map(p => `<p class="small"><b>${esc(p.n)}</b>${p.fm27 ? ' <span class="chip new">FM27</span>' : ''}<br>${esc(p.d)} <span class="muted">${esc(p.tip)}</span></p>`).join('')}</div>
     <div class="grid">
       <div class="panel"><h3>Instruções de adversário</h3>${OPPOSITION_INSTRUCTIONS.map(p => `<p class="small"><b>${esc(p.n)}</b><br>${esc(p.d)} <span class="muted">${esc(p.tip)}</span></p>`).join('')}</div>
       <div class="panel"><h3>Tactical Tweaks <span class="chip new">FM27</span></h3><p class="small muted">Atalhos no ecrã de jogo que alteram várias instruções de uma vez. Passe o rato no jogo para ver exactamente quais.</p>
-        ${TACTICAL_TWEAKS.map(p => `<p class="small"><b>${esc(p.n)}</b> — ${esc(p.d)}<br><span class="muted">Quando: ${esc(p.when)}</span></p>`).join('')}</div>
+        ${TACTICAL_TWEAKS.map(p => `<p class="small"><b>${esc(p.n)}</b> — ${esc(p.d)}<br><span class="muted"><span>Quando:</span> <span>${esc(p.when)}</span></span></p>`).join('')}</div>
     </div></div>`;
 }
 

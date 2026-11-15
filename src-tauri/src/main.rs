@@ -367,9 +367,24 @@ async fn lab_request(
     .map_err(|e| e.to_string())?
 }
 
+/// Abre um link https no browser do sistema (os links da app: plugin, fmsave, uv, Tactics Lab).
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") || url.contains('"') || url.contains(' ') {
+        return Err("Link inválido".into());
+    }
+    #[cfg(windows)]
+    let r = Command::new("rundll32").args(["url.dll,FileProtocolHandler", url.as_str()]).spawn();
+    #[cfg(target_os = "macos")]
+    let r = Command::new("open").arg(&url).spawn();
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let r = Command::new("xdg-open").arg(&url).spawn();
+    r.map(|_| ()).map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, lab_request])
+        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, lab_request, open_url])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o FM27 Tactical Bible");
 }

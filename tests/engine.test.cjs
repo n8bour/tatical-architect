@@ -1,5 +1,5 @@
 const fs=require('fs'), vm=require('vm');
-const code=['core/roles.js','core/tactics_data.js','core/engine.js','core/insights.js'].map(f=>fs.readFileSync(require('path').join(__dirname,'..','src',f),'utf8')).join('\n;\n');
+const code=['i18n/i18n.js','core/roles.js','core/tactics_data.js','core/engine.js','core/insights.js'].map(f=>fs.readFileSync(require('path').join(__dirname,'..','src',f),'utf8')).join('\n;\n');
 const ctx={console}; vm.createContext(ctx); vm.runInContext(code+';this.X={ROLES,ROLE_BY_ID,FORMATIONS,TEMPLATES,TEAM_INSTRUCTIONS,newTactic,matchFormations,tacticFromTemplate,auditTactic,parseSquad,parsePositions,suggestTactics,validRole,slotInfo,retargetTactic,trainingPlan,ATTRS,hungarian,complexityOf,rolesFor,GROUPS};',ctx);
 const X=ctx.X; let fails=0; const ok=(c,m)=>{ if(!c){fails++;console.log('FAIL',m);} };
 // 1. atributos dos papéis existem
@@ -117,7 +117,7 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
 // 14. bolas paradas: papéis preenchidos, sem jogadores repetidos, GR fora, ≥ 2 atrás
 {
   const c5={console,Math}; vm.createContext(c5);
-  vm.runInContext(code+';const attrName=(k)=>ATTRS[k]?ATTRS[k].n:k;this.Q={parseSquad,setPiecePlan,tacticFromTemplate,TEMPLATES};',c5);
+  vm.runInContext(code+';this.Q={parseSquad,setPiecePlan,tacticFromTemplate,TEMPLATES};',c5);
   const Q=c5.Q, P=require('path'), rd=f=>fs.readFileSync(P.join(__dirname,'fixtures',f),'utf8');
   let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
   for (const [mine,opp] of [['fmsave_players.csv','squad_en.csv'],['squad_en.csv',null],['squad_de.csv','fmsave_players.csv']]) {
@@ -138,7 +138,7 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
 // 15. gerador: táticas válidas, coerentes e com razões para as instruções
 {
   const c6={console,Math,performance}; vm.createContext(c6);
-  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','generator.js'),'utf8')+';const attrName=(k)=>ATTRS[k]?ATTRS[k].n:k;this.Gn={generateTactic,parseSquad,auditTactic,validRole,slotInfo,TEAM_INSTRUCTIONS,FORMATIONS,depthChart,weakSpots};',c6);
+  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','generator.js'),'utf8')+';this.Gn={generateTactic,parseSquad,auditTactic,validRole,slotInfo,TEAM_INSTRUCTIONS,FORMATIONS,depthChart,weakSpots};',c6);
   const G=c6.Gn, P=require('path'), rd=f=>fs.readFileSync(P.join(__dirname,'fixtures',f),'utf8');
   let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
   const depth=f=>{const sl=G.FORMATIONS[f].filter(x=>x.code!=='GK');return sl.reduce((a,x)=>a+x.y,0)/sl.length;};
@@ -163,8 +163,8 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
 // 16. laboratório: análise das experiências do Tactics Lab (efeito conhecido)
 {
   const c7={console,Math}; vm.createContext(c7);
-  vm.runInContext(fs.readFileSync(require('path').join(__dirname,'..','src','core','lab.js'),'utf8')+';this.L={analyzeJob,jobFromAny};',c7);
-  const L=c7.L, rd=f=>JSON.parse(fs.readFileSync(require('path').join(__dirname,'fixtures',f),'utf8'));
+  vm.runInContext(fs.readFileSync(require('path').join(__dirname,'..','src','i18n','i18n.js'),'utf8')+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','lab.js'),'utf8')+';this.LB={analyzeJob,jobFromAny};',c7);
+  const L=c7.LB, rd=f=>JSON.parse(fs.readFileSync(require('path').join(__dirname,'fixtures',f),'utf8'));
   let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
   const e=L.analyzeJob(rd('job_effect.json')), z=L.analyzeJob(rd('job_null.json')), f=L.analyzeJob(rd('job_few.json'));
   chk(e.comparison && e.comparison.n===80,'pares');

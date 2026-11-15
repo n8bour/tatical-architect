@@ -4,7 +4,10 @@ Analisador tático, campo animado e bíblia de papéis e instruções para o Foo
 
 ## Como usar (3 passos)
 
-1. **Plantel, lido do save.**
+1. **Plantel.** Há duas vias, ambas opcionais e ambas dependentes de uma ferramenta externa gratuita. Os cartões em **Plantel** e **Definições › Integrações** dizem o que cada uma **requer**, têm o link de download e mostram o estado no seu PC.
+   A leitura automática do save vem **desligada** por defeito. Ligue-a no cartão ou use "Ler o save agora".
+
+   **Plantel, lido do save:**
    - **App instalada:** grave o jogo no FM27 e a app lê o save sozinha (verifica a cada 10 segundos). Na primeira vez é preciso instalar o leitor:
      ```
      winget install --id=astral-sh.uv -e
@@ -32,7 +35,7 @@ Para levar a tática para o jogo, use **Tática › Ficha para o FM27**. A ficha
 | Tática › Bolas paradas | Marcadores (cantos com o pé certo, livres diretos e cruzados, penáltis, lançamentos longos), capitão e vice, canto ofensivo e defensivo num diagrama (zonas, marcações aos mais fortes no ar do adversário, quem fica atrás e quem fica na frente) e dicas aplicáveis |
 | Tática › Ficha para o FM27 | Passo-a-passo para recriar a tática no jogo, incluindo a secção *Set Pieces & Captains* |
 | Treino | Prioridades de Tactical Understanding, semana-tipo, Role Training e foco por jogador |
-| Bíblia | 77 papéis (com **▶ Ver em campo**), instruções (incluindo as novas do FM27), conceitos e Tactical Effectiveness |
+| Bíblia | 77 papéis e instruções (incluindo as novas do FM27), conceitos e Tactical Effectiveness. Cada papel tem um **clip** com o movimento individual desse jogador. Cada instrução animada tem um **clip duplo** que mostra, lado a lado, o efeito da opção mínima e da máxima |
 
 Pode arrastar qualquer ficheiro para qualquer sítio da janela. Plantéis do teu clube vão para o Plantel; plantéis de outro clube vão para o Adversário; ficheiros `.fmf` vão para o inspector; cópias de segurança `.json` são restauradas.
 
@@ -56,11 +59,18 @@ Duração: cerca de 6 a 8 minutos na primeira vez e 2 a 3 minutos nas seguintes,
 
 A ligação passa pelo lado nativo da app, porque o servidor do Tactics Lab recusa pedidos vindos de outras páginas. Só fala com `127.0.0.1` e só usa caminhos `/api/`.
 
+## Idioma
+A app abre em **inglês** por defeito. O português escolhe-se no seletor **EN/PT** no fundo do menu, e a escolha fica guardada.
+- **Tradução completa:** cobre a interface, a Bíblia (descrições e dicas dos 77 papéis, instruções, conceitos, treino) e as mensagens do diagnóstico, do gerador, do relatório do adversário, das bolas paradas e do Laboratório.
+- **Gerador:** ao trocar de idioma, as razões do relatório são recalculadas na nova língua.
+- **Teste automático:** `tests/ui_i18n.py` falha o build se algum texto ficar em português com a app em inglês.
+
 ## Interface
 - **Painéis recolhíveis:** clique no ▾ (ou no título) de qualquer painel para o fechar ou abrir. A app lembra-se do estado em cada ecrã.
 - **Menu só com ícones:** botão « no topo do menu ou **Ctrl+B**. Em janelas estreitas (por exemplo, 1366 com escala de 125%) o menu passa a ícones sozinho.
 - **Arrastar e largar** qualquer ficheiro para a janela.
 - **Atividade sempre visível:** tudo o que demora mostra que está a trabalhar. Aparece uma barra fina no topo da janela e um cartão na barra lateral com o que está a acontecer, o tempo decorrido e, quando se sabe, a percentagem. O cartão nunca tapa conteúdo. Os botões dessa tarefa mostram um spinner e ficam bloqueados até acabar. Está ligado à leitura do save (com aviso quando a primeira leitura demora), ao F9, a ficheiros grandes, ao Gerador (progresso par a par), à análise de `.fmf` e ao Laboratório (procurar o servidor, abrir experiências, exportar `.fmf` e jogos a correr no motor).
+- **Testes de interface no GitHub:** `ui_layout.py` corre em inglês completo e numa passagem rápida em português. `ui_busy.py` verifica os indicadores de atividade e `ui_i18n.py` a cobertura de idioma.
 - **Portão de layout:** `tests/ui_layout.py` percorre os 17 ecrãs em 6 larguras e 3 modos (normal, menu recolhido, painéis fechados) com um plantel de 62 jogadores de nomes longos. Corre no GitHub em cada build, e o Release não é publicado se encontrar sobreposições ou erros.
 
 ## Limitações
@@ -74,6 +84,7 @@ A ligação passa pelo lado nativo da app, porque o servidor do Tactics Lab recu
 ## Estrutura
 
 ```
+src/i18n/   i18n.js (L/T/translateDOM) · en_dict.js (dicionário PT→EN)
 src/core/   roles.js · tactics_data.js · engine.js · insights.js (PIs, adversário, bolas paradas) · generator.js (gerador) · lab.js (estatística do Tactics Lab) · sim_model.js
 src/ui/     state.js · components.js · sim_view.js · views_*.js · actions.js · main.js
 build.mjs   junta tudo em app/index.html (ficheiro único)

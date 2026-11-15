@@ -15,29 +15,29 @@ function recommendPIs(p, ipRole, oopRole, group) {
   const a = (k) => A_(p, k) ?? 0, tags = ipRole ? ipRole.tags : [];
   const attacker = ['ST','AMC','AM_LR','M_LR'].includes(group);
   if (group === 'GK') return out;
-  if (attacker && (a('pac') >= 15 || a('acc') >= 15) && a('otb') >= 13) add('Attack the Defensive Line', `Velocidade ${Math.max(a('pac'), a('acc'))} e Sem Bola ${a('otb')}: ganha nas costas da defesa.`);
-  if (group === 'ST' && a('pac') >= 14 && a('otb') >= 12 && !tags.includes('DROP')) add('Move into channels', 'Rápido e com bom movimento: arrasta os centrais para os corredores.');
-  if (['DM','MC','AMC'].includes(group) && a('otb') >= 13 && tags.some(t => ['ADV','BOX','RUN'].includes(t))) add('Arrive Late', `Sem Bola ${a('otb')}: entra na área em segunda vaga, quando a defesa já está presa.`);
-  if (a('lon') >= 15 && a('tec') >= 13) add('Shoot more', `Remates de Longe ${a('lon')}: vale a pena arriscar de fora da área.`);
-  else if (attacker && a('fin') && a('fin') <= 10 && a('lon') <= 11) add('Shoot less', `Finalização ${a('fin')} e Remates de Longe ${a('lon')}: melhor procurar o passe.`);
-  if (a('dri') >= 15 && a('agi') >= 13) add('Dribble more', `Drible ${a('dri')}, Agilidade ${a('agi')}: ganha duelos individuais.`);
-  else if (a('dri') && a('dri') <= 9 && attacker) add('Dribble less', `Drible ${a('dri')}: perde muitas bolas a conduzir.`);
-  if (a('pas') >= 15 && a('vis') >= 15) add('Take more risks', `Passe ${a('pas')} e Visão ${a('vis')}: pode tentar o passe de ruptura.`);
-  else if (a('pas') && a('pas') <= 10 && (tags.includes('CR') || ['DC','DM'].includes(group))) add('Take fewer risks', `Passe ${a('pas')}: passes simples evitam perdas perigosas.`);
-  if (['D_LR','WB_LR','M_LR','AM_LR'].includes(group) && a('cro') >= 15) add(tags.includes('IN') ? 'Cross from deep' : 'Cross from byline', `Cruzamentos ${a('cro')}: é uma arma, use-a.`);
-  if (a('sta') && a('sta') <= 10) add('Press less', `Resistência ${a('sta')}: guarda energia para os 90 minutos.`);
-  else if (a('wor') >= 15 && a('sta') >= 14 && attacker) add('Press more', `Índice de Trabalho ${a('wor')} e Resistência ${a('sta')}: aguenta pressionar mais.`);
+  if (attacker && (a('pac') >= 15 || a('acc') >= 15) && a('otb') >= 13) add('Attack the Defensive Line', L(`Velocidade ${Math.max(a('pac'), a('acc'))} e Sem Bola ${a('otb')}: ganha nas costas da defesa.`, `Pace ${Math.max(a('pac'), a('acc'))} and Off the Ball ${a('otb')}: gets in behind the defence.`));
+  if (group === 'ST' && a('pac') >= 14 && a('otb') >= 12 && !tags.includes('DROP')) add('Move into channels', L('Rápido e com bom movimento: arrasta os centrais para os corredores.', 'Quick with good movement: drags centre-backs into the channels.'));
+  if (['DM','MC','AMC'].includes(group) && a('otb') >= 13 && tags.some(t => ['ADV','BOX','RUN'].includes(t))) add('Arrive Late', L(`Sem Bola ${a('otb')}: entra na área em segunda vaga, quando a defesa já está presa.`, `Off the Ball ${a('otb')}: arrives in the box as a second wave, once the defence is pinned.`));
+  if (a('lon') >= 15 && a('tec') >= 13) add('Shoot more', L(`Remates de Longe ${a('lon')}: vale a pena arriscar de fora da área.`, `Long Shots ${a('lon')}: worth trying from outside the box.`));
+  else if (attacker && a('fin') && a('fin') <= 10 && a('lon') <= 11) add('Shoot less', L(`Finalização ${a('fin')} e Remates de Longe ${a('lon')}: melhor procurar o passe.`, `Finishing ${a('fin')} and Long Shots ${a('lon')}: better to look for the pass.`));
+  if (a('dri') >= 15 && a('agi') >= 13) add('Dribble more', L(`Drible ${a('dri')}, Agilidade ${a('agi')}: ganha duelos individuais.`, `Dribbling ${a('dri')}, Agility ${a('agi')}: wins one-on-one duels.`));
+  else if (a('dri') && a('dri') <= 9 && attacker) add('Dribble less', L(`Drible ${a('dri')}: perde muitas bolas a conduzir.`, `Dribbling ${a('dri')}: loses the ball often when carrying it.`));
+  if (a('pas') >= 15 && a('vis') >= 15) add('Take more risks', L(`Passe ${a('pas')} e Visão ${a('vis')}: pode tentar o passe de ruptura.`, `Passing ${a('pas')} and Vision ${a('vis')}: can try the defence-splitting pass.`));
+  else if (a('pas') && a('pas') <= 10 && (tags.includes('CR') || ['DC','DM'].includes(group))) add('Take fewer risks', L(`Passe ${a('pas')}: passes simples evitam perdas perigosas.`, `Passing ${a('pas')}: simple passes avoid dangerous turnovers.`));
+  if (['D_LR','WB_LR','M_LR','AM_LR'].includes(group) && a('cro') >= 15) add(tags.includes('IN') ? 'Cross from deep' : 'Cross from byline', L(`Cruzamentos ${a('cro')}: é uma arma, use-a.`, `Crossing ${a('cro')}: it is a weapon, use it.`));
+  if (a('sta') && a('sta') <= 10) add('Press less', L(`Resistência ${a('sta')}: guarda energia para os 90 minutos.`, `Stamina ${a('sta')}: save energy for the full 90 minutes.`));
+  else if (a('wor') >= 15 && a('sta') >= 14 && attacker) add('Press more', L(`Índice de Trabalho ${a('wor')} e Resistência ${a('sta')}: aguenta pressionar mais.`, `Work Rate ${a('wor')} and Stamina ${a('sta')}: can press harder.`));
   if (['DC','D_LR','WB_LR','DM'].includes(group)) {
-    if (a('tck') >= 15 && a('agg') >= 13) add('Tackle harder', `Desarme ${a('tck')}, Agressividade ${a('agg')}: ganha duelos.`);
-    else if (a('tck') && a('tck') <= 10) add('Ease off tackles', `Desarme ${a('tck')}: evita faltas e cartões.`);
-    if (a('mar') >= 15) add('Mark tighter', `Marcação ${a('mar')}: anula o adversário directo.`);
+    if (a('tck') >= 15 && a('agg') >= 13) add('Tackle harder', L(`Desarme ${a('tck')}, Agressividade ${a('agg')}: ganha duelos.`, `Tackling ${a('tck')}, Aggression ${a('agg')}: wins duels.`));
+    else if (a('tck') && a('tck') <= 10) add('Ease off tackles', L(`Desarme ${a('tck')}: evita faltas e cartões.`, `Tackling ${a('tck')}: avoids fouls and cards.`));
+    if (a('mar') >= 15) add('Mark tighter', L(`Marcação ${a('mar')}: anula o adversário directo.`, `Marking ${a('mar')}: shuts down his direct opponent.`));
   }
   if (group === 'ST') {
-    if (tags.includes('AIR') || (a('hea') >= 15 && a('jum') >= 14)) add('Target Centre', `Cabeceamento ${a('hea')}: ataca o centro da área nos cruzamentos.`);
-    else if (ipRole && ipRole.id === 'poa') add('Target Near Post', 'Poacher: o primeiro poste é onde aparece primeiro.');
+    if (tags.includes('AIR') || (a('hea') >= 15 && a('jum') >= 14)) add('Target Centre', L(`Cabeceamento ${a('hea')}: ataca o centro da área nos cruzamentos.`, `Heading ${a('hea')}: attacks the centre of the box on crosses.`));
+    else if (ipRole && ipRole.id === 'poa') add('Target Near Post', L('Poacher: o primeiro poste é onde aparece primeiro.', 'Poacher: the near post is where he gets there first.'));
   }
-  if (ipRole && ipRole.id === 'wf_ip') add('Target Far Post', 'Wide Forward: ataca o segundo poste enquanto o avançado prende os centrais.');
-  if (['DM','MC'].includes(group) && tags.includes('RD') && a('dec') >= 12) add('Hold position', 'Garante a rest-defence enquanto os outros sobem.');
+  if (ipRole && ipRole.id === 'wf_ip') add('Target Far Post', L('Wide Forward: ataca o segundo poste enquanto o avançado prende os centrais.', 'Wide Forward: attacks the far post while the striker pins the centre-backs.'));
+  if (['DM','MC'].includes(group) && tags.includes('RD') && a('dec') >= 12) add('Hold position', L('Garante a rest-defence enquanto os outros sobem.', 'Secures the rest-defence while the others push on.'));
   return out.slice(0, 3);
 }
 
@@ -93,27 +93,28 @@ function opponentReport(t, myPlayers, oppPlayers) {
   const push = (ti, v, why) => plan.push({ ti, v, why });
   const d = (k) => S[k] && S[k].diff;
   // ataque
-  if (d('cb_pace') >= 1.5) push('reception', 0, `Os teus atacantes são mais rápidos do que os centrais deles (${S.cb_pace.uv.toFixed(1)} vs ${S.cb_pace.tv.toFixed(1)}): joga para o espaço nas costas.`);
-  if (d('cb_pace') <= -1.5) push('reception', 2, `Os centrais deles são mais rápidos do que os teus atacantes: passe ao pé, sem bolas nas costas.`);
-  if (d('cb_air') >= 1.5) { push('crossing', 3, `Os teus avançados ganham no ar aos centrais deles (${S.cb_air.uv.toFixed(1)} vs ${S.cb_air.tv.toFixed(1)}): cruzamentos altos.`); push('set_pieces', 2, 'Vantagem aérea: procura cantos e livres.'); }
-  if (d('cb_air') <= -1.5) push('crossing', 0, `Os centrais deles dominam no ar (${S.cb_air.tv.toFixed(1)}): só cruzamentos rasteiros.`);
+  if (d('cb_pace') >= 1.5) push('reception', 0, L(`Os teus atacantes são mais rápidos do que os centrais deles (${S.cb_pace.uv.toFixed(1)} vs ${S.cb_pace.tv.toFixed(1)}): joga para o espaço nas costas.`, `Your attackers are quicker than their centre-backs (${S.cb_pace.uv.toFixed(1)} vs ${S.cb_pace.tv.toFixed(1)}): play into the space behind.`));
+  if (d('cb_pace') <= -1.5) push('reception', 2, L(`Os centrais deles são mais rápidos do que os teus atacantes: passe ao pé, sem bolas nas costas.`, `Their centre-backs are quicker than your attackers: pass to feet, no balls in behind.`));
+  if (d('cb_air') >= 1.5) { push('crossing', 3, L(`Os teus avançados ganham no ar aos centrais deles (${S.cb_air.uv.toFixed(1)} vs ${S.cb_air.tv.toFixed(1)}): cruzamentos altos.`, `Your strikers beat their centre-backs in the air (${S.cb_air.uv.toFixed(1)} vs ${S.cb_air.tv.toFixed(1)}): high crosses.`)); push('set_pieces', 2, L('Vantagem aérea: procura cantos e livres.', 'Aerial advantage: go for corners and free kicks.')); }
+  if (d('cb_air') <= -1.5) push('crossing', 0, L(`Os centrais deles dominam no ar (${S.cb_air.tv.toFixed(1)}): só cruzamentos rasteiros.`, `Their centre-backs dominate in the air (${S.cb_air.tv.toFixed(1)}): low crosses only.`));
   if (S.fb_def && S.fb_def.tv != null) {
     const dl = them.find(x => x.code === 'DL'), dr = them.find(x => x.code === 'DR');
     const vl = dl ? avgOf(dl.p, S.fb_def.a) : null, vr = dr ? avgOf(dr.p, S.fb_def.a) : null;
     if (vl != null && vr != null && Math.abs(vl - vr) >= 1.2) {
       const weakLeft = vl < vr; // o lateral esquerdo deles defende o teu flanco direito
-      push('progress', weakLeft ? 3 : 0, `O lateral ${weakLeft ? 'esquerdo' : 'direito'} deles (${(weakLeft ? dl : dr).p.name}) é o elo fraco: ataca pelo teu flanco ${weakLeft ? 'direito' : 'esquerdo'}.`);
+      push('progress', weakLeft ? 3 : 0, L(`O lateral ${weakLeft ? 'esquerdo' : 'direito'} deles (${(weakLeft ? dl : dr).p.name}) é o elo fraco: ataca pelo teu flanco ${weakLeft ? 'direito' : 'esquerdo'}.`,
+        `Their ${weakLeft ? 'left' : 'right'} full-back (${(weakLeft ? dl : dr).p.name}) is the weak link: attack down your ${weakLeft ? 'right' : 'left'} flank.`));
     }
   }
   // defesa
   const pr = S.press && S.press.tv;
-  if (pr != null && pr >= 13.5) push('buildup', 2, `Pressionam muito (${pr.toFixed(1)}): salta a pressão com bola longa em vez de sair a jogar.`);
-  if (pr != null && pr <= 10.5) push('buildup', 0, `Pressionam pouco (${pr.toFixed(1)}): sai a jogar curto com calma.`);
-  if (d('fw_pace') <= -1.5) push('dline', 1, `Os avançados deles são mais rápidos do que os teus centrais (${S.fw_pace.tv.toFixed(1)} vs ${S.fw_pace.uv.toFixed(1)}): baixa a linha.`);
-  if (d('fw_pace') >= 1.5) push('dline', 3, `Os teus centrais são mais rápidos do que os avançados deles: podes subir a linha.`);
-  if (d('air_att') <= -1.5) push('cross_eng', 2, `Os avançados deles são fortes no ar (${S.air_att.tv.toFixed(1)}): impede os cruzamentos.`);
-  if (S.mid_create && S.mid_create.tv != null && S.mid_create.tv >= 14) push('press_trap', 2, `O meio-campo deles cria muito (${S.mid_create.tv.toFixed(1)}): empurra o jogo para as alas.`);
-  if (S.wing && S.wing.tv != null && S.wing.tv >= 14.5 && d('wing') <= -1) push('def_trans', 0, `Os extremos deles são perigosos em transição: reagrupa antes de pressionar.`);
+  if (pr != null && pr >= 13.5) push('buildup', 2, L(`Pressionam muito (${pr.toFixed(1)}): salta a pressão com bola longa em vez de sair a jogar.`, `They press a lot (${pr.toFixed(1)}): bypass the press with long balls instead of playing out.`));
+  if (pr != null && pr <= 10.5) push('buildup', 0, L(`Pressionam pouco (${pr.toFixed(1)}): sai a jogar curto com calma.`, `They press little (${pr.toFixed(1)}): play out short and calmly.`));
+  if (d('fw_pace') <= -1.5) push('dline', 1, L(`Os avançados deles são mais rápidos do que os teus centrais (${S.fw_pace.tv.toFixed(1)} vs ${S.fw_pace.uv.toFixed(1)}): baixa a linha.`, `Their forwards are quicker than your centre-backs (${S.fw_pace.tv.toFixed(1)} vs ${S.fw_pace.uv.toFixed(1)}): drop the line.`));
+  if (d('fw_pace') >= 1.5) push('dline', 3, L(`Os teus centrais são mais rápidos do que os avançados deles: podes subir a linha.`, `Your centre-backs are quicker than their forwards: you can push the line up.`));
+  if (d('air_att') <= -1.5) push('cross_eng', 2, L(`Os avançados deles são fortes no ar (${S.air_att.tv.toFixed(1)}): impede os cruzamentos.`, `Their forwards are strong in the air (${S.air_att.tv.toFixed(1)}): stop the crosses.`));
+  if (S.mid_create && S.mid_create.tv != null && S.mid_create.tv >= 14) push('press_trap', 2, L(`O meio-campo deles cria muito (${S.mid_create.tv.toFixed(1)}): empurra o jogo para as alas.`, `Their midfield creates a lot (${S.mid_create.tv.toFixed(1)}): push play out wide.`));
+  if (S.wing && S.wing.tv != null && S.wing.tv >= 14.5 && d('wing') <= -1) push('def_trans', 0, L(`Os extremos deles são perigosos em transição: reagrupa antes de pressionar.`, `Their wingers are dangerous in transition: regroup before pressing.`));
   // fortes e fracos
   sectors.forEach(s => { if (s.tv == null) return; if (s.tv >= 14) strengths.push(s); if (s.tv <= 10.5) weaknesses.push(s); });
   // jogadores perigosos
@@ -176,8 +177,8 @@ function setPiecePlan(t, players, oppList) {
   const best = cornerRank[0];
   const corners = {
     // canto da direita batido com o pé esquerdo = curva para dentro (inswinger)
-    right: left && left.s.corner >= best.s.corner - 1.5 ? { x: left, swing: 'para dentro (inswinger)' } : { x: best, swing: footOf(best.p) === 'R' ? 'para fora (outswinger)' : footOf(best.p) === 'L' ? 'para dentro (inswinger)' : null },
-    left: right && right.s.corner >= best.s.corner - 1.5 ? { x: right, swing: 'para dentro (inswinger)' } : { x: best, swing: footOf(best.p) === 'L' ? 'para fora (outswinger)' : footOf(best.p) === 'R' ? 'para dentro (inswinger)' : null },
+    right: left && left.s.corner >= best.s.corner - 1.5 ? { x: left, swing: L('para dentro (inswinger)', 'inswinging') } : { x: best, swing: footOf(best.p) === 'R' ? L('para fora (outswinger)', 'outswinging') : footOf(best.p) === 'L' ? L('para dentro (inswinger)', 'inswinging') : null },
+    left: right && right.s.corner >= best.s.corner - 1.5 ? { x: right, swing: L('para dentro (inswinger)', 'inswinging') } : { x: best, swing: footOf(best.p) === 'L' ? L('para fora (outswinger)', 'outswinging') : footOf(best.p) === 'R' ? L('para dentro (inswinger)', 'inswinging') : null },
   };
   const fkD = rank('fkDirect')[0], fkC = rank('fkCross')[0];
   const directOk = fkD && (A_(fkD.p, 'fre') ?? 0) >= 14;
@@ -199,40 +200,40 @@ function setPiecePlan(t, players, oppList) {
   const edge = take(out, 'edge', 1)[0];
   const shortOpt = take(out, 'fkCross', 1, x => ['AM_LR','M_LR','D_LR','WB_LR','MC','AMC'].includes(x.group))[0];
   const attack = [
-    { k: 'taker', n: 'Marcador', x: taker, w: corners.right.swing ? 'canto ' + corners.right.swing : why(taker, ['cor', 'cro']) },
-    { k: 'far', n: '2.º poste', x: farP, w: why(farP, ['hea', 'jum']) + ' — o melhor no ar ataca a bola que passa todos' },
-    { k: 'centre', n: 'Centro da pequena área', x: centre, w: why(centre, ['hea', 'jum', 'str']) },
-    { k: 'near', n: '1.º poste', x: nearP, w: why(nearP, ['hea', 'acc']) + ' — antecipa-se e desvia' },
-    { k: 'spot', n: 'Marca de penálti (segunda bola)', x: spot, w: why(spot, ['hea', 'ant']) },
-    { k: 'edge', n: 'Entrada da área', x: edge, w: why(edge, ['lon', 'tec']) + ' — remata as sobras' },
-    { k: 'short', n: 'Opção curta', x: shortOpt, w: shortOpt ? why(shortOpt, ['pas', 'cro']) : '' },
-    ...back.map((b, i) => ({ k: 'back' + i, n: 'Fica atrás', x: b, w: why(b, ['pac', 'acc', 'pos']) + ' — protege o contra-ataque' })),
+    { k: 'taker', n: L('Marcador', 'Taker'), x: taker, w: corners.right.swing ? L('canto ', '') + corners.right.swing + L('', ' corner') : why(taker, ['cor', 'cro']) },
+    { k: 'far', n: L('2.º poste', 'Far post'), x: farP, w: why(farP, ['hea', 'jum']) + L(' — o melhor no ar ataca a bola que passa todos', ' — the best in the air attacks the ball that clears everyone') },
+    { k: 'centre', n: L('Centro da pequena área', 'Centre of the six-yard box'), x: centre, w: why(centre, ['hea', 'jum', 'str']) },
+    { k: 'near', n: L('1.º poste', 'Near post'), x: nearP, w: why(nearP, ['hea', 'acc']) + L(' — antecipa-se e desvia', ' — gets there first and flicks it on') },
+    { k: 'spot', n: L('Marca de penálti (segunda bola)', 'Penalty spot (second ball)'), x: spot, w: why(spot, ['hea', 'ant']) },
+    { k: 'edge', n: L('Entrada da área', 'Edge of the box'), x: edge, w: why(edge, ['lon', 'tec']) + L(' — remata as sobras', ' — shoots from the loose balls') },
+    { k: 'short', n: L('Opção curta', 'Short option'), x: shortOpt, w: shortOpt ? why(shortOpt, ['pas', 'cro']) : '' },
+    ...back.map((b, i) => ({ k: 'back' + i, n: L('Fica atrás', 'Stays back'), x: b, w: why(b, ['pac', 'acc', 'pos']) + L(' — protege o contra-ataque', ' — protects against the counter') })),
   ].filter(r => r.x);
   // ---- canto defensivo
   used.clear();
   const outlet = take(out, 'outlet', tiVal(t, 'att_trans') === 2 ? 2 : 1, x => ['ST','AM_LR','AMC','M_LR'].includes(x.group));
   const theirAir = oppList && oppList.length ? opponentXI(oppList).filter(x => x.group !== 'GK').map(x => ({ p: x.p, a: SP.aerial(x.p) })).sort((a, b) => b.a - a.a).slice(0, 3) : [];
   const ourAirAvg = avgPlayers(out.map(x => x.p), ['hea', 'jum']);
-  const system = ourAirAvg != null && ourAirAvg >= 13.5 ? 'Zonal' : theirAir.length && theirAir[0].a >= 15 ? 'Misto (zonal + marcação ao mais perigoso)' : 'Misto';
+  const system = ourAirAvg != null && ourAirAvg >= 13.5 ? 'Zonal' : theirAir.length && theirAir[0].a >= 15 ? L('Misto (zonal + marcação ao mais perigoso)', 'Mixed (zonal + marking the most dangerous)') : 'Misto';
   const zones = take(out, 'zone', 3);
   const markers = take(out, 'marker', Math.max(2, theirAir.length));
   const dEdge = take(out, 'cover', 1, x => ['DM','MC','AMC','AM_LR','M_LR'].includes(x.group))[0];
   const defend = [
-    { k: 'zn', n: 'Zona 1.º poste', x: zones[1] || zones[0], w: 'posicionamento e jogo aéreo' },
-    { k: 'zc', n: 'Zona centro (pequena área)', x: zones[0], w: why(zones[0], ['pos', 'hea', 'jum']) },
-    { k: 'zf', n: 'Zona 2.º poste', x: zones[2], w: 'posicionamento e jogo aéreo' },
-    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? `Marca ${shortName(theirAir[i].p)}` : 'Marcação individual', x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? ` · ${theirAir[i].p.name} é dos melhores no ar deles` : '') })),
-    { k: 'de', n: 'Entrada da área (segundas bolas)', x: dEdge, w: dEdge ? why(dEdge, ['acc', 'ant']) : '' },
-    ...outlet.map((o, i) => ({ k: 'o' + i, n: 'Fica na frente (contra-ataque)', x: o, w: why(o, ['pac', 'acc']) })),
+    { k: 'zn', n: L('Zona 1.º poste', 'Near-post zone'), x: zones[1] || zones[0], w: L('posicionamento e jogo aéreo', 'positioning and aerial ability') },
+    { k: 'zc', n: L('Zona centro (pequena área)', 'Central zone (six-yard box)'), x: zones[0], w: why(zones[0], ['pos', 'hea', 'jum']) },
+    { k: 'zf', n: L('Zona 2.º poste', 'Far-post zone'), x: zones[2], w: L('posicionamento e jogo aéreo', 'positioning and aerial ability') },
+    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? `Marca ${shortName(theirAir[i].p)}` : L('Marcação individual', 'Man-marking'), x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? L(` · ${theirAir[i].p.name} é dos melhores no ar deles`, ` · ${theirAir[i].p.name} is one of their best in the air`) : '') })),
+    { k: 'de', n: L('Entrada da área (segundas bolas)', 'Edge of the box (second balls)'), x: dEdge, w: dEdge ? why(dEdge, ['acc', 'ant']) : '' },
+    ...outlet.map((o, i) => ({ k: 'o' + i, n: L('Fica na frente (contra-ataque)', 'Stays forward (counter-attack)'), x: o, w: why(o, ['pac', 'acc']) })),
   ].filter(r => r.x);
   // ---- conselhos gerais
   const tips = [];
   const ourAirTop = rank('aerial').slice(0, 4).map(x => x.s.aerial);
   const airTop = ourAirTop.reduce((a, b) => a + b, 0) / Math.max(1, ourAirTop.length);
-  if (airTop >= 14) tips.push({ ti: 'set_pieces', v: 2, t: `Tens ${ourAirTop.length} jogadores fortes no ar (média ${airTop.toFixed(1)}): procura cantos e livres.` });
-  else if (airTop <= 11) tips.push({ ti: 'set_pieces', v: 0, t: `Pouca presença aérea (média ${airTop.toFixed(1)}): mais vale manter a bola em jogo; cantos curtos.` });
-  if (!directOk) tips.push({ t: `Ninguém com Livres ≥ 14 (melhor: ${fkD ? fkD.p.name + ' ' + Math.round(A_(fkD.p, 'fre') ?? 0) : '—'}): nos livres frontais, cruza em vez de rematar.` });
-  if (lt) tips.push({ t: `${lt.p.name} tem Lançamentos Longos ${Math.round(A_(lt.p, 'lth'))}: use lançamentos longos para a área no último terço.` });
-  if (nBack === 3) tips.push({ t: 'Os avançados deles são rápidos: deixa 3 atrás nos cantos ofensivos.' });
+  if (airTop >= 14) tips.push({ ti: 'set_pieces', v: 2, t: L(`Tens ${ourAirTop.length} jogadores fortes no ar (média ${airTop.toFixed(1)}): procura cantos e livres.`, `You have ${ourAirTop.length} players strong in the air (average ${airTop.toFixed(1)}): go for corners and free kicks.`) });
+  else if (airTop <= 11) tips.push({ ti: 'set_pieces', v: 0, t: L(`Pouca presença aérea (média ${airTop.toFixed(1)}): mais vale manter a bola em jogo; cantos curtos.`, `Little aerial presence (average ${airTop.toFixed(1)}): better to keep the ball in play; take short corners.`) });
+  if (!directOk) tips.push({ t: L(`Ninguém com Livres ≥ 14 (melhor: ${fkD ? fkD.p.name + ' ' + Math.round(A_(fkD.p, 'fre') ?? 0) : '—'}): nos livres frontais, cruza em vez de rematar.`, `Nobody with Free Kicks ≥ 14 (best: ${fkD ? fkD.p.name + ' ' + Math.round(A_(fkD.p, 'fre') ?? 0) : '—'}): from central free kicks, cross instead of shooting.`) });
+  if (lt) tips.push({ t: L(`${lt.p.name} tem Lançamentos Longos ${Math.round(A_(lt.p, 'lth'))}: use lançamentos longos para a área no último terço.`, `${lt.p.name} has Long Throws ${Math.round(A_(lt.p, 'lth'))}: use long throws into the box in the final third.`) });
+  if (nBack === 3) tips.push({ t: L('Os avançados deles são rápidos: deixa 3 atrás nos cantos ofensivos.', 'Their forwards are quick: leave 3 back on your attacking corners.') });
   return { xi, corners, fk: { direct: directOk ? fkD : null, cross: fkC }, pens, longThrow: lt, caps, attack, defend, system, theirAir, tips, airTop };
 }

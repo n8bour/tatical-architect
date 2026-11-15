@@ -52,7 +52,7 @@ function vTactic() {
       const v = tiVal(t, d.k);
       return `<div class="ti ${v !== d.def ? 'changed' : ''}"><div class="h"><span>${esc(d.n)}${d.fm27 ? ' <span class="chip new">FM27</span>' : ''}</span><span class="small muted">${esc(d.area)}</span></div>
         ${selectHTML(d.opts.map((o, i) => [i, o + (i === d.def ? ' (default)' : '')]), v, `A.setTI('${d.k}',this.value)`)}
-        <details><summary>${esc(d.d)}</summary><p><b>Prós:</b> ${esc(d.pro)}</p><p><b>Contras:</b> ${esc(d.con)}</p>${d.need ? `<p class="muted">Atributos relevantes: ${Object.values(d.need).flat().filter((x, i, a) => a.indexOf(x) === i).map(attrName).join(', ')}</p>` : ''}</details></div>`;
+        <details><summary>${esc(d.d)}</summary><p><b>Prós:</b> ${esc(d.pro)}</p><p><b>Contras:</b> ${esc(d.con)}</p>${d.need ? `<p class="muted"><span>Atributos relevantes:</span> ${Object.values(d.need).flat().filter((x, i, a) => a.indexOf(x) === i).map(attrName).join(', ')}</p>` : ''}</details></div>`;
     }).join('')}</div>`).join('')}
   </div>`;
 }
@@ -69,16 +69,16 @@ function vSlotEditor(i) {
     <p class="small">${esc(r.desc)}</p><p class="small muted">💡 ${esc(r.tip)}</p>
     <div class="attrs"><b>Chave:</b> ${r.key.map(k => attrChip(k, p)).join('')}</div>
     <div class="attrs"><b>Preferidos:</b> ${r.pref.map(k => attrChip(k, p)).join('')}</div></div>` : '';
-  return `<div class="panel grid"><div class="row" style="justify-content:space-between"><h3>${s.ipCode} <span class="muted small">→ sem bola ${s.oopCode}</span></h3><button class="btn sm" onclick="A.sel(${i})">Fechar</button></div>
+  return `<div class="panel grid"><div class="row" style="justify-content:space-between"><h3>${s.ipCode} <span class="muted small">→ <span>sem bola</span> ${s.oopCode}</span></h3><button class="btn sm" onclick="A.sel(${i})">Fechar</button></div>
     ${players().length ? `<label class="f">Jogador${selectHTML([['', '— vazio —']].concat(plist.map(x => [x.q.id, `${x.q.name} (${x.sc})${x.q.posRaw ? ' · ' + x.q.posRaw : ''}`])), s.pid || '', `A.setPlayer(${i},this.value)`)}</label>` : ''}
     <div class="grid g2">
-      <label class="f">Papel com bola (${GROUPS[a.group]})${selectHTML(ipRoles.map(r => [r.id, lab(r)]), s.ip, `A.setRole(${i},'IP',this.value)`)}</label>
-      <label class="f">Papel sem bola (${GROUPS[b.group]})${selectHTML(oopRoles.map(r => [r.id, lab(r)]), s.oop, `A.setRole(${i},'OOP',this.value)`)}</label>
+      <label class="f"><span>Papel com bola</span> (<span>${GROUPS[a.group]}</span>)${selectHTML(ipRoles.map(r => [r.id, lab(r)]), s.ip, `A.setRole(${i},'IP',this.value)`)}</label>
+      <label class="f"><span>Papel sem bola</span> (<span>${GROUPS[b.group]}</span>)${selectHTML(oopRoles.map(r => [r.id, lab(r)]), s.oop, `A.setRole(${i},'OOP',this.value)`)}</label>
     </div>
-    ${p ? `<div class="small">Adequação: ${fitBadge(slotScore(p, t, s))} · melhores papéis IP aqui: ${bestRolesForPlayer(p, a.group, 'IP', a.wideCB).map(x => `${esc(x.r.name)} ${x.s}`).join(' · ')}</div>` : ''}
+    ${p ? `<div class="small"><span>Adequação:</span> ${fitBadge(slotScore(p, t, s))} · <span>melhores papéis IP aqui:</span> ${bestRolesForPlayer(p, a.group, 'IP', a.wideCB).map(x => `${esc(x.r.name)} ${x.s}`).join(' · ')}</div>` : ''}
     ${roleBox(ri)}${roleBox(ro)}
-    ${p ? (() => { const rec = recommendPIs(p, ri, ro, a.group); return rec.length ? `<div class="recs"><b class="small">Recomendadas para ${esc(p.name)}</b>${rec.map(r => `<div class="rec"><div><b>${esc(r.pi)}</b><span class="small muted"> — ${esc(r.why)}</span></div>${(s.pis || []).includes(r.pi) ? '<span class="chip ip">aplicada</span>' : `<button class="btn sm" onclick="A.applyPI(${i}, '${r.pi.replace(/'/g, "\\'")}')">Aplicar</button>`}</div>`).join('')}</div>` : ''; })() : ''}
-    <details><summary>Todas as instruções individuais (${(s.pis || []).length} activas) — cada uma soma complexidade</summary>
+    ${p ? (() => { const rec = recommendPIs(p, ri, ro, a.group); return rec.length ? `<div class="recs"><b class="small"><span>Recomendadas para</span> ${esc(p.name)}</b>${rec.map(r => `<div class="rec"><div><b>${esc(r.pi)}</b><span class="small muted"> — ${esc(r.why)}</span></div>${(s.pis || []).includes(r.pi) ? '<span class="chip ip">aplicada</span>' : `<button class="btn sm" onclick="A.applyPI(${i}, '${r.pi.replace(/'/g, "\\'")}')">Aplicar</button>`}</div>`).join('')}</div>` : ''; })() : ''}
+    <details><summary>${L(`Todas as instruções individuais (${(s.pis || []).length} activas) — cada uma soma complexidade`, `All player instructions (${(s.pis || []).length} active) — each one adds complexity`)}</summary>
       <div class="grid" style="margin-top:6px">${PLAYER_INSTRUCTIONS.map((pi, j) => `<label class="small"><input type="checkbox" ${(s.pis || []).includes(pi.n) ? 'checked' : ''} onchange="A.togglePI(${i}, ${j})"> <b>${esc(pi.n)}</b> — <span class="muted">${esc(pi.tip)}</span></label>`).join('')}</div>
     </details></div>`;
 }
@@ -91,7 +91,7 @@ function vImport() {
       <div class="drop" id="drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');A.fmf(event.dataTransfer.files[0])">
         <p><b>Arraste o .fmf para aqui</b> ou</p><label class="btn primary">Escolher ficheiro<input type="file" accept=".fmf" hidden onchange="A.fmf(this)"></label>
         <p class="small muted">Os ficheiros ficam em Documentos/Sports Interactive/Football Manager 27/tactics</p></div>
-      <div class="notice warn"><b>Limite do formato:</b> no FM27, o conteúdo da tática dentro do .fmf está <b>comprimido e cifrado</b> pelo jogo (blocos com nonce e tag de autenticação, padrão AES-GCM). Nenhuma ferramenta externa consegue ler formação, papéis ou instruções sem a chave do jogo. O inspector confirma o formato e mostra a estrutura; a análise faz-se recriando a tática no analisador (≈1 minuto).</div>
+      <div class="notice warn"><b>Limite do formato:</b> no FM27, o conteúdo da tática dentro do .fmf está <b>comprimido e cifrado</b> pelo jogo. Esta app não o decifra: para importar ou exportar .fmf use o <a href="#" onclick="A.go('lab');return false">Laboratório</a> (FM Tactics Lab). O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈1 minuto).</div>
       <h4>Outras opções</h4>
       <div class="row"><label class="btn">Importar tática JSON (desta app)<input type="file" accept=".json" hidden onchange="A.importJSON(this)"></label><button class="btn" onclick="A.tab('tactic','analyze')">Recriar manualmente →</button></div>
     </div>
@@ -103,8 +103,8 @@ function vImport() {
       <span>Outras assinaturas</span><b>${r.magic.length ? esc(r.magic.join(', ')) : '—'}</b>
       <span>Textos encontrados</span><b>${r.strings.length}</b></div>
       ${r.container && r.container.recognized ? `<div class="notice" style="margin-top:12px"><b>✓ Formato .fmf do FM27 reconhecido.</b> ${r.container.sections.length} secções (${r.container.sections.map(x => esc(x.name) + ' ' + x.len + 'B' + (x.kind === 'zstd' ? ' — índice zstd' : '')).join(', ')}) e ${r.container.blocks.length} ficheiros internos cifrados (${r.container.blocks.map(b => b.cipher + 'B').join(', ')}). O maior (${r.container.largest.cipher}B cifrados) é a tática.
-        <br><b>Resultado:</b> o conteúdo não é legível fora do jogo. Use o nome do ficheiro como ponto de partida e recrie a tática no analisador.
-        <div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.fmfApplyHints()">Criar “${esc(r.name.replace(/\.fmf$/i, ''))}” no analisador</button></div></div>` : ''}
+        <br><b>Resultado:</b> esta app não lê o conteúdo. Para importar a tática use o Laboratório (FM Tactics Lab), ou recrie-a no analisador a partir do nome do ficheiro.
+        <div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.fmfApplyHints()">${L(`Criar “${esc(r.name.replace(/\.fmf$/i, ''))}” no analisador`, `Create “${esc(r.name.replace(/\.fmf$/i, ''))}” in the analyser`)}</button></div></div>` : ''}
       <h4 style="margin-top:12px">Texto legível</h4>
       ${r.decoded || r.matches.mentality.length || r.matches.formations.length ? `
         ${r.matches.roles.length ? `<p class="small"><b>Papéis:</b> ${r.matches.roles.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</p>` : ''}
@@ -132,7 +132,7 @@ function vSheet() {
   const t = ST.tactic, pm = Object.fromEntries(players().map(p => [p.id, p]));
   const ck = '<input type="checkbox" aria-label="feito">';
   const changed = TEAM_INSTRUCTIONS.filter(d => tiVal(t, d.k) !== d.def).length;
-  return `<div class="top"><div><h2>Ficha para o FM27 — ${esc(t.name)}</h2>
+  return `<div class="top"><div><h2><span>Ficha para o FM27</span> — ${esc(t.name)}</h2>
     <p class="muted small" style="margin:0">Recrie a tática no jogo por esta ordem e guarde-a lá: o FM27 gera o .fmf. Marque cada passo à medida que avança.</p></div>
     <div class="row no-print"><button class="btn" onclick="A.print()">Imprimir/PDF</button><button class="btn" onclick="A.copySheet()">Copiar texto</button><button class="btn" onclick="A.tab('tactic','analyze')">Voltar</button></div></div>
   <div class="grid g2 sheet">
@@ -160,8 +160,8 @@ function vSheet() {
         return `<h4 style="margin-top:12px">Set Pieces &amp; Captains</h4><table><tbody>
           ${li('Captain', r.caps[0])}${li('Vice Captain', r.caps[1])}${li('Corners (right)', r.corners.right.x)}${li('Corners (left)', r.corners.left.x)}
           ${li('Free Kicks (direct)', r.fk.direct)}${li('Free Kicks (crossed)', r.fk.cross)}${r.pens.map((x, i) => li('Penalty ' + (i + 1), x)).join('')}${r.longThrow ? li('Long Throws', r.longThrow) : ''}
-          ${r.attack.filter(x => x.k !== 'taker').map(x => li('Canto ofensivo — ' + x.n, x.x)).join('')}
-          ${r.defend.map(x => li('Canto defensivo — ' + x.n, x.x)).join('')}</tbody></table>`; })()}
+          ${r.attack.filter(x => x.k !== 'taker').map(x => li(L('Canto ofensivo — ', 'Attacking corner — ') + x.n, x.x)).join('')}
+          ${r.defend.map(x => li(L('Canto defensivo — ', 'Defending corner — ') + x.n, x.x)).join('')}</tbody></table>`; })()}
       ${t.ois ? `<p class="small" style="margin-top:12px">${ck} Opposition Instructions: ${t.ois} activa(s) — defina-as antes de cada jogo.</p>` : ''}
     </div>
   </div>`;

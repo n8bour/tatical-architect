@@ -26,7 +26,7 @@ function vSetPieces() {
   if (!r) return '<div class="panel empty">Não consegui montar o XI.</div>';
   const row = (label, x, extra) => `<tr><td>${esc(label)}</td><td>${x ? `<b>${esc(x.p.name)}</b> <span class="muted small">${esc(x.code)}</span>` : '—'}</td><td class="small muted">${extra || ''}</td></tr>`;
   const a = (x, ks) => ks.map(k => `${attrName(k)} ${Math.round(x.p.a[k] ?? 0)}`).join(' · ');
-  return `<div class="top"><div><h2>Bolas paradas & capitães</h2><p class="muted small" style="margin:0">Escolhidos entre o XI de “${esc(ST.tactic.name)}”.${oppPlayers().length ? ' Marcações individuais contra os mais fortes no ar do adversário carregado.' : ' Carregue o adversário para marcações individuais nominais.'}</p></div>
+  return `<div class="top"><div><h2>Bolas paradas & capitães</h2><p class="muted small" style="margin:0"><span>Escolhidos entre o XI de</span> “${esc(ST.tactic.name)}”. <span>${oppPlayers().length ? 'Marcações individuais contra os mais fortes no ar do adversário carregado.' : 'Carregue o adversário para marcações individuais nominais.'}</span></p></div>
     <div class="row"><button class="btn" onclick="A.tab('tactic','sheet')">Ver na Ficha para o FM27</button></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Marcadores</h3><table><tbody>
@@ -48,7 +48,7 @@ function vSetPieces() {
   <div class="grid g2" style="margin-top:16px">
     <div class="panel"><h3>Canto ofensivo</h3>${spPitch(r.attack, 'attack', 'Canto do lado esquerdo; do outro lado é o espelho.', false)}
       <table><tbody>${r.attack.map(x => `<tr><td>${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td><td class="small muted">${esc(x.w)}</td></tr>`).join('')}</tbody></table></div>
-    <div class="panel"><h3>Canto defensivo — ${esc(r.system)}</h3>${spPitch(r.defend, 'defend', 'Posições sem bola no canto contra.', true)}
+    <div class="panel"><h3><span>Canto defensivo</span> — <span>${esc(r.system)}</span></h3>${spPitch(r.defend, 'defend', 'Posições sem bola no canto contra.', true)}
       <table><tbody>${r.defend.map(x => `<tr><td>${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td><td class="small muted">${esc(x.w)}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
 }

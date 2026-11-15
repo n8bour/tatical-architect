@@ -2,14 +2,14 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 const r = (f) => readFileSync(new URL('./src/' + f, import.meta.url), 'utf8');
 export const ORDER = [
-  'core/roles.js', 'core/tactics_data.js', 'core/engine.js', 'core/insights.js', 'core/generator.js', 'core/lab.js', 'core/sim_model.js',
-  'ui/state.js', 'ui/components.js', 'ui/sim_view.js',
+  'i18n/i18n.js', 'core/roles.js', 'core/tactics_data.js', 'core/engine.js', 'core/insights.js', 'core/generator.js', 'core/lab.js', 'core/sim_model.js',
+  'i18n/en_dict.js', 'ui/state.js', 'ui/components.js', 'ui/sim_view.js', 'ui/clips.js',
   'ui/views_home.js', 'ui/views_team.js', 'ui/views_gen.js', 'ui/views_tactic.js', 'ui/views_setpieces.js', 'ui/views_training.js', 'ui/views_bible.js', 'ui/views_settings.js', 'ui/views_lab.js',
   'ui/actions.js', 'ui/main.js',
 ];
 const js = ORDER.map(f => `// ---- ${f}\n` + r(f)).join('\n;\n');
 const html = `<!doctype html>
-<html lang="pt">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">

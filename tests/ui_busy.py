@@ -26,8 +26,10 @@ with sync_playwright() as p:
     pg = b.new_page(viewport={'width': 1366, 'height': 860}); pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.add_init_script(f"""window.__TAURI__={{core:{{invoke:async(c,a)=>{{ if(c==='latest_save')return {{path:'C:/x/T.fm',name:'T.fm',modified:1763200000,size:104857600}};
       if(c==='export_save'){{await new Promise(r=>setTimeout(r,2500));return {{save:'T.fm',modified:1763200000,content:{json.dumps(CSV)},runner:'uvx'}};}} return null; }}}}}};""")
-    pg.goto(U.APP); pg.wait_for_timeout(1200)
-    ok('A ler o save' in pg.locator('#busy').inner_text(), 'save: cartão de actividade não apareceu')
+    pg.goto(U.APP); pg.wait_for_timeout(400)
+    ok(not pg.evaluate("ST.auto.save"), 'save: a leitura automática devia vir desligada por defeito')
+    pg.evaluate("A.tab('team','squad')"); pg.click('button[data-busy="save"]'); pg.wait_for_timeout(800)
+    ok('T.fm' in pg.locator('#busy').inner_text(), 'save: cartão de actividade não apareceu')
     ok(all(pg.evaluate("[...document.querySelectorAll('button[data-busy=save]')].map(b=>b.disabled)")), 'save: botões não bloqueados')
     pg.wait_for_function("!document.querySelector('#busy').classList.contains('on')", timeout=10000)
     ok(pg.evaluate("players().length") == 16, 'save: plantel não carregou')

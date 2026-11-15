@@ -28,7 +28,7 @@ const A = {
   autoXI() { if (players().length < 11) return toast('Precisa de pelo menos 11 jogadores no plantel'); autoPickXI(ST.tactic, players()); save(); render(); toast('XI escolhido pela melhor adequação'); },
   clearXI() { ST.tactic.slots.forEach(s => s.pid = null); save(); render(); },
   newTactic() { ST.tactic = newTactic(ST.tactic.ipForm, ST.tactic.oopForm); ST.sel = null; save(); render(); },
-  saveTactic() { const c = JSON.parse(JSON.stringify(ST.tactic)); c.savedAt = new Date().toISOString(); ST.saved = ST.saved.filter(x => x.name !== c.name); ST.saved.unshift(c); save(); render(); toast('Tática guardada: ' + c.name); },
+  saveTactic() { const c = JSON.parse(JSON.stringify(ST.tactic)); c.savedAt = new Date().toISOString(); ST.saved = ST.saved.filter(x => x.name !== c.name); ST.saved.unshift(c); save(); render(); toast(L('Tática guardada: ', 'Tactic saved: ') + c.name); },
   loadSaved(i) { ST.tactic = JSON.parse(JSON.stringify(ST.saved[i])); ST.sel = null; save(); A.go('tactic', 'analyze'); },
   delSaved(i) { ST.saved.splice(i, 1); save(); render(); },
   exportTactic() { download((ST.tactic.name || 'tatica').replace(/[^\w\-]+/g, '_') + '.fm27tb.json', JSON.stringify({ kind: 'fm27tb-tactic', v: 1, tactic: ST.tactic }, null, 2)); },
@@ -68,22 +68,22 @@ const A = {
   genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
   labSet(k, v) { labState()[k] = v; save(); },
   async labConnect() {
-    const L = labState(); if (BUSY['lab-connect']) return; L.busy = true; L.err = ''; render();
-    const ports = [L.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
+    const LS = labState(); if (BUSY['lab-connect']) return; LS.busy = true; LS.err = ''; render();
+    const ports = [LS.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
     busyStart('lab-connect', 'A procurar o Tactics Lab', { p: 0 });
     for (const [i, p] of ports.entries()) {
-      L.port = p; busyUpdate('lab-connect', { p: i / ports.length, detail: 'porta ' + p });
-      try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { L.status = s; break; } } catch (e) { /* tenta a seguinte */ }
+      LS.port = p; busyUpdate('lab-connect', { p: i / ports.length, detail: 'porta ' + p });
+      try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { LS.status = s; break; } } catch (e) { /* tenta a seguinte */ }
     }
-    L.busy = false; busyEnd('lab-connect');
-    if (!L.status) { L.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; L.port = ports[0]; render(); return; }
+    LS.busy = false; busyEnd('lab-connect');
+    if (!LS.status) { LS.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; LS.port = ports[0]; render(); return; }
     save(); await A.labJobs();
   },
-  async labJobs() { const L = labState(); busyStart('lab-jobs', 'A ler as experiências do Tactics Lab'); try { const j = await labCall('GET', '/api/jobs?brief=1'); L.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); L.err = ''; } catch (e) { L.err = e.message; L.status = null; } busyEnd('lab-jobs'); render(); },
-  async labOpen(id) { const L = labState(); try { L.job = await withBusy('lab-open', 'A abrir a experiência', () => labCall('GET', '/api/jobs/' + id, null, 15000)); L.err = ''; } catch (e) { L.err = e.message; } render(); },
+  async labJobs() { const LS = labState(); busyStart('lab-jobs', 'A ler as experiências do Tactics Lab'); try { const j = await labCall('GET', '/api/jobs?brief=1'); LS.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); LS.err = ''; } catch (e) { LS.err = e.message; LS.status = null; } busyEnd('lab-jobs'); render(); },
+  async labOpen(id) { const LS = labState(); try { LS.job = await withBusy('lab-open', 'A abrir a experiência', () => labCall('GET', '/api/jobs/' + id, null, 15000)); LS.err = ''; } catch (e) { LS.err = e.message; } render(); },
   async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
   async labMore(id) {
-    const L = labState(), n = L.more || 100; if (BUSY['lab-more']) return;
+    const LS = labState(), n = LS.more || 100; if (BUSY['lab-more']) return;
     busyStart('lab-more', `A pedir mais ${n} jogos ao motor do FM27`, { detail: 'a preparar as táticas A e B' });
     try {
       const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
@@ -94,7 +94,7 @@ const A = {
       if (sc.A) body.reference = sc.A;
       const r = await labCall('POST', '/api/run', body, 15000);
       busyEnd('lab-more'); toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
-    } catch (e) { busyEnd('lab-more'); toast(e.message); L.err = e.message; render(); }
+    } catch (e) { busyEnd('lab-more'); toast(e.message); LS.err = e.message; render(); }
   },
   async labFmf(id, g) {
     if (BUSY['lab-fmf']) return;
@@ -114,8 +114,15 @@ const A = {
       download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); } finally { busyEnd('lab-cat'); }
   },
   labImport(input) { const f = input.files[0]; if (!f) return; f.text().then(t => { try { ingestJSON(JSON.parse(t), f.name); } catch (e) { toast('JSON inválido'); } }); },
+  lang(l) {
+    ST.lang = LANG = l;
+    // o relatório do gerador guarda as razões no idioma em que foi feito: recalcula-as no novo idioma
+    if (ST.gen && ST.gen.res && players().length >= 11) [ST.gen.res.main, ...ST.gen.res.alts].forEach(r => { const g = generateTIs(r.t, players(), ST.gen.res.expect); r.reasons = g.reasons; r.mentWhy = g.mentWhy; });
+    save(); render();
+  },
   navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
+  clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
   setMyClub(v) { ST.myClub = v || null; save(); render(); },
   autoToggle() { ST.auto.on = !ST.auto.on; save(); render(); if (ST.auto.on) desktopPoll(true); },
@@ -128,12 +135,12 @@ const A = {
   simOpen() { const s = simDefaults(); Object.assign(s, { src: 'tactic', t: null, focus: null, hl: null, title: '' }); A.go('tactic', 'sim'); },
   roleDemo(id) {
     const r = ROLE_BY_ID[id], d = demoTacticForRole(r), s = simDefaults();
-    Object.assign(s, { src: 'demo', t: d.t, focus: d.idx, hl: null, title: 'Como joga: ' + r.name, phase: r.phase === 'IP' ? 0 : 4, u: 0 });
+    Object.assign(s, { src: 'demo', t: d.t, focus: d.idx, hl: null, title: L('Como joga: ', 'How it plays: ') + r.name, phase: r.phase === 'IP' ? 0 : 4, u: 0 });
     A.go('tactic', 'sim');
   },
   tiDemo(k) {
     const s = simDefaults();
-    Object.assign(s, { src: 'demo', t: JSON.parse(JSON.stringify(ST.tactic)), focus: null, hl: k, title: 'Instrução: ' + TI_BY_KEY[k].n, phase: TI_PHASE[k] ?? 0, u: 0 });
+    Object.assign(s, { src: 'demo', t: JSON.parse(JSON.stringify(ST.tactic)), focus: null, hl: k, title: L('Instrução: ', 'Instruction: ') + TI_BY_KEY[k].n, phase: TI_PHASE[k] ?? 0, u: 0 });
     A.go('tactic', 'sim');
   },
   simBack() { Object.assign(ST.sim, { src: 'tactic', t: null, focus: null, hl: null }); render(true); },
@@ -149,7 +156,7 @@ const A = {
   async fmf(input) {
     const f = input.files ? input.files[0] : input; if (!f) return;
     ST.fmf = { loading: true, name: f.name }; render();
-    try { ST.fmf = await withBusy('fmf', 'A analisar ' + f.name, () => inspectFmf(f)); } catch (e) { ST.fmf = { error: String(e), name: f.name }; }
+    try { ST.fmf = await withBusy('fmf', L('A analisar ', 'Analysing ') + f.name, () => inspectFmf(f)); } catch (e) { ST.fmf = { error: String(e), name: f.name }; }
     render();
   },
   fmfStrings() { if (!ST.fmf) return; download(ST.fmf.name + '.strings.txt', ST.fmf.strings.join('\n'), 'text/plain'); },
@@ -171,7 +178,7 @@ const A = {
   rg(v) { ST.rg = v; render(); }, rp(v) { ST.rp = v; render(); },
   // dados
   exportAll() { download('fm27tb_backup.json', JSON.stringify({ kind: 'fm27tb-all', v: 1, tactic: ST.tactic, squad: ST.squad, saved: ST.saved }, null, 2)); },
-  wipe() { if (!confirm('Apagar tática, plantel e táticas guardadas deste computador?')) return; localStorage.removeItem(STORE_KEY); location.reload(); },
+  wipe() { if (!confirm(T('Apagar tática, plantel e táticas guardadas deste computador?'))) return; localStorage.removeItem(STORE_KEY); location.reload(); },
   print() { window.print(); },
   copySheet() { const txt = sheetText(ST.tactic); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Ficha copiada'), () => download((ST.tactic.name || 'tatica') + '.txt', txt, 'text/plain')); },
 };

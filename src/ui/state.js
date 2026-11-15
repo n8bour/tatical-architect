@@ -1,7 +1,7 @@
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.2.0';
+const VERSION = '4.3.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -9,20 +9,19 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'
 
 const fitColor = (s) => s == null ? 'var(--muted)' : s >= 70 ? '#1c8a4d' : s >= 58 ? '#5a9a2e' : s >= 48 ? '#b7791f' : '#c2412d';
 
-const attrName = (k) => (ATTRS[k] ? ATTRS[k].n : k);
 
 const EMPTY_SQUAD = () => ({ players: [], source: '', warnings: [], mapped: [], at: null });
 const ST = {
   view: 'home', tabs: { team: 'squad', tactic: 'analyze', bible: 'roles' },
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
   saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
-  auto: { on: true, dir: '', mtime: 0, last: '', save: true, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '' },   // carregamento automático (app instalada)
-  lastSave: null, gen: null, lab: null, ui: { collapsed: {}, navMini: false },
+  auto: { on: true, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 43 },   // carregamento automático (app instalada)
+  lastSave: null, gen: null, lab: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang })); } catch (e) {}
 }
 
 function load() {
@@ -35,16 +34,17 @@ function load() {
     if (d.theme) ST.theme = d.theme;
     if (d.opp && Array.isArray(d.opp.players)) ST.opp = d.opp;
     if (d.myClub) ST.myClub = d.myClub;
-    if (d.auto) ST.auto = Object.assign(ST.auto, d.auto);
+    if (d.auto) { ST.auto = Object.assign(ST.auto, d.auto); if (!d.auto.v || d.auto.v < 43) { ST.auto.save = false; ST.auto.v = 43; } }   // v4.3: ler o save passa a ser opcional
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
     if (d.gen) ST.gen = d.gen;
+    if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
     if (d.ui) ST.ui = { collapsed: d.ui.collapsed || {}, navMini: !!d.ui.navMini };
     if (d.lab) ST.lab = { port: d.lab.port || 8765, more: d.lab.more || 100, status: null, jobs: [], job: null, err: '', busy: false };
     [ST.tactic, ...ST.saved].forEach(t => { if (t && t.ti && t.ti.loe > 2) t.ti.loe = 2; if (t && t.ti && t.ti.short_gk > 1) t.ti.short_gk = 1; });
   } catch (e) {}
 }
 
-function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2200); }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = T(msg); t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2200); }
 
 function applyTheme() { if (ST.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', ST.theme); }
 
@@ -54,7 +54,7 @@ function oppPlayers() { return ST.opp.players || []; }
 // Carrega uma exportação (CSV/HTML/texto) e decide se é o teu plantel ou o do adversário pelo clube
 function ingestSquadText(text, sourceName, opts = {}) {
   const r = parseSquad(String(text || '').replace(/^\uFEFF/, ''));
-  if (!r.players.length) { toast('Não encontrei jogadores em ' + sourceName); return null; }
+  if (!r.players.length) { toast(L('Não encontrei jogadores em ', 'No players found in ') + sourceName); return null; }
   const mc = majorityClub(r.players);
   const pack = { players: r.players, warnings: r.warnings, mapped: r.mapped, source: sourceName, at: new Date().toISOString() };
   let target = opts.force || 'squad';
@@ -64,9 +64,9 @@ function ingestSquadText(text, sourceName, opts = {}) {
     ST.squad = pack; if (mc.club) ST.myClub = mc.club; ST.sugg = null;
     const ids = new Set(r.players.map(p => p.id)); ST.tactic.slots.forEach(s => { if (s.pid && !ids.has(s.pid)) s.pid = null; });
     if (ST.tactic.slots.every(s => !s.pid) && r.players.length >= 11) autoPickXI(ST.tactic, r.players);
-    toast(`Plantel${mc.club ? ' do ' + mc.club : ''}: ${r.players.length} jogadores`);
+    toast(L(`Plantel${mc.club ? ' do ' + mc.club : ''}: ${r.players.length} jogadores`, `Squad${mc.club ? ' — ' + mc.club : ''}: ${r.players.length} players`));
   } else {
-    ST.opp = pack; toast(`Adversário${mc.club ? ' ' + mc.club : ''}: ${r.players.length} jogadores — relatório pronto`);
+    ST.opp = pack; toast(L(`Adversário${mc.club ? ' ' + mc.club : ''}: ${r.players.length} jogadores — relatório pronto`, `Opponent${mc.club ? ' ' + mc.club : ''}: ${r.players.length} players — report ready`));
   }
   save();
   return target;

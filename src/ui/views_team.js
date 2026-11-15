@@ -3,22 +3,13 @@
 // ============================================================
 function vSquad() {
   const ps = players();
-  return `<div class="top"><div><h2>Plantel${ST.myClub ? ' — ' + esc(ST.myClub) : ''}</h2><p class="muted small" style="margin:0">${ps.length ? `${ps.length} jogadores · ${esc(ST.squad.source)}${ST.squad.at ? ' · ' + new Date(ST.squad.at).toLocaleString('pt-PT') : ''}` : 'Ainda sem plantel carregado.'}</p></div>
+  return `<div class="top"><div><h2><span>Plantel</span>${ST.myClub ? ' — ' + esc(ST.myClub) : ''}</h2><p class="muted small" style="margin:0">${ps.length ? `${L(`${ps.length} jogadores`, `${ps.length} players`)} · ${esc(ST.squad.source)}${ST.squad.at ? ' · ' + new Date(ST.squad.at).toLocaleString('pt-PT') : ''}` : 'Ainda sem plantel carregado.'}</p></div>
     <div class="row"><button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>${ps.length ? '<button class="btn" onclick="A.clearSquad()">Limpar</button>' : ''}</div></div>
   <div class="grid g2">
     <div class="panel"><h3>Como trazer o plantel do FM27</h3>
-      ${DESKTOP ? `<div class="notice"><b>Do save (recomendado):</b> grave o jogo no FM — a app lê o save sozinha${ST.auto.save ? '' : ' (automático desligado)'}.
-        ${ST.lastSave ? `<br><span class="small">Último save: <b>${esc(ST.lastSave.name)}</b>${ST.auto.saveLast ? ' · lido ' + esc(ST.auto.saveLast.split(' · ')[1] || '') : ''}</span>` : ''}
-        ${ST.auto.saveErr ? `<div class="small" style="color:var(--crit);margin-top:4px">${esc(ST.auto.saveErr)}</div><div class="small">Instale o leitor uma vez: <code>winget install --id=astral-sh.uv -e</code> (depois reinicie a app).</div>` : ''}
-        <div class="row" style="margin-top:8px"><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">Ler o save agora</button></div></div>`
-      : `<ol class="clean small"><li><b>Do save:</b> abra o <a href="https://rhiever.github.io/fmsave/app/" target="_blank" rel="noopener">fmsave no browser</a>, largue lá o seu <code>.fm</code> (Documentos › Sports Interactive › Football Manager 27 › games) e descarregue o CSV do plantel. Nada é enviado para a internet.</li><li>Arraste esse CSV para esta janela.</li></ol>`}
-      <details style="margin-top:8px"><summary>Alternativa: F9 no jogo (FM View Exporter)</summary>
-      <ol class="clean small">
-        <li>Instale o plugin gratuito <b>FM View Exporter</b> (github.com/ElectroHugin/FM-View-Exporter → Releases → <code>setup.exe</code>).</li>
-        <li>No ecrã do plantel: <b>Import View…</b> → <code>FM27-PlayerAnalyzer-Squad-Standard.fmf</code>, depois <b>F9</b>. ${DESKTOP ? 'A app apanha o ficheiro sozinha.' : 'Arraste o <code>squad_….csv</code> para aqui.'}</li>
-        <li>F9 no plantel de outro clube carrega-o como <b>adversário</b>.</li>
-      </ol></details>
-      <p class="small muted">Também aceita exportações do fmsave (CSV/JSON), FMPT Chief Analyst, FMLibreEditor, HTML com tabela e texto colado.</p>
+      <p class="small muted" style="margin:.2em 0 8px">Escolha uma via. Ambas são opcionais e precisam de uma ferramenta externa gratuita:</p>
+      ${integrationsHTML(true)}
+      <p class="small muted">Também aceita CSV/JSON do fmsave, FMPT Chief Analyst, FMLibreEditor, HTML com tabela e texto colado — basta arrastar para a janela.</p>
     </div>
     <div class="panel"><textarea id="sqtext" placeholder="Arraste para aqui o CSV do plantel (fmsave ou F9 do FM View Exporter), ou cole o conteúdo…" ondragover="event.preventDefault()" ondrop="event.preventDefault();A.squadFile({files:event.dataTransfer.files})"></textarea>
       <div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.squadText()">Ler texto</button>
@@ -78,12 +69,12 @@ function vXI() {
     const b = bs[i];
     return `<tr><td><b>${esc(s.ipCode)}</b></td>
       <td>${p ? `${fitBadge(sc)} <b>${esc(p.name)}</b>${p.age ? ` <span class="muted small">${p.age}a</span>` : ''}` : '<span class="muted">vazio</span>'}
-        <div class="small muted">${esc(ri.name)} / ${esc(ro.name)}${alt && alt.r.id !== ri.id && alt.s >= cur + 5 ? ` · <span style="color:var(--warn)">melhor como ${esc(alt.r.name)} (${alt.s})</span>` : ''}</div></td>
+        <div class="small muted">${esc(ri.name)} / ${esc(ro.name)}${alt && alt.r.id !== ri.id && alt.s >= cur + 5 ? ` · <span style="color:var(--warn)"><span>melhor como</span> ${esc(alt.r.name)} (${alt.s})</span>` : ''}</div></td>
       <td>${recs.map(r => (s.pis || []).includes(r.pi) ? `<span class="chip ip" title="${esc(r.why)}">✓ ${esc(r.pi)}</span>` : `<button class="chip btnchip" title="${esc(r.why)}" onclick="A.applyPI(${i}, '${r.pi.replace(/'/g, "\\'")}')">+ ${esc(r.pi)}</button>`).join('') || '<span class="muted small">—</span>'}</td>
       <td class="small">${b.bench ? `${esc(b.bench.p.name)} ${fitBadge(b.bench.sc)}` : '—'}</td>
       <td class="small">${b.succ ? `${esc(b.succ.p.name)} <span class="muted">${b.succ.p.age}a</span> ${fitBadge(b.succ.sc)}` : '—'}</td></tr>`;
   }).join('');
-  return `<div class="top"><div><h2>Melhor XI — ${esc(t.name)}</h2><p class="muted small" style="margin:0">Passe o rato numa instrução para ver porquê. As instruções aplicadas entram na tática e na Ficha para o FM27.</p></div>
+  return `<div class="top"><div><h2><span>Melhor XI</span> — ${esc(t.name)}</h2><p class="muted small" style="margin:0">Passe o rato numa instrução para ver porquê. As instruções aplicadas entram na tática e na Ficha para o FM27.</p></div>
     <div class="row"><button class="btn" onclick="A.autoXI()">Escolher XI automaticamente</button><button class="btn primary" onclick="A.applyAllPIs()">Aplicar a principal de cada jogador</button></div></div>
   <div class="grid" style="grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:start">
     <div class="panel">${pitchSVG(t, 'IP', null, { static: true })}<p class="small muted">Cor = adequação ao par de papéis (verde ≥ 70).</p></div>
@@ -102,7 +93,7 @@ function vOpp() {
       <div class="panel"><h3>O que vais ver</h3><ul class="clean small"><li>Velocidade e jogo aéreo dos centrais deles contra os teus avançados.</li><li>Laterais, criação no meio-campo, pressão, extremos, finalização e ataque aéreo.</li><li>Os 3 jogadores mais perigosos e as instruções de adversário a usar.</li><li>Um plano de ajustes que aplicas à tua tática com um clique e vês no campo animado.</li></ul></div></div>`;
   const rep = opponentReport(ST.tactic, players(), op); ST._oppRep = rep;
   const pct = (v) => v == null ? 0 : Math.max(0, Math.min(100, (v - 1) / 19 * 100));
-  return `<div class="top"><div><h2>Relatório: ${esc(rep.club || ST.opp.source)}</h2><p class="muted small" style="margin:0">${op.length} jogadores · onze provável escolhido pelos atributos (4-2-3-1). ${players().length ? 'O traço vertical é o teu XI.' : 'Carrega o teu plantel para comparar.'}</p></div>
+  return `<div class="top"><div><h2><span>Relatório:</span> ${esc(rep.club || ST.opp.source)}</h2><p class="muted small" style="margin:0">${op.length} jogadores · onze provável escolhido pelos atributos (4-2-3-1). ${players().length ? 'O traço vertical é o teu XI.' : 'Carrega o teu plantel para comparar.'}</p></div>
     <div class="row"><button class="btn" onclick="A.clearOpp()">Trocar adversário</button></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Setor a setor</h3>

@@ -43,7 +43,7 @@ function vSim() {
   const ctl = (k) => { const d = TI_BY_KEY[k]; return `<label class="f ${sim.hl === k ? 'hl' : ''}">${esc(d.n)}${selectHTML(d.opts.map((o, i) => [i, o]), tiVal(t, k), `A.simTI('${k}',this.value)`)}</label>`; };
   const fr = sim.focus != null ? t.slots[sim.focus] : null;
   const fRole = fr ? [ROLE_BY_ID[fr.ip], ROLE_BY_ID[fr.oop]] : null;
-  return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : 'Campo animado — ' + esc(t.name)}</h2>
+  return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : '<span>' + L('Campo animado', 'Animated pitch') + '</span> — ' + esc(t.name)}</h2>
       <p class="muted small" style="margin:0">${esc(t.ipForm)} com bola → ${esc(t.oopForm)} sem bola · ${esc(t.ment)}. Clique num jogador para o seguir.</p></div>
     <div class="row">${sim.src === 'demo' ? '<button class="btn" onclick="A.simBack()">Voltar à minha tática</button>' : '<button class="btn" onclick="A.tab(\'tactic\',\'analyze\')">Editar no analisador</button>'}</div></div>
   <div class="simgrid">
@@ -121,6 +121,7 @@ function simCaption(t) {
     <p class="small" style="margin:.4em 0">${esc(c.text)}</p>
     ${c.notes.length ? `<ul class="clean small">${c.notes.map(n => `<li>${n}</li>`).join('')}</ul>` : ''}
     ${ph.k === 'oop' && SIM.model.overlays.length ? `<p class="small" style="color:var(--warn)"><b>Atenção:</b> ${SIM.model.overlays.map(o => esc(o.label)).join(' e ')}.</p>` : ''}`;
+  translateDOM(el);
   document.querySelectorAll('.phases .ph').forEach((b, i) => b.classList.toggle('on', i === sim.phase));
 }
 
