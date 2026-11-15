@@ -261,12 +261,22 @@ function posFactor(p, group, side) {
   if ((ADJ[group] || []).some(g => p.pos.includes(g))) return 0.82;
   return 0.6;
 }
+// Pé preferido nas alas: papéis que entram por dentro querem o pé contrário ao lado; papéis abertos, o mesmo pé
+function footSide(p) { const f = String((p.meta && p.meta.foot) || '').toLowerCase(); return /left|esq/.test(f) ? 'L' : /right|dir/.test(f) ? 'R' : /either|ambos|both/.test(f) ? 'B' : null; }
+function footFactor(p, a, role) {
+  if (!role || !a || !['D_LR','WB_LR','M_LR','AM_LR'].includes(a.group) || (a.side !== 'L' && a.side !== 'R')) return 1;
+  const f = footSide(p); if (!f || f === 'B') return 1;
+  const inside = role.tags.includes('IN'), wide = role.tags.includes('W');
+  if (inside && f === a.side) return 0.92;          // ex.: extremo interior canhoto na esquerda
+  if (wide && !inside && f !== a.side) return 0.95; // ex.: winger destro na esquerda
+  return 1;
+}
 function slotScore(p, t, slot) {
   const a = slotInfo(t.ipForm, slot.ipCode), b = slotInfo(t.oopForm, slot.oopCode);
   const ri = roleScore(p, ROLE_BY_ID[slot.ip]), ro = roleScore(p, ROLE_BY_ID[slot.oop]);
   if (!ri && !ro) return 0;
   const base = ri && ro ? ri.score * 0.55 + ro.score * 0.45 : (ri || ro).score;
-  return Math.round(base * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side)));
+  return Math.round(base * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side)) * footFactor(p, a, ROLE_BY_ID[slot.ip]));
 }
 function autoPickXI(t, players) {
   if (!players.length) return t;

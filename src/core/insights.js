@@ -133,3 +133,98 @@ function majorityClub(players) {
   const e = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
   return e ? { club: e[0], share: e[1] / players.length } : { club: null, share: 0 };
 }
+
+// ---------- Bolas paradas e capitães ----------
+// Pontuações em escala ~1–20 a partir dos atributos; cada função devolve também o porquê.
+const SP = {
+  aerial: (p) => { const a = (k) => A_(p, k) ?? 8; let h = 0; const cm = parseFloat(String(p.meta && p.meta.height || '').replace(',', '.')); if (cm > 150) h = (cm - 183) / 5 * 0.6;
+    return (a('hea') * 1.3 + a('jum') * 1.2 + a('str') * 0.6 + a('bra') * 0.5 + a('ant') * 0.4) / 4 + h; },
+  corner: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('cor') * 1.6 + a('cro') + a('tec') * 0.5) / 3.1; },
+  fkDirect: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('fre') * 1.7 + a('tec') + a('lon') * 0.6 + a('cmp') * 0.3) / 3.6; },
+  fkCross: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('fre') + a('cro') + a('tec') * 0.5) / 2.5; },
+  penalty: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pen') * 2 + a('cmp') + a('tec') * 0.3) / 3.3; },
+  marker: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('mar') * 1.2 + a('hea') + a('str') * 0.6 + a('pos') * 0.6 + a('jum') * 0.6 + a('cnt') * 0.4) / 4.4; },
+  zone: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pos') * 1.2 + a('hea') + a('jum') * 0.8 + a('ant') * 0.6 + a('cnt') * 0.4) / 4; },
+  cover: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pac') + a('acc') + a('pos') * 0.6 + a('tck') * 0.5 + a('ant') * 0.4) / 3.5; },
+  outlet: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pac') + a('acc') + a('otb') * 0.6 + a('fir') * 0.3) / 2.9; },
+  edge: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('lon') * 1.2 + a('tec') + a('fir') * 0.5 + a('cmp') * 0.3) / 3; },
+  captain: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('ldr') * 1.6 + a('det') + a('tea') * 0.4 + a('cmp') * 0.3) / 3.3 + Math.min(4, Math.max(0, ((p.age || 24) - 22) * 0.4)); },
+};
+const footOf = (p) => { const f = String((p.meta && p.meta.foot) || '').toLowerCase(); return /left|esq/.test(f) ? 'L' : /right|dir/.test(f) ? 'R' : /either|ambos|both/.test(f) ? 'B' : null; };
+const shortName = (p) => p ? p.name.split(' ').slice(-1)[0] : '—';
+
+function setPiecePlan(t, players, oppList) {
+  const xi = players.length >= 11 ? myXI(t, players) : [];
+  if (xi.length < 10) return null;
+  const out = xi.filter(x => x.group !== 'GK').map(x => ({ ...x, s: Object.fromEntries(Object.keys(SP).map(k => [k, SP[k](x.p)])) }));
+  const used = new Set(), take = (list, key, n = 1, filter = () => true) => {
+    const r = list.filter(x => !used.has(x.p.id) && filter(x)).sort((a, b) => b.s[key] - a.s[key]).slice(0, n); r.forEach(x => used.add(x.p.id)); return r;
+  };
+  const rank = (key, filter = () => true) => [...out].filter(filter).sort((a, b) => b.s[key] - a.s[key]);
+  const why = (x, keys) => keys.map(k => `${attrName(k)} ${Math.round(A_(x.p, k) ?? 0)}`).join(', ');
+  // ---- marcadores
+  const cornerRank = rank('corner');
+  const left = cornerRank.find(x => footOf(x.p) === 'L'), right = cornerRank.find(x => footOf(x.p) === 'R');
+  const best = cornerRank[0];
+  const corners = {
+    // canto da direita batido com o pé esquerdo = curva para dentro (inswinger)
+    right: left && left.s.corner >= best.s.corner - 1.5 ? { x: left, swing: 'para dentro (inswinger)' } : { x: best, swing: footOf(best.p) === 'R' ? 'para fora (outswinger)' : footOf(best.p) === 'L' ? 'para dentro (inswinger)' : null },
+    left: right && right.s.corner >= best.s.corner - 1.5 ? { x: right, swing: 'para dentro (inswinger)' } : { x: best, swing: footOf(best.p) === 'L' ? 'para fora (outswinger)' : footOf(best.p) === 'R' ? 'para dentro (inswinger)' : null },
+  };
+  const fkD = rank('fkDirect')[0], fkC = rank('fkCross')[0];
+  const directOk = fkD && (A_(fkD.p, 'fre') ?? 0) >= 14;
+  const pens = rank('penalty').slice(0, 3);
+  const lt = rank('fkCross', x => (A_(x.p, 'lth') ?? 0) >= 14).sort((a, b) => (A_(b.p, 'lth') ?? 0) - (A_(a.p, 'lth') ?? 0))[0] || null;
+  const caps = [...xi.map(x => ({ ...x, c: SP.captain(x.p) }))].sort((a, b) => b.c - a.c).slice(0, 2);
+  // ---- canto ofensivo
+  const taker = corners.right.x;
+  used.add(taker.p.id);
+  const oppFast = oppList && oppList.length ? avgPlayers(opponentXI(oppList).filter(x => ['ST','AM_LR'].includes(x.group)).map(x => x.p), ['pac','acc']) : null;
+  const nBack = oppFast != null && oppFast >= 14 ? 3 : 2;
+  // os melhores no ar não ficam atrás; dos restantes, os mais rápidos defensores ficam a proteger
+  const topAir = new Set(rank('aerial').slice(0, 4).map(x => x.p.id));
+  const back = take(out, 'cover', nBack, x => ['DC','D_LR','WB_LR','DM','MC'].includes(x.group) && !topAir.has(x.p.id));
+  const box = take(out, 'aerial', 4);
+  // 3.º e 4.º melhores no ar: o mais rápido vai ao 1.º poste, o outro fica na marca de penálti
+  const rest = box.slice(2).sort((a, b) => (A_(b.p, 'acc') ?? 0) - (A_(a.p, 'acc') ?? 0));
+  const [farP, centre, nearP, spot] = [box[0], box[1], rest[0], rest[1]];
+  const edge = take(out, 'edge', 1)[0];
+  const shortOpt = take(out, 'fkCross', 1, x => ['AM_LR','M_LR','D_LR','WB_LR','MC','AMC'].includes(x.group))[0];
+  const attack = [
+    { k: 'taker', n: 'Marcador', x: taker, w: corners.right.swing ? 'canto ' + corners.right.swing : why(taker, ['cor', 'cro']) },
+    { k: 'far', n: '2.º poste', x: farP, w: why(farP, ['hea', 'jum']) + ' — o melhor no ar ataca a bola que passa todos' },
+    { k: 'centre', n: 'Centro da pequena área', x: centre, w: why(centre, ['hea', 'jum', 'str']) },
+    { k: 'near', n: '1.º poste', x: nearP, w: why(nearP, ['hea', 'acc']) + ' — antecipa-se e desvia' },
+    { k: 'spot', n: 'Marca de penálti (segunda bola)', x: spot, w: why(spot, ['hea', 'ant']) },
+    { k: 'edge', n: 'Entrada da área', x: edge, w: why(edge, ['lon', 'tec']) + ' — remata as sobras' },
+    { k: 'short', n: 'Opção curta', x: shortOpt, w: shortOpt ? why(shortOpt, ['pas', 'cro']) : '' },
+    ...back.map((b, i) => ({ k: 'back' + i, n: 'Fica atrás', x: b, w: why(b, ['pac', 'acc', 'pos']) + ' — protege o contra-ataque' })),
+  ].filter(r => r.x);
+  // ---- canto defensivo
+  used.clear();
+  const outlet = take(out, 'outlet', tiVal(t, 'att_trans') === 2 ? 2 : 1, x => ['ST','AM_LR','AMC','M_LR'].includes(x.group));
+  const theirAir = oppList && oppList.length ? opponentXI(oppList).filter(x => x.group !== 'GK').map(x => ({ p: x.p, a: SP.aerial(x.p) })).sort((a, b) => b.a - a.a).slice(0, 3) : [];
+  const ourAirAvg = avgPlayers(out.map(x => x.p), ['hea', 'jum']);
+  const system = ourAirAvg != null && ourAirAvg >= 13.5 ? 'Zonal' : theirAir.length && theirAir[0].a >= 15 ? 'Misto (zonal + marcação ao mais perigoso)' : 'Misto';
+  const zones = take(out, 'zone', 3);
+  const markers = take(out, 'marker', Math.max(2, theirAir.length));
+  const dEdge = take(out, 'cover', 1, x => ['DM','MC','AMC','AM_LR','M_LR'].includes(x.group))[0];
+  const defend = [
+    { k: 'zn', n: 'Zona 1.º poste', x: zones[1] || zones[0], w: 'posicionamento e jogo aéreo' },
+    { k: 'zc', n: 'Zona centro (pequena área)', x: zones[0], w: why(zones[0], ['pos', 'hea', 'jum']) },
+    { k: 'zf', n: 'Zona 2.º poste', x: zones[2], w: 'posicionamento e jogo aéreo' },
+    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? `Marca ${shortName(theirAir[i].p)}` : 'Marcação individual', x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? ` · ${theirAir[i].p.name} é dos melhores no ar deles` : '') })),
+    { k: 'de', n: 'Entrada da área (segundas bolas)', x: dEdge, w: dEdge ? why(dEdge, ['acc', 'ant']) : '' },
+    ...outlet.map((o, i) => ({ k: 'o' + i, n: 'Fica na frente (contra-ataque)', x: o, w: why(o, ['pac', 'acc']) })),
+  ].filter(r => r.x);
+  // ---- conselhos gerais
+  const tips = [];
+  const ourAirTop = rank('aerial').slice(0, 4).map(x => x.s.aerial);
+  const airTop = ourAirTop.reduce((a, b) => a + b, 0) / Math.max(1, ourAirTop.length);
+  if (airTop >= 14) tips.push({ ti: 'set_pieces', v: 2, t: `Tens ${ourAirTop.length} jogadores fortes no ar (média ${airTop.toFixed(1)}): procura cantos e livres.` });
+  else if (airTop <= 11) tips.push({ ti: 'set_pieces', v: 0, t: `Pouca presença aérea (média ${airTop.toFixed(1)}): mais vale manter a bola em jogo; cantos curtos.` });
+  if (!directOk) tips.push({ t: `Ninguém com Livres ≥ 14 (melhor: ${fkD ? fkD.p.name + ' ' + Math.round(A_(fkD.p, 'fre') ?? 0) : '—'}): nos livres frontais, cruza em vez de rematar.` });
+  if (lt) tips.push({ t: `${lt.p.name} tem Lançamentos Longos ${Math.round(A_(lt.p, 'lth'))}: use lançamentos longos para a área no último terço.` });
+  if (nBack === 3) tips.push({ t: 'Os avançados deles são rápidos: deixa 3 atrás nos cantos ofensivos.' });
+  return { xi, corners, fk: { direct: directOk ? fkD : null, cross: fkC }, pens, longThrow: lt, caps, attack, defend, system, theirAir, tips, airTop };
+}

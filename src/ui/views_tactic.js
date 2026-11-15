@@ -155,6 +155,13 @@ function vSheet() {
       <p class="small muted">${changed} instrução(ões) fora do default, a <b>negrito</b>. As restantes ficam como estão.</p>
       ${FM_SECTIONS.map(([sec, keys]) => `<h4 style="margin-top:12px">${esc(sec)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k]; const v = tiVal(t, k), ch = v !== d.def;
         return `<tr class="${ch ? '' : 'muted'}"><td>${ch ? ck : ''}</td><td>${esc(d.n)}</td><td>${ch ? `<b>${esc(d.opts[v])}</b>` : esc(d.opts[v])}</td></tr>`; }).join('')}</tbody></table>`).join('')}
+      ${(() => { const r = players().length >= 11 ? setPiecePlan(t, players(), oppPlayers()) : null; if (!r) return '';
+        const li = (l, x) => `<tr><td>${ck}</td><td>${esc(l)}</td><td>${x ? `<b>${esc(x.p.name)}</b>` : '—'}</td></tr>`;
+        return `<h4 style="margin-top:12px">Set Pieces &amp; Captains</h4><table><tbody>
+          ${li('Captain', r.caps[0])}${li('Vice Captain', r.caps[1])}${li('Corners (right)', r.corners.right.x)}${li('Corners (left)', r.corners.left.x)}
+          ${li('Free Kicks (direct)', r.fk.direct)}${li('Free Kicks (crossed)', r.fk.cross)}${r.pens.map((x, i) => li('Penalty ' + (i + 1), x)).join('')}${r.longThrow ? li('Long Throws', r.longThrow) : ''}
+          ${r.attack.filter(x => x.k !== 'taker').map(x => li('Canto ofensivo — ' + x.n, x.x)).join('')}
+          ${r.defend.map(x => li('Canto defensivo — ' + x.n, x.x)).join('')}</tbody></table>`; })()}
       ${t.ois ? `<p class="small" style="margin-top:12px">${ck} Opposition Instructions: ${t.ois} activa(s) — defina-as antes de cada jogo.</p>` : ''}
     </div>
   </div>`;

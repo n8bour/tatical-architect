@@ -5,13 +5,14 @@ const NAV = [
   ['home', 'Início', '⌂'],
   ['team', 'A minha equipa', '☰'],
   ['tactic', 'Tática', '◎'],
+  ['lab', 'Laboratório', '⚗'],
   ['training', 'Treino', '◷'],
   ['bible', 'Bíblia', '◆'],
   ['settings', 'Definições', '⚙'],
 ];
 const TABS = {
-  team: [['squad', 'Plantel'], ['xi', 'Melhor XI & sugestões'], ['opp', 'Adversário']],
-  tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
+  team: [['squad', 'Plantel'], ['gen', 'Gerar tática'], ['xi', 'Melhor XI & sistemas'], ['opp', 'Adversário']],
+  tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['setpieces', 'Bolas paradas'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
   bible: [['roles', 'Papéis'], ['ti', 'Instruções'], ['concepts', 'Conceitos & adversários'], ['btraining', 'Treino & Effectiveness']],
 };
 
@@ -40,18 +41,22 @@ function render(scrollTop) {
   if (!isSim) cancelAnimationFrame(SIM.raf);
   let body;
   if (v === 'home') body = vHome();
-  else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'xi' ? vXI() : vOpp());
-  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'sheet' ? vSheet() : vImport());
+  else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
+  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
+  else if (v === 'lab') body = vLab();
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
+  if (v === 'lab') labPoll();
 }
 
 // ---------- ficheiros: rota única para tudo o que entra ----------
 function ingestJSON(d, name) {
+  const job = jobFromAny(d);
+  if (job) { labState().job = job; ST.view = 'lab'; render(true); toast('Experiência importada: ' + (job.name || job.id)); return; }
   if (d.kind === 'fm27tb-tactic' && d.tactic) { ST.tactic = d.tactic; save(); A.go('tactic', 'analyze'); toast('Tática importada'); }
   else if (d.kind === 'fm27tb-all') { Object.assign(ST, { tactic: d.tactic || ST.tactic, squad: d.squad || ST.squad, opp: d.opp || ST.opp, saved: d.saved || [], myClub: d.myClub || ST.myClub }); save(); render(true); toast('Dados restaurados'); }
   else if (Array.isArray(d) || Array.isArray(d.players)) {

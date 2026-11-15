@@ -6,6 +6,7 @@
 //!  • última exportação do FM View Exporter (F9) e as pastas onde pode estar;
 //!  • último save do FM27 (.fm) e a exportação do plantel desse save com o fmsave
 //!    (MIT, github.com/rhiever/fmsave), corrido sobre uma CÓPIA do save.
+//!  • ponte HTTP local para o FM Tactics Lab (127.0.0.1), que corre o motor original do FM27.
 //! Nada escreve no jogo nem no save, e nada lê a memória do FM.
 
 use serde::Serialize;
@@ -296,9 +297,79 @@ async fn export_save(path: String) -> Result<SaveExport, String> {
         .map_err(|e| e.to_string())?
 }
 
+// ---------------------------------------------------------------------------
+// Ponte para o FM Tactics Lab (servidor local, por defeito 127.0.0.1:8765).
+// O servidor recusa POSTs com um Origin diferente do seu, por isso os pedidos
+// saem daqui (sem Origin) e não do browser da janela. Só aceita caminhos /api/
+// e só fala com 127.0.0.1.
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct LabResponse {
+    status: u16,
+    body: String,
+}
+
+fn lab_http(port: u16, method: &str, path: &str, body: &str, timeout_ms: u64) -> Result<LabResponse, String> {
+    use std::io::{Read, Write};
+    use std::net::{SocketAddr, TcpStream};
+    use std::time::Duration;
+    if !path.starts_with("/api/") || path.contains("..") || path.contains(' ') {
+        return Err("Caminho inválido".into());
+    }
+    if method != "GET" && method != "POST" {
+        return Err("Método inválido".into());
+    }
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let mut stream = TcpStream::connect_timeout(&addr, Duration::from_millis(timeout_ms.max(150)))
+        .map_err(|e| format!("O Tactics Lab não responde na porta {}: {}", port, e))?;
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(180)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
+    let head = format!(
+        "{} {} HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        method,
+        path,
+        port,
+        body.len()
+    );
+    stream.write_all(head.as_bytes()).map_err(|e| e.to_string())?;
+    stream.write_all(body.as_bytes()).map_err(|e| e.to_string())?;
+    let mut buf: Vec<u8> = Vec::new();
+    stream.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+    let split = buf
+        .windows(4)
+        .position(|w| w == b"\r\n\r\n")
+        .ok_or_else(|| "Resposta inválida do Tactics Lab".to_string())?;
+    let head_text = String::from_utf8_lossy(&buf[..split]).into_owned();
+    let status: u16 = head_text
+        .split_whitespace()
+        .nth(1)
+        .and_then(|x| x.parse().ok())
+        .unwrap_or(0);
+    Ok(LabResponse {
+        status,
+        body: String::from_utf8_lossy(&buf[split + 4..]).into_owned(),
+    })
+}
+
+#[tauri::command]
+async fn lab_request(
+    port: u16,
+    method: String,
+    path: String,
+    body: Option<String>,
+    timeout_ms: Option<u64>,
+) -> Result<LabResponse, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        lab_http(port, &method, &path, body.as_deref().unwrap_or(""), timeout_ms.unwrap_or(3000))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save])
+        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, lab_request])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o FM27 Tactical Bible");
 }

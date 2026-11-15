@@ -168,6 +168,35 @@ svg.simpitch{display:block;width:100%;height:auto}
 main>.tabs{position:sticky;top:-22px;background:var(--bg);z-index:3;padding-top:4px}
 .panel.grid{align-content:start}
 
+.sp-fig{margin:0 0 10px}.sp-svg{width:100%;height:auto;display:block;border-radius:10px}
+
+.chips{display:flex;flex-wrap:wrap;gap:4px;max-height:150px;overflow:auto;padding:2px}
+.chip.pick{border:1px solid var(--line);cursor:pointer;background:var(--panel)}
+.chip.pick.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.genopt{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto auto;gap:0 10px;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px;margin:6px 0;cursor:pointer}
+.genopt>svg{grid-column:2;grid-row:1/4;align-self:center}
+.genopt.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.secn{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;margin-right:8px;vertical-align:middle}
+tr.dim td{color:var(--muted)}
+.depth{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+
+/* ---------- laboratório ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:10px}
+.kpis div{background:var(--panel2);border-radius:8px;padding:8px 10px;min-width:0}
+.kpis span{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpis b{font-size:15px;white-space:nowrap}.kpis em{display:block;font-style:normal;font-size:11px;color:var(--muted)}
+.verdict{border-left:4px solid var(--info)}.verdict.good{border-left-color:var(--good)}.verdict.crit{border-left-color:var(--crit)}.verdict.warn{border-left-color:var(--warn)}
+.cibar{position:relative;height:14px;background:var(--panel2);border-radius:7px;margin:6px 0 4px;overflow:hidden}
+.cibar .zero{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
+.cibar b{position:absolute;top:3px;height:8px;border-radius:4px;opacity:.85}
+.cibar em{position:absolute;top:0;width:3px;height:14px;background:var(--text);transform:translateX(-1px)}
+.progress{height:8px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:12px}.progress i{display:block;height:100%;background:var(--accent)}
+.jobitem{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 11px;margin:6px 0;cursor:pointer}
+.jobitem b{display:block}.jobitem.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.jobitem .st{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--chip);margin-right:6px}
+.jobitem .st.running,.jobitem .st.queued{background:color-mix(in srgb,var(--warn) 25%,transparent)}.jobitem .st.complete{background:color-mix(in srgb,var(--good) 22%,transparent)}
+@media (max-width:1400px){.lab-vars{grid-template-columns:1fr!important}}
+
 </style>
 </head>
 <body>
@@ -1026,12 +1055,22 @@ function posFactor(p, group, side) {
   if ((ADJ[group] || []).some(g => p.pos.includes(g))) return 0.82;
   return 0.6;
 }
+// Pé preferido nas alas: papéis que entram por dentro querem o pé contrário ao lado; papéis abertos, o mesmo pé
+function footSide(p) { const f = String((p.meta && p.meta.foot) || '').toLowerCase(); return /left|esq/.test(f) ? 'L' : /right|dir/.test(f) ? 'R' : /either|ambos|both/.test(f) ? 'B' : null; }
+function footFactor(p, a, role) {
+  if (!role || !a || !['D_LR','WB_LR','M_LR','AM_LR'].includes(a.group) || (a.side !== 'L' && a.side !== 'R')) return 1;
+  const f = footSide(p); if (!f || f === 'B') return 1;
+  const inside = role.tags.includes('IN'), wide = role.tags.includes('W');
+  if (inside && f === a.side) return 0.92;          // ex.: extremo interior canhoto na esquerda
+  if (wide && !inside && f !== a.side) return 0.95; // ex.: winger destro na esquerda
+  return 1;
+}
 function slotScore(p, t, slot) {
   const a = slotInfo(t.ipForm, slot.ipCode), b = slotInfo(t.oopForm, slot.oopCode);
   const ri = roleScore(p, ROLE_BY_ID[slot.ip]), ro = roleScore(p, ROLE_BY_ID[slot.oop]);
   if (!ri && !ro) return 0;
   const base = ri && ro ? ri.score * 0.55 + ro.score * 0.45 : (ri || ro).score;
-  return Math.round(base * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side)));
+  return Math.round(base * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side)) * footFactor(p, a, ROLE_BY_ID[slot.ip]));
 }
 function autoPickXI(t, players) {
   if (!players.length) return t;
@@ -1517,6 +1556,444 @@ function majorityClub(players) {
   return e ? { club: e[0], share: e[1] / players.length } : { club: null, share: 0 };
 }
 
+// ---------- Bolas paradas e capitães ----------
+// Pontuações em escala ~1–20 a partir dos atributos; cada função devolve também o porquê.
+const SP = {
+  aerial: (p) => { const a = (k) => A_(p, k) ?? 8; let h = 0; const cm = parseFloat(String(p.meta && p.meta.height || '').replace(',', '.')); if (cm > 150) h = (cm - 183) / 5 * 0.6;
+    return (a('hea') * 1.3 + a('jum') * 1.2 + a('str') * 0.6 + a('bra') * 0.5 + a('ant') * 0.4) / 4 + h; },
+  corner: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('cor') * 1.6 + a('cro') + a('tec') * 0.5) / 3.1; },
+  fkDirect: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('fre') * 1.7 + a('tec') + a('lon') * 0.6 + a('cmp') * 0.3) / 3.6; },
+  fkCross: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('fre') + a('cro') + a('tec') * 0.5) / 2.5; },
+  penalty: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pen') * 2 + a('cmp') + a('tec') * 0.3) / 3.3; },
+  marker: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('mar') * 1.2 + a('hea') + a('str') * 0.6 + a('pos') * 0.6 + a('jum') * 0.6 + a('cnt') * 0.4) / 4.4; },
+  zone: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pos') * 1.2 + a('hea') + a('jum') * 0.8 + a('ant') * 0.6 + a('cnt') * 0.4) / 4; },
+  cover: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pac') + a('acc') + a('pos') * 0.6 + a('tck') * 0.5 + a('ant') * 0.4) / 3.5; },
+  outlet: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('pac') + a('acc') + a('otb') * 0.6 + a('fir') * 0.3) / 2.9; },
+  edge: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('lon') * 1.2 + a('tec') + a('fir') * 0.5 + a('cmp') * 0.3) / 3; },
+  captain: (p) => { const a = (k) => A_(p, k) ?? 8; return (a('ldr') * 1.6 + a('det') + a('tea') * 0.4 + a('cmp') * 0.3) / 3.3 + Math.min(4, Math.max(0, ((p.age || 24) - 22) * 0.4)); },
+};
+const footOf = (p) => { const f = String((p.meta && p.meta.foot) || '').toLowerCase(); return /left|esq/.test(f) ? 'L' : /right|dir/.test(f) ? 'R' : /either|ambos|both/.test(f) ? 'B' : null; };
+const shortName = (p) => p ? p.name.split(' ').slice(-1)[0] : '—';
+
+function setPiecePlan(t, players, oppList) {
+  const xi = players.length >= 11 ? myXI(t, players) : [];
+  if (xi.length < 10) return null;
+  const out = xi.filter(x => x.group !== 'GK').map(x => ({ ...x, s: Object.fromEntries(Object.keys(SP).map(k => [k, SP[k](x.p)])) }));
+  const used = new Set(), take = (list, key, n = 1, filter = () => true) => {
+    const r = list.filter(x => !used.has(x.p.id) && filter(x)).sort((a, b) => b.s[key] - a.s[key]).slice(0, n); r.forEach(x => used.add(x.p.id)); return r;
+  };
+  const rank = (key, filter = () => true) => [...out].filter(filter).sort((a, b) => b.s[key] - a.s[key]);
+  const why = (x, keys) => keys.map(k => `${attrName(k)} ${Math.round(A_(x.p, k) ?? 0)}`).join(', ');
+  // ---- marcadores
+  const cornerRank = rank('corner');
+  const left = cornerRank.find(x => footOf(x.p) === 'L'), right = cornerRank.find(x => footOf(x.p) === 'R');
+  const best = cornerRank[0];
+  const corners = {
+    // canto da direita batido com o pé esquerdo = curva para dentro (inswinger)
+    right: left && left.s.corner >= best.s.corner - 1.5 ? { x: left, swing: 'para dentro (inswinger)' } : { x: best, swing: footOf(best.p) === 'R' ? 'para fora (outswinger)' : footOf(best.p) === 'L' ? 'para dentro (inswinger)' : null },
+    left: right && right.s.corner >= best.s.corner - 1.5 ? { x: right, swing: 'para dentro (inswinger)' } : { x: best, swing: footOf(best.p) === 'L' ? 'para fora (outswinger)' : footOf(best.p) === 'R' ? 'para dentro (inswinger)' : null },
+  };
+  const fkD = rank('fkDirect')[0], fkC = rank('fkCross')[0];
+  const directOk = fkD && (A_(fkD.p, 'fre') ?? 0) >= 14;
+  const pens = rank('penalty').slice(0, 3);
+  const lt = rank('fkCross', x => (A_(x.p, 'lth') ?? 0) >= 14).sort((a, b) => (A_(b.p, 'lth') ?? 0) - (A_(a.p, 'lth') ?? 0))[0] || null;
+  const caps = [...xi.map(x => ({ ...x, c: SP.captain(x.p) }))].sort((a, b) => b.c - a.c).slice(0, 2);
+  // ---- canto ofensivo
+  const taker = corners.right.x;
+  used.add(taker.p.id);
+  const oppFast = oppList && oppList.length ? avgPlayers(opponentXI(oppList).filter(x => ['ST','AM_LR'].includes(x.group)).map(x => x.p), ['pac','acc']) : null;
+  const nBack = oppFast != null && oppFast >= 14 ? 3 : 2;
+  // os melhores no ar não ficam atrás; dos restantes, os mais rápidos defensores ficam a proteger
+  const topAir = new Set(rank('aerial').slice(0, 4).map(x => x.p.id));
+  const back = take(out, 'cover', nBack, x => ['DC','D_LR','WB_LR','DM','MC'].includes(x.group) && !topAir.has(x.p.id));
+  const box = take(out, 'aerial', 4);
+  // 3.º e 4.º melhores no ar: o mais rápido vai ao 1.º poste, o outro fica na marca de penálti
+  const rest = box.slice(2).sort((a, b) => (A_(b.p, 'acc') ?? 0) - (A_(a.p, 'acc') ?? 0));
+  const [farP, centre, nearP, spot] = [box[0], box[1], rest[0], rest[1]];
+  const edge = take(out, 'edge', 1)[0];
+  const shortOpt = take(out, 'fkCross', 1, x => ['AM_LR','M_LR','D_LR','WB_LR','MC','AMC'].includes(x.group))[0];
+  const attack = [
+    { k: 'taker', n: 'Marcador', x: taker, w: corners.right.swing ? 'canto ' + corners.right.swing : why(taker, ['cor', 'cro']) },
+    { k: 'far', n: '2.º poste', x: farP, w: why(farP, ['hea', 'jum']) + ' — o melhor no ar ataca a bola que passa todos' },
+    { k: 'centre', n: 'Centro da pequena área', x: centre, w: why(centre, ['hea', 'jum', 'str']) },
+    { k: 'near', n: '1.º poste', x: nearP, w: why(nearP, ['hea', 'acc']) + ' — antecipa-se e desvia' },
+    { k: 'spot', n: 'Marca de penálti (segunda bola)', x: spot, w: why(spot, ['hea', 'ant']) },
+    { k: 'edge', n: 'Entrada da área', x: edge, w: why(edge, ['lon', 'tec']) + ' — remata as sobras' },
+    { k: 'short', n: 'Opção curta', x: shortOpt, w: shortOpt ? why(shortOpt, ['pas', 'cro']) : '' },
+    ...back.map((b, i) => ({ k: 'back' + i, n: 'Fica atrás', x: b, w: why(b, ['pac', 'acc', 'pos']) + ' — protege o contra-ataque' })),
+  ].filter(r => r.x);
+  // ---- canto defensivo
+  used.clear();
+  const outlet = take(out, 'outlet', tiVal(t, 'att_trans') === 2 ? 2 : 1, x => ['ST','AM_LR','AMC','M_LR'].includes(x.group));
+  const theirAir = oppList && oppList.length ? opponentXI(oppList).filter(x => x.group !== 'GK').map(x => ({ p: x.p, a: SP.aerial(x.p) })).sort((a, b) => b.a - a.a).slice(0, 3) : [];
+  const ourAirAvg = avgPlayers(out.map(x => x.p), ['hea', 'jum']);
+  const system = ourAirAvg != null && ourAirAvg >= 13.5 ? 'Zonal' : theirAir.length && theirAir[0].a >= 15 ? 'Misto (zonal + marcação ao mais perigoso)' : 'Misto';
+  const zones = take(out, 'zone', 3);
+  const markers = take(out, 'marker', Math.max(2, theirAir.length));
+  const dEdge = take(out, 'cover', 1, x => ['DM','MC','AMC','AM_LR','M_LR'].includes(x.group))[0];
+  const defend = [
+    { k: 'zn', n: 'Zona 1.º poste', x: zones[1] || zones[0], w: 'posicionamento e jogo aéreo' },
+    { k: 'zc', n: 'Zona centro (pequena área)', x: zones[0], w: why(zones[0], ['pos', 'hea', 'jum']) },
+    { k: 'zf', n: 'Zona 2.º poste', x: zones[2], w: 'posicionamento e jogo aéreo' },
+    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? `Marca ${shortName(theirAir[i].p)}` : 'Marcação individual', x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? ` · ${theirAir[i].p.name} é dos melhores no ar deles` : '') })),
+    { k: 'de', n: 'Entrada da área (segundas bolas)', x: dEdge, w: dEdge ? why(dEdge, ['acc', 'ant']) : '' },
+    ...outlet.map((o, i) => ({ k: 'o' + i, n: 'Fica na frente (contra-ataque)', x: o, w: why(o, ['pac', 'acc']) })),
+  ].filter(r => r.x);
+  // ---- conselhos gerais
+  const tips = [];
+  const ourAirTop = rank('aerial').slice(0, 4).map(x => x.s.aerial);
+  const airTop = ourAirTop.reduce((a, b) => a + b, 0) / Math.max(1, ourAirTop.length);
+  if (airTop >= 14) tips.push({ ti: 'set_pieces', v: 2, t: `Tens ${ourAirTop.length} jogadores fortes no ar (média ${airTop.toFixed(1)}): procura cantos e livres.` });
+  else if (airTop <= 11) tips.push({ ti: 'set_pieces', v: 0, t: `Pouca presença aérea (média ${airTop.toFixed(1)}): mais vale manter a bola em jogo; cantos curtos.` });
+  if (!directOk) tips.push({ t: `Ninguém com Livres ≥ 14 (melhor: ${fkD ? fkD.p.name + ' ' + Math.round(A_(fkD.p, 'fre') ?? 0) : '—'}): nos livres frontais, cruza em vez de rematar.` });
+  if (lt) tips.push({ t: `${lt.p.name} tem Lançamentos Longos ${Math.round(A_(lt.p, 'lth'))}: use lançamentos longos para a área no último terço.` });
+  if (nBack === 3) tips.push({ t: 'Os avançados deles são rápidos: deixa 3 atrás nos cantos ofensivos.' });
+  return { xi, corners, fk: { direct: directOk ? fkD : null, cross: fkC }, pens, longThrow: lt, caps, attack, defend, system, theirAir, tips, airTop };
+}
+
+;
+// ---- core/generator.js
+// ============================================================
+// Gerador de tática: formações, XI, papéis IP/OOP e as instruções
+// de equipa (cada uma com razão), a partir do plantel.
+//
+// 1. Pré-selecção: todos os pares formação-com-bola × 3 formações-sem-bola
+//    mais próximas, pontuados pelo melhor par de papéis de cada jogador.
+// 2. Nos melhores pares: alterna (a) XI óptimo pelo algoritmo húngaro com
+//    (b) pesquisa local do papel IP e OOP de cada posição, maximizando
+//    adequação + regras de equilíbrio (auditTactic estrutural).
+// 3. Instruções de equipa geradas comparando cada sector com a média do plantel.
+// ============================================================
+
+const EXPECT = {
+  title: { n: 'Candidato ao título', ment: 'Positive', press: 1 },
+  top: { n: 'Lugares de cima', ment: 'Positive', press: 0.5 },
+  mid: { n: 'Meio da tabela', ment: 'Balanced', press: 0 },
+  low: { n: 'Fuga à descida', ment: 'Cautious', press: -1 },
+};
+
+function pairCost(ip, oop) {
+  return matchFormations(ip, oop).reduce((acc, m) => { const A = slotInfo(ip, m.ipCode), B = slotInfo(oop, m.oopCode); return acc + Math.hypot(A.x - B.x, A.y - B.y); }, 0);
+}
+// profundidade média dos jogadores de campo: a forma com bola não pode ser mais recuada do que a forma sem bola
+const formDepth = (f) => { const sl = FORMATIONS[f].filter(x => x.code !== 'GK'); return sl.reduce((a, x) => a + x.y, 0) / sl.length; };
+function formationPairs(perIP = 3) {
+  const F = Object.keys(FORMATIONS), out = [];
+  F.forEach(ip => F.filter(oop => formDepth(ip) >= formDepth(oop) - 0.5).map(oop => ({ ip, oop, c: pairCost(ip, oop) })).sort((a, b) => a.c - b.c).slice(0, perIP).forEach(x => out.push(x)));
+  return out;
+}
+
+// cache de pontuação jogador × papel
+function makeScorer(players) {
+  const cache = new Map();
+  const rs = (p, r) => { const k = p.id + '|' + r.id; let v = cache.get(k); if (v === undefined) { v = (roleScore(p, r) || { score: 0 }).score; cache.set(k, v); } return v; };
+  const fit = (p, a, b, ri, ro) => (rs(p, ri) * 0.55 + rs(p, ro) * 0.45) * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side)) * footFactor(p, a, ri);
+  return { rs, fit };
+}
+
+function generateTactic(players, opts = {}) {
+  const exp = EXPECT[opts.expect] || EXPECT.mid;
+  const must = new Set(opts.must || []), youth = new Set(opts.youth || []), star = opts.star || null;
+  if (players.length < 11) return null;
+  const S = makeScorer(players);
+  const bonus = (p) => (youth.has(p.id) ? 6 : 0);
+  const weight = (p) => (p.id === star ? 1.6 : 1);
+
+  // ---------- 1. pré-selecção rápida
+  const bestPair = (p, a, b) => {
+    let best = 0;
+    const ipR = rolesFor(a.group, 'IP', a.wideCB), opR = rolesFor(b.group, 'OOP', b.wideCB);
+    const bi = Math.max(...ipR.map(r => S.rs(p, r))), bo = Math.max(...opR.map(r => S.rs(p, r)));
+    best = (bi * 0.55 + bo * 0.45) * Math.min(posFactor(p, a.group, a.side), posFactor(p, b.group, b.side));
+    return best;
+  };
+  const quick = formationPairs(3).map(pr => {
+    const pairs = matchFormations(pr.ip, pr.oop).map(m => ({ a: slotInfo(pr.ip, m.ipCode), b: slotInfo(pr.oop, m.oopCode), m }));
+    const cost = pairs.map(x => players.map(p => -(bestPair(p, x.a, x.b) + bonus(p)) * weight(p) - (must.has(p.id) ? 1000 : 0)));
+    while (cost[0].length < cost.length) cost.forEach(r => r.push(1000));
+    const asg = hungarian(cost);
+    const v = pairs.reduce((acc, x, i) => acc + (players[asg[i]] ? bestPair(players[asg[i]], x.a, x.b) : 0), 0) / 11;
+    return { ...pr, v };
+  }).sort((a, b) => b.v - a.v);
+  // os melhores pares, sem repetir demasiado a mesma formação com bola
+  const shortlist = [], perIP = {};
+  for (const q of quick) { if ((perIP[q.ip] || 0) >= 2) continue; perIP[q.ip] = (perIP[q.ip] || 0) + 1; shortlist.push(q); if (shortlist.length >= (opts.depth || 10)) break; }
+
+  // ---------- 2. optimização conjunta papéis × XI
+  const objective = (t, pmap) => {
+    let sum = 0, wsum = 0;
+    t.slots.forEach(s => { const p = pmap[s.pid]; if (!p) return; const a = slotInfo(t.ipForm, s.ipCode), b = slotInfo(t.oopForm, s.oopCode);
+      const w = weight(p); sum += (S.fit(p, a, b, ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop]) + bonus(p)) * w; wsum += w; });
+    const fitAvg = wsum ? sum / wsum : 0;
+    const au = auditTactic(t, []);
+    const ipS = au.scores.IP, oopS = au.scores.OOP;
+    return { v: fitAvg * 0.72 + ((ipS + oopS) / 2) * 0.28, fitAvg, au };
+  };
+  const assign = (t) => {
+    const cost = t.slots.map(s => { const a = slotInfo(t.ipForm, s.ipCode), b = slotInfo(t.oopForm, s.oopCode), ri = ROLE_BY_ID[s.ip], ro = ROLE_BY_ID[s.oop];
+      return players.map(p => -(S.fit(p, a, b, ri, ro) + bonus(p)) * weight(p) - (must.has(p.id) ? 1000 : 0)); });
+    while (cost[0].length < cost.length) cost.forEach(r => r.push(1000));
+    const asg = hungarian(cost);
+    t.slots.forEach((s, i) => { s.pid = players[asg[i]] ? players[asg[i]].id : null; });
+  };
+  const pmap = Object.fromEntries(players.map(p => [p.id, p]));
+  const results = shortlist.map(pr => {
+    const t = newTactic(pr.ip, pr.oop); t.ment = exp.ment; t.name = `${pr.ip} (gerada)`;
+    // papéis iniciais: o melhor par para quem melhor serve cada posição
+    assign(t);
+    for (let pass = 0; pass < 2; pass++) {
+      t.slots.forEach((s, i) => {
+        const p = pmap[s.pid]; if (!p) return;
+        const a = slotInfo(t.ipForm, s.ipCode), b = slotInfo(t.oopForm, s.oopCode);
+        for (const phase of ['IP', 'OOP']) {
+          const key = phase === 'IP' ? 'ip' : 'oop', grp = phase === 'IP' ? a : b;
+          let best = s[key], bestV = -1;
+          for (const r of rolesFor(grp.group, phase, grp.wideCB)) { s[key] = r.id; const o = objective(t, pmap).v; if (o > bestV + 1e-9) { bestV = o; best = r.id; } }
+          s[key] = best;
+        }
+      });
+      assign(t);
+    }
+    const o = objective(t, pmap);
+    return { t, pair: pr, fitAvg: Math.round(o.fitAvg), balance: Math.round((o.au.scores.IP + o.au.scores.OOP) / 2), v: o.v };
+  }).sort((a, b) => b.v - a.v);
+
+  // ---------- 3. instruções de equipa com razão, para cada resultado
+  results.forEach(r => { const g = generateTIs(r.t, players, exp); r.t.ti = g.ti; r.reasons = g.reasons; r.t.ment = g.ment; r.mentWhy = g.mentWhy;
+    r.audit = auditTactic(r.t, players); r.total = Math.round(r.fitAvg * 0.6 + r.audit.overall * 0.4); });
+  results.sort((a, b) => b.total - a.total);
+  // alternativas com formação com bola diferente da recomendada
+  const main = results[0], alts = [], seen = new Set([main.t.ipForm]);
+  for (const r of results.slice(1)) { if (seen.has(r.t.ipForm)) continue; seen.add(r.t.ipForm); alts.push(r); if (alts.length === 3) break; }
+  return { main, alts, considered: quick.length, optimised: shortlist.length, expect: exp };
+}
+
+// ---------- instruções de equipa a partir do perfil do plantel ----------
+function generateTIs(t, players, exp) {
+  const pm = Object.fromEntries(players.map(p => [p.id, p]));
+  const xi = t.slots.map(s => ({ p: pm[s.pid], a: slotInfo(t.ipForm, s.ipCode), ip: ROLE_BY_ID[s.ip] })).filter(x => x.p);
+  const grp = (gs) => xi.filter(x => gs.includes(x.a.group)).map(x => x.p);
+  const top = [...players].sort((a, b) => (avgOf(b, Object.keys(ATTRS)) || 0) - (avgOf(a, Object.keys(ATTRS)) || 0)).slice(0, 18);
+  const sq = (ks) => avgPlayers(top.filter(p => !(p.pos || []).includes('GK') || (p.pos || []).length > 1), ks) ?? 10;
+  const v = (ps, ks) => avgPlayers(ps, ks);
+  const f1 = (x) => x == null ? '—' : x.toFixed(1);
+  const ti = {}, reasons = {};
+  const set = (k, val, why) => { const d = TI_BY_KEY[k]; if (val !== d.def) ti[k] = val; reasons[k] = why; };
+  const keep = (k, why) => { reasons[k] = why; };
+  const out = xi.filter(x => x.a.group !== 'GK').map(x => x.p);
+  const DC = grp(['DC']), FB = grp(['D_LR', 'WB_LR']), MID = grp(['DM', 'MC', 'AMC']), WIDE = grp(['M_LR', 'AM_LR']), ST = grp(['ST']), ATT = grp(['ST', 'AM_LR', 'AMC', 'M_LR']);
+  const GK = grp(['GK']);
+  const tech = v([...DC, ...MID, ...FB], ['pas', 'tec', 'fir', 'cmp']), phys = v(out, ['pac', 'acc', 'str']);
+  const press = v(out, ['wor', 'sta', 'acc', 'agg']), sqPress = sq(['wor', 'sta', 'acc', 'agg']);
+  const attPace = v(ATT, ['pac', 'acc']), sqPace = sq(['pac', 'acc']), cbPace = v(DC, ['pac', 'acc']);
+  const stAir = v(ST, ['hea', 'jum', 'str']), cbAir = v(DC, ['hea', 'jum', 'str']);
+  const buildQ = v([...GK, ...DC], ['pas', 'cmp', 'fir']);
+  const flair = v(ATT, ['fla', 'dec', 'vis']), dri = v(ATT, ['dri', 'agi']), lon = (() => { const l = out.map(p => p.a.lon ?? 0).sort((a, b) => b - a).slice(0, 3); return l.reduce((a, b) => a + b, 0) / Math.max(1, l.length); })();
+  const wideQ = v(WIDE.concat(FB), ['cro', 'dri', 'acc']), centreQ = v(MID, ['pas', 'vis', 'dec']);
+  const defT = v([...DC, ...FB, ...grp(['DM'])], ['tck', 'agg']);
+  const inside = xi.filter(x => ['M_LR', 'AM_LR'].includes(x.a.group) && x.ip && x.ip.tags.includes('IN')).length;
+  const wideW = xi.filter(x => ['M_LR', 'AM_LR'].includes(x.a.group) && x.ip && x.ip.tags.includes('W')).length;
+  const sideQ = (side) => v(xi.filter(x => x.a.side === side && x.a.group !== 'GK' && x.a.group !== 'DC').map(x => x.p), ['dri', 'cro', 'pas', 'acc', 'otb']);
+
+  // mentalidade
+  const ment = exp.ment, mentWhy = `${exp.n}: ${ment} dá iniciativa sem expor a equipa.` + (exp.press < 0 ? ' Contra equipas mais fortes, prudência primeiro.' : '');
+  // ---- com bola
+  if (tech != null && phys != null && tech - phys >= 1) set('passing', 1, `Os teus defesas e médios são mais técnicos (${f1(tech)}) do que físicos (${f1(phys)}): passe curto.`);
+  else if (phys != null && tech != null && phys - tech >= 1.2 && stAir >= 13) set('passing', 3, `Equipa mais física (${f1(phys)}) do que técnica (${f1(tech)}) e avançados fortes no ar: jogo mais directo.`);
+  else keep('passing', `Técnica (${f1(tech)}) e físico (${f1(phys)}) equilibrados.`);
+  const midDec = v(MID, ['dec', 'tec']);
+  if (midDec != null && midDec >= sq(['dec', 'tec']) + 1) set('tempo', 3, `O meio-campo decide e executa bem (${f1(midDec)}): podes acelerar.`);
+  else if (exp.press < 0) set('tempo', 1, 'Como underdog, ritmo mais baixo controla o jogo e poupa energia.');
+  else keep('tempo', 'Ritmo normal para o nível do meio-campo.');
+  if (wideQ != null && centreQ != null && wideQ - centreQ >= 1.2) set('width', 3, `Corredores mais fortes (${f1(wideQ)}) do que o meio (${f1(centreQ)}): abre o jogo.`);
+  else if (centreQ != null && wideQ != null && centreQ - wideQ >= 1.2) set('width', 1, `Meio-campo mais forte (${f1(centreQ)}) do que os corredores (${f1(wideQ)}): joga mais por dentro.`);
+  else keep('width', 'Corredores e meio-campo ao mesmo nível.');
+  if (flair != null && flair >= 14) set('creative', 2, `Atacantes criativos (Talento/Decisões/Visão ${f1(flair)}): mais liberdade.`);
+  else if (flair != null && flair <= 10.5) set('creative', 0, `Talento/Decisões baixos na frente (${f1(flair)}): mais disciplina.`);
+  else keep('creative', 'Criatividade média: equilíbrio.');
+  if ((attPace != null && attPace >= Math.max(14, sqPace + 1)) || exp.press < 0) set('att_trans', 2, attPace != null && attPace >= 14 ? `Atacantes rápidos (${f1(attPace)}): ataca a desorganização adversária.` : 'Como underdog, o contra-ataque é a melhor arma.');
+  else if (exp.press > 0 && tech != null && tech >= 13) set('att_trans', 0, 'Favorito e técnico: depois de recuperar, assume a posse.');
+  else keep('att_trans', 'Transição equilibrada.');
+  if (exp.press > 0) set('timewaste', 0, 'Favorito: queres ritmo, não queimar tempo.'); else keep('timewaste', 'Ajusta durante o jogo conforme o resultado.');
+  const air = xi.filter(x => x.a.group !== 'GK').map(x => SP.aerial(x.p)).sort((a, b) => b - a).slice(0, 4); const airTop = air.reduce((a, b) => a + b, 0) / Math.max(1, air.length);
+  if (airTop >= 14) set('set_pieces', 2, `Quatro jogadores fortes no ar (média ${f1(airTop)}): procura cantos e livres.`);
+  else if (airTop <= 11) set('set_pieces', 0, `Pouca presença aérea (${f1(airTop)}): mantém a bola em jogo.`);
+  else keep('set_pieces', 'Presença aérea média.');
+  const attOtb = v(ATT, ['otb']);
+  if (attPace != null && attPace >= 14 && attOtb >= 12.5) set('reception', 0, `Avançados rápidos e com bom movimento (${f1(attPace)} / ${f1(attOtb)}): passe para o espaço.`);
+  else if (v(ATT, ['fir', 'tec']) >= (attPace || 0) + 1.5) set('reception', 2, 'Avançados mais técnicos do que rápidos: passe ao pé.');
+  else keep('reception', 'Mistura de passe ao pé e para o espaço.');
+  if (buildQ != null && buildQ >= 13.5) set('buildup', 0, `GR e centrais bons com bola (${f1(buildQ)}): sai a jogar contra a pressão.`);
+  else if (buildQ != null && buildQ <= 10.5) set('buildup', 2, `GR e centrais fracos com bola (${f1(buildQ)}): salta a pressão.`);
+  else keep('buildup', `Qualidade de construção média (${f1(buildQ)}).`);
+  if (buildQ != null && buildQ >= 13.5) set('goal_kicks', 0, 'Construção curta a partir do GR.');
+  else if (buildQ != null && buildQ <= 10.5 && stAir >= 13.5) set('goal_kicks', 2, `Pontapés longos para o teu avançado forte no ar (${f1(stAir)}).`);
+  else keep('goal_kicks', 'Mistura curto e longo.');
+  if (ti.att_trans === 2) set('gk_speed', 2, 'Contra-ataque: o GR repõe rápido.'); else keep('gk_speed', 'Ritmo normal de reposição.');
+  if (ti.buildup === 2 && stAir >= 14) set('gk_target', 4, 'Bola longa para a referência aérea.');
+  else if (ti.buildup === 0 && v(FB, ['pas', 'fir']) >= 13) set('gk_target', 1, 'Laterais bons com bola: começa por eles.');
+  else keep('gk_target', 'Distribuição variada.');
+  if (inside >= 1 && wideW === 0) set('support_runs', 2, 'Os teus alas entram por dentro: os laterais sobrepõem por fora.');
+  else if (wideW >= 2) set('support_runs', 0, 'Alas abertos: os laterais apoiam por dentro.');
+  else keep('support_runs', 'Apoios mistos conforme o flanco.');
+  if (dri != null && dri >= 14) set('dribbling', 2, `Atacantes com Drible/Agilidade altos (${f1(dri)}).`);
+  else if (dri != null && dri <= 10) set('dribbling', 0, `Drible fraco na frente (${f1(dri)}): solta a bola.`);
+  else keep('dribbling', 'Drible na média.');
+  const L = sideQ('L'), R = sideQ('R');
+  if (L != null && R != null && Math.abs(L - R) >= 1.3) set('progress', L > R ? 0 : 3, `O teu flanco ${L > R ? 'esquerdo' : 'direito'} é mais forte (${f1(Math.max(L, R))} vs ${f1(Math.min(L, R))}).`);
+  else keep('progress', 'Flancos equilibrados.');
+  if (exp.press > 0 && tech != null && tech >= 13) set('patience', 2, 'Favorito e técnico: trabalha a bola até à área.');
+  else if (exp.press < 0) set('patience', 0, 'Como underdog, aproveita cada chegada.');
+  else keep('patience', 'Paciência normal.');
+  if (lon >= 14.5) set('long_shots', 2, `Há quem remate bem de longe (top 3: ${f1(lon)}).`); else if (lon <= 10) set('long_shots', 0, `Remates de longe fracos (${f1(lon)}).`); else keep('long_shots', 'Remates de longe na média.');
+  if (stAir >= 15) set('crossing', 3, `Avançados dominantes no ar (${f1(stAir)}): cruzamentos altos.`);
+  else if (stAir != null && stAir <= 11 && attPace >= 13) set('crossing', 0, `Avançados baixos mas rápidos: cruzamentos rasteiros.`);
+  else keep('crossing', 'Cruzamentos variados.');
+  // ---- sem bola
+  const pressRel = press != null ? press - sqPress : 0;
+  if (press != null && (press >= 13.5 || pressRel >= 1) && exp.press >= 0) set('loe', 2, `Índice de Trabalho/Resistência/Aceleração do XI ${f1(press)}: aguenta pressão alta.`);
+  else if ((press != null && press <= 10.5) || exp.press < 0) set('loe', 0, press != null && press <= 10.5 ? `Pouca capacidade de pressão (${f1(press)}): bloco baixo.` : 'Como underdog, bloco baixo e compacto.');
+  else keep('loe', 'Bloco médio.');
+  t.ti = ti; const cbRel = cbPace != null ? cbPace - sqPace : 0, loeV = tiVal(t, 'loe');
+  if (cbPace != null && (cbRel <= -1.5 || cbPace <= 10.5)) set('dline', Math.max(1, loeV * 2 - 1), `Centrais mais lentos do que o resto da equipa (${f1(cbPace)} vs ${f1(sqPace)}): linha mais baixa.`);
+  else if (cbPace != null && cbPace >= 13.5 && loeV === 2) set('dline', 3, `Centrais rápidos (${f1(cbPace)}) e pressão alta: linha subida.`);
+  else set('dline', [1, 2, 3][loeV], 'Linha alinhada com a altura da pressão.');
+  if (press != null && press >= 14) set('trigger', 3, `Muita energia no XI (${f1(press)}).`); else if (press != null && press <= 10.5) set('trigger', 1, `Pouca energia (${f1(press)}): pressiona menos.`); else keep('trigger', 'Pressão normal.');
+  if (press != null && press >= 13 && exp.press >= 0) set('def_trans', 2, 'Recupera a bola logo após a perda.');
+  else if (exp.press < 0 || (press != null && press <= 10.5)) set('def_trans', 0, 'Reagrupa primeiro: protege a organização.');
+  else keep('def_trans', 'Reacção equilibrada à perda.');
+  if (defT != null && defT >= 14) set('tackling', 2, `Defesas fortes no desarme (${f1(defT)}).`); else if (defT != null && defT <= 10.5) set('tackling', 0, `Desarme fraco (${f1(defT)}): evita faltas.`); else keep('tackling', 'Desarme normal.');
+  const fbAgg = v(FB, ['acc', 'tck', 'agg']), mdDef = v(grp(['DM', 'MC']), ['tck', 'pos', 'ant']);
+  if (fbAgg != null && mdDef != null && fbAgg - mdDef >= 1) set('press_trap', 2, `Laterais agressivos (${f1(fbAgg)}): força o jogo para fora.`);
+  else if (mdDef != null && fbAgg != null && mdDef - fbAgg >= 1) set('press_trap', 0, `Meio-campo forte a defender (${f1(mdDef)}): força o jogo para dentro.`);
+  else keep('press_trap', 'Sem armadilha específica.');
+  if (tiVal(t, 'loe') === 2) set('short_gk', 1, 'Pressão alta: não deixes o GR adversário sair curto.'); else keep('short_gk', 'Deixa o adversário sair curto.');
+  keep('dl_behaviour', 'Comportamento normal da linha.');
+  if (cbAir != null && cbAir >= 14) set('cross_eng', 0, `Centrais dominantes no ar (${f1(cbAir)}): deixa-os cruzar.`);
+  else if (cbAir != null && cbAir <= 11.5) set('cross_eng', 2, `Centrais fracos no ar (${f1(cbAir)}): impede os cruzamentos.`);
+  else keep('cross_eng', 'Cruzamentos adversários sem tratamento especial.');
+  return { ti, reasons, ment, mentWhy };
+}
+
+// ---------- profundidade e reforços ----------
+function depthChart(t, players, n = 3) {
+  return t.slots.map(s => ({ code: s.ipCode, list: players.map(p => ({ p, sc: slotScore(p, t, s) })).sort((a, b) => b.sc - a.sc).slice(0, n) }));
+}
+function weakSpots(t, players) {
+  const pm = Object.fromEntries(players.map(p => [p.id, p]));
+  return t.slots.map(s => {
+    const p = pm[s.pid], sc = p ? slotScore(p, t, s) : 0;
+    const alt = players.filter(q => q.id !== s.pid).map(q => slotScore(q, t, s)).sort((a, b) => b - a)[0] || 0;
+    const ri = ROLE_BY_ID[s.ip], lack = p ? ri.key.filter(k => p.a[k] != null).sort((a, b) => p.a[a] - p.a[b]).slice(0, 3) : [];
+    return { code: s.ipCode, role: ri, p, sc, alt, lack, urgent: sc < 55 || alt < 45 };
+  }).filter(x => x.urgent).sort((a, b) => a.sc - b.sc);
+}
+
+;
+// ---- core/lab.js
+// ============================================================
+// Laboratório: análise das experiências do FM Tactics Lab
+// (github.com/lqf0624/fm-tactics-lab, MIT). Formato lido do código
+// do servidor (fm27_tactics_server.py):
+//   job = { id, name, status, completed, total, mode: 'single'|'comparison',
+//           experiment_type?: 'save_opponents'|'setpiece_episode',
+//           schedule?: { variant: { group, tested_side, opponent, venue } },
+//           metrics: { variant|group: { n, wins, draws, losses, win_rate, win_interval, goals_for, goals_against, points } },
+//           runs: [ { variant, seed, result: { score: [casa, fora] },
+//                     statistics: { teams: [ { xg, shots, possession, passes, completed_passes, ... }, {...} ] } } ] }
+// No modo livre a equipa testada é a 0; 'A' = referência, 'B' = tática nova.
+// ============================================================
+
+const T95 = [0, 12.71, 4.30, 3.18, 2.78, 2.57, 2.45, 2.36, 2.31, 2.26, 2.23, 2.20, 2.18, 2.16, 2.14, 2.13, 2.12, 2.11, 2.10, 2.09, 2.09, 2.08, 2.07, 2.07, 2.06, 2.06, 2.06, 2.05, 2.05, 2.05, 2.04];
+const tcrit = (df) => df <= 0 ? NaN : df < T95.length ? T95[df] : 1.96 + 2.4 / df;
+function meanCI(xs) {
+  const n = xs.length; if (!n) return null;
+  const m = xs.reduce((a, b) => a + b, 0) / n;
+  if (n < 2) return { n, mean: m, sd: null, lo: null, hi: null };
+  const sd = Math.sqrt(xs.reduce((a, x) => a + (x - m) * (x - m), 0) / (n - 1));
+  const h = tcrit(n - 1) * sd / Math.sqrt(n);
+  return { n, mean: m, sd, lo: m - h, hi: m + h };
+}
+// Wilson para taxas (vitórias)
+function wilson(k, n) {
+  if (!n) return null; const z = 1.959963984540054, p = k / n, den = 1 + z * z / n;
+  const c = (p + z * z / (2 * n)) / den, h = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den;
+  return { p, lo: Math.max(0, c - h), hi: Math.min(1, c + h) };
+}
+
+// orienta cada jogo para a equipa testada: devolve {gf, ga, xg, xga, shots, shotsA, poss, pass}
+function orientRun(job, run) {
+  const sched = job.schedule && job.schedule[run.variant];
+  const side = sched && sched.tested_side != null ? sched.tested_side : 0;
+  const sc = (run.result && run.result.score) || [0, 0];
+  const st = (run.statistics && run.statistics.teams) || [];
+  const me = st[side] || {}, op = st[1 - side] || {};
+  const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+  return {
+    group: sched ? sched.group : run.variant, seed: run.seed, opponent: sched ? sched.opponent_key || sched.opponent : null, venue: sched ? sched.venue : null,
+    gf: sc[side], ga: sc[1 - side], xg: num(me.xg), xga: num(op.xg), shots: num(me.shots), shotsA: num(op.shots),
+    poss: num(me.possession), pass: me.passes ? (me.completed_passes || 0) / me.passes : null,
+  };
+}
+
+function summarize(rows) {
+  const n = rows.length; if (!n) return null;
+  const avg = (k) => { const v = rows.map(r => r[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const w = rows.filter(r => r.gf > r.ga).length, d = rows.filter(r => r.gf === r.ga).length;
+  return { n, w, d, l: n - w - d, win: wilson(w, n), pts: (3 * w + d) / n, gf: avg('gf'), ga: avg('ga'), xg: avg('xg'), xga: avg('xga'),
+    shots: avg('shots'), shotsA: avg('shotsA'), poss: avg('poss'), pass: avg('pass'),
+    gd: meanCI(rows.map(r => r.gf - r.ga)), xgd: rows.every(r => r.xg != null && r.xga != null) ? meanCI(rows.map(r => r.xg - r.xga)) : null };
+}
+
+// emparelha A e B pela mesma semente (e mesmo adversário/campo, no modo save)
+function pairedDiff(rows) {
+  const key = (r) => [r.seed, r.opponent || '', r.venue || ''].join('|');
+  const A = new Map(), B = new Map();
+  rows.forEach(r => { if (r.group === 'A') A.set(key(r), r); else if (r.group === 'B') B.set(key(r), r); });
+  const pairs = [...A.keys()].filter(k => B.has(k)).map(k => [A.get(k), B.get(k)]);
+  if (!pairs.length) return null;
+  const dGD = meanCI(pairs.map(([a, b]) => (b.gf - b.ga) - (a.gf - a.ga)));
+  const hasXG = pairs.every(([a, b]) => a.xg != null && b.xg != null && a.xga != null && b.xga != null);
+  const dXG = hasXG ? meanCI(pairs.map(([a, b]) => (b.xg - b.xga) - (a.xg - a.xga))) : null;
+  const dPts = meanCI(pairs.map(([a, b]) => ((b.gf > b.ga ? 3 : b.gf === b.ga ? 1 : 0) - (a.gf > a.ga ? 3 : a.gf === a.ga ? 1 : 0))));
+  // o xG tem muito menos ruído do que os golos: é a métrica principal do veredicto
+  const main = dXG || dGD, unit = dXG ? 'xG' : 'golos';
+  let verdict, tone;
+  if (!main || main.n < 6 || main.lo == null) { verdict = 'Poucos jogos para concluir. Corre pelo menos 30 por tática.'; tone = 'info'; }
+  else if (main.lo > 0) { verdict = `B é melhor do que A: +${main.mean.toFixed(2)} ${unit} de saldo por jogo (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`; tone = 'good'; }
+  else if (main.hi < 0) { verdict = `A é melhor do que B: ${main.mean.toFixed(2)} ${unit} de saldo por jogo com B (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`; tone = 'crit'; }
+  else { verdict = `Sem diferença clara (${main.mean >= 0 ? '+' : ''}${main.mean.toFixed(2)} ${unit}; 95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`; tone = 'warn'; }
+  // jogos necessários para separar uma diferença do tamanho observada (mín. 0,15) com 95%
+  let needN = null;
+  if (main && main.sd) { const target = Math.max(0.15, Math.abs(main.mean)); needN = Math.ceil(Math.pow(1.96 * main.sd / target, 2)); }
+  return { n: pairs.length, dGD, dXG, dPts, verdict, tone, needN, unit };
+}
+
+function analyzeJob(job) {
+  const runs = (job.runs || []).filter(r => r && r.result && Array.isArray(r.result.score));
+  const rows = runs.map(r => orientRun(job, r));
+  const groups = [...new Set(rows.map(r => r.group))].sort();
+  const per = Object.fromEntries(groups.map(g => [g, summarize(rows.filter(r => r.group === g))]));
+  const comparison = groups.includes('A') && groups.includes('B') ? pairedDiff(rows) : null;
+  // por adversário (modo save)
+  let byOpp = null;
+  if (job.schedule) {
+    const opps = [...new Set(rows.map(r => r.opponent).filter(Boolean))];
+    byOpp = opps.map(o => ({ key: o, name: (Object.values(job.schedule).find(s => (s.opponent_key || s.opponent) === o) || {}).opponent || o,
+      A: summarize(rows.filter(r => r.opponent === o && r.group === 'A')), B: summarize(rows.filter(r => r.opponent === o && r.group === 'B')) }));
+  }
+  const names = job.variant_names || {};
+  return { id: job.id, name: job.name || job.id, status: job.status, completed: job.completed, total: job.total, mode: job.mode, type: job.experiment_type || 'free', per, comparison, byOpp, names, rows };
+}
+
+// pacote de exportação (/api/jobs/{id}/export) ou o próprio job
+function jobFromAny(d) {
+  if (!d || typeof d !== 'object') return null;
+  if (d.summary && Array.isArray(d.summary.runs)) return Object.assign({}, d.summary, { _scenarios: d.scenarios || null });
+  if (Array.isArray(d.runs) && (d.metrics || d.status)) return d;
+  return null;
+}
+
 ;
 // ---- core/sim_model.js
 // ============================================================
@@ -1792,7 +2269,7 @@ const SIM_TI = new Set(['buildup','goal_kicks','passing','tempo','width','suppor
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '3.1.0';
+const VERSION = '4.0.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -1808,12 +2285,12 @@ const ST = {
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
   saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
   auto: { on: true, dir: '', mtime: 0, last: '', save: true, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '' },   // carregamento automático (app instalada)
-  lastSave: null,
+  lastSave: null, gen: null, lab: null,
 };
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null })); } catch (e) {}
 }
 
 function load() {
@@ -1828,6 +2305,8 @@ function load() {
     if (d.myClub) ST.myClub = d.myClub;
     if (d.auto) ST.auto = Object.assign(ST.auto, d.auto);
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
+    if (d.gen) ST.gen = d.gen;
+    if (d.lab) ST.lab = { port: d.lab.port || 8765, more: d.lab.more || 100, status: null, jobs: [], job: null, err: '', busy: false };
     [ST.tactic, ...ST.saved].forEach(t => { if (t && t.ti && t.ti.loe > 2) t.ti.loe = 2; if (t && t.ti && t.ti.short_gk > 1) t.ti.short_gk = 1; });
   } catch (e) {}
 }
@@ -2138,7 +2617,7 @@ function vHome() {
     ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${ps.length} jogadores</b>${ST.myClub ? ' do ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Definições.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
       ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : (DESKTOP ? `<button class="btn primary" onclick="A.saveNow()">Ler o save agora</button>` : `<button class="btn primary" onclick="A.tab('team','squad')">Como carregar</button>`) + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
     ${step(2, true, 'Tática', `<div class="score-ring" style="gap:12px">${ring(au.overall, 64)}<div><b>${esc(t.name)}</b><br><span class="muted">${esc(t.ipForm)} → ${esc(t.oopForm)} · ${esc(t.ment)}</span></div></div>`,
-      `<button class="btn primary" onclick="A.tab('tactic','analyze')">Analisar</button><button class="btn" onclick="A.simOpen()">▶ Ver em campo</button><button class="btn" onclick="A.tab('tactic','sheet')">Ficha FM27</button>`)}
+      (ps.length >= 11 ? `<button class="btn primary" onclick="A.tab('team','gen')">Gerar tática para o plantel</button>` : '') + `<button class="btn ${ps.length >= 11 ? '' : 'primary'}" onclick="A.tab('tactic','analyze')">Analisar</button><button class="btn" onclick="A.simOpen()">▶ Ver em campo</button>`)}
     ${step(3, op.length > 0, 'Adversário', op.length ? `<b>${esc(ST._oppRep && ST._oppRep.club || ST.opp.source)}</b> carregado` : 'No FM27, abra o plantel do adversário e carregue <b>F9</b>. A app reconhece que é outro clube.',
       `<button class="btn ${op.length ? '' : 'primary'}" onclick="A.tab('team','opp')">${op.length ? 'Ver relatório' : 'Como carregar'}</button>`)}
   </div>
@@ -2271,6 +2750,60 @@ function vOpp() {
     </div>
   </div>
   <div class="panel" style="margin-top:16px"><h3>Onze provável</h3><p class="small">${rep.them.map(x => `<span class="chip"><b>${esc(x.code)}</b> ${esc(x.p.name)}</span>`).join('')}</p></div>`;
+}
+
+;
+// ---- ui/views_gen.js
+// ============================================================
+// Gerador de tática — relatório na ordem dos ecrãs do FM27
+// ============================================================
+function genOpts() { if (!ST.gen) ST.gen = { expect: 'mid', must: [], star: '', youth: [], res: null, pick: 0 }; return ST.gen; }
+function vGen() {
+  const ps = players(), g = genOpts();
+  if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>O gerador monta uma tática completa à volta do teu plantel: formas com e sem bola, XI com papel para cada fase, as instruções todas com o porquê, bolas paradas, profundidade, reforços e alternativas.</p>
+    <button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('team','gen')">Usar exemplo</button></div>`;
+  const byName = [...ps].sort((a, b) => a.name.localeCompare(b.name));
+  const young = byName.filter(p => p.age != null && p.age <= 21);
+  const opts = `<div class="panel grid"><h3>O teu contexto</h3>
+    <label class="f">Objectivo na liga${selectHTML(Object.entries(EXPECT).map(([k, e]) => [k, e.n]), g.expect, "A.genOpt('expect',this.value)")}</label>
+    <label class="f">Jogador-estrela (constrói à volta dele)${selectHTML([['', '— nenhum —']].concat(byName.map(p => [p.id, p.name + (p.posRaw ? ' · ' + p.posRaw : '')])), g.star, "A.genOpt('star',this.value)")}</label>
+    <div class="f"><span>Titulares obrigatórios</span><div class="chips">${byName.map(p => `<button class="chip pick ${g.must.includes(p.id) ? 'on' : ''}" onclick="A.genToggle('must','${esc(p.id)}')">${esc(p.name)}</button>`).join('')}</div></div>
+    ${young.length ? `<div class="f"><span>Jovens a desenvolver (≤ 21) — ganham prioridade no XI</span><div class="chips">${young.map(p => `<button class="chip pick ${g.youth.includes(p.id) ? 'on' : ''}" onclick="A.genToggle('youth','${esc(p.id)}')">${esc(p.name)} <span class="muted">${p.age}</span></button>`).join('')}</div></div>` : ''}
+    <button class="btn primary" onclick="A.genRun()">${g.res ? 'Gerar de novo' : 'Gerar tática'}</button>
+    <p class="small muted" style="margin:0">Testa todos os pares de formações, escolhe o papel de cada posição com regras de equilíbrio (rest-defence, largura, área, criadores, outlets) e o XI exacto pelo algoritmo húngaro.</p></div>`;
+  if (!g.res) return `<div class="top"><div><h2>Gerar tática</h2><p class="muted small" style="margin:0">Uma tática completa feita à volta do teu plantel, pronta a copiar para o FM27.</p></div></div><div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">${opts}<div class="panel empty">Escolha o contexto e carregue em <b>Gerar tática</b>.</div></div>`;
+  const all = [g.res.main, ...g.res.alts], r = all[g.pick] || all[0], t = r.t;
+  const pm = Object.fromEntries(ps.map(p => [p.id, p]));
+  const sp = setPiecePlan(t, ps, oppPlayers()), tp = trainingPlan(t, ps, r.audit), dc = depthChart(t, ps), weak = weakSpots(t, ps);
+  const pis = t.slots.map(s => { const a = slotInfo(t.ipForm, s.ipCode); const rec = recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], a.group).slice(0, 2); return { s, p: pm[s.pid], rec }; }).filter(x => x.rec.length);
+  const sec = (n, title, body) => `<div class="panel"><h3><span class="secn">${n}</span>${title}</h3>${body}</div>`;
+  return `<div class="top"><div><h2>Gerar tática</h2><p class="muted small" style="margin:0">${g.res.considered} pares de formações avaliados, ${g.res.optimised} optimizados a fundo.</p></div>
+    <div class="row"><button class="btn primary" onclick="A.genUse()">Usar esta tática</button><button class="btn" onclick="A.genUse(true)">▶ Ver em campo</button><button class="btn" onclick="A.genCopy()">Copiar como texto</button></div></div>
+  <div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">
+    <div class="grid">${opts}
+      <div class="panel"><h3>Opções geradas</h3>${all.map((x, i) => `<button class="genopt ${i === g.pick ? 'on' : ''}" onclick="A.genPick(${i})"><b>${i === 0 ? 'Recomendada' : 'Alternativa ' + i}</b><span>${esc(x.t.ipForm)} → ${esc(x.t.oopForm)}</span><span class="small muted">adequação ${x.fitAvg} · equilíbrio ${x.balance} · diagnóstico ${x.audit.overall}</span>${ring(x.total, 46)}</button>`).join('')}</div>
+    </div>
+    <div class="grid">
+      ${sec(1, 'Estilo e mentalidade', `<p><b>Style:</b> Clean Slate · <b>Mentality:</b> ${esc(t.ment)}</p><p class="small muted">${esc(r.mentWhy)}</p>`)}
+      ${sec(2, 'Formas e XI', `<div class="grid g2"><div><p class="small"><b>Com bola:</b> ${esc(t.ipForm)}</p>${pitchSVG(t, 'IP', null, { static: true })}</div><div><p class="small"><b>Sem bola:</b> ${esc(t.oopForm)}</p>${pitchSVG(t, 'OOP', null, { static: true })}</div></div>
+        <div class="table-wrap" style="margin-top:10px;max-height:none"><table><thead><tr><th>Pos</th><th>Jogador</th><th>In Possession</th><th>Out of Possession</th><th>Adequação</th></tr></thead><tbody>
+        ${t.slots.map(s => { const p = pm[s.pid]; return `<tr><td><b>${esc(s.ipCode)}</b>${s.oopCode !== s.ipCode ? ` <span class="muted small">→ ${esc(s.oopCode)}</span>` : ''}</td><td>${p ? esc(p.name) : '—'}${p && g.youth.includes(p.id) ? ' <span class="chip new">jovem</span>' : ''}${p && g.star === p.id ? ' <span class="chip new">estrela</span>' : ''}</td><td>${esc(ROLE_BY_ID[s.ip].name)}</td><td>${esc(ROLE_BY_ID[s.oop].name)}</td><td>${fitBadge(p ? slotScore(p, t, s) : null)}</td></tr>`; }).join('')}
+        </tbody></table></div>`)}
+      ${sec(3, 'Instruções de equipa', FM_SECTIONS.map(([n, keys]) => `<h4 style="margin:10px 0 4px">${esc(n)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k], v = tiVal(t, k), ch = v !== d.def;
+          return `<tr class="${ch ? '' : 'dim'}"><td style="width:34%">${esc(d.n)}</td><td style="width:22%">${ch ? `<b>${esc(d.opts[v])}</b>` : esc(d.opts[v])}</td><td class="small muted">${esc(r.reasons[k] || '')}</td></tr>`; }).join('')}</tbody></table>`).join(''))}
+      ${sec(4, 'Instruções individuais', pis.length ? `<table><tbody>${pis.map(x => `<tr><td><b>${esc(x.s.ipCode)}</b> ${esc(x.p.name)}</td><td>${x.rec.map(r2 => `<span class="chip" title="${esc(r2.why)}">${esc(r2.pi)}</span>`).join('')}</td><td class="small muted">${esc(x.rec[0].why)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">Nenhum atributo pede instruções individuais.</p>')}
+      ${sp ? sec(5, 'Bolas paradas e capitães', `<div class="grid g2"><table><tbody>
+          <tr><td>Capitão</td><td><b>${esc(sp.caps[0].p.name)}</b></td></tr><tr><td>Vice-capitão</td><td><b>${esc(sp.caps[1].p.name)}</b></td></tr>
+          <tr><td>Cantos (dir./esq.)</td><td><b>${esc(sp.corners.right.x.p.name)}</b> / <b>${esc(sp.corners.left.x.p.name)}</b></td></tr>
+          <tr><td>Livres</td><td><b>${esc((sp.fk.direct || sp.fk.cross).p.name)}</b>${sp.fk.direct ? ' (directos)' : ' (cruzar)'}</td></tr>
+          <tr><td>Penáltis</td><td>${sp.pens.map(x => esc(x.p.name)).join(' → ')}</td></tr></tbody></table>
+          <table><tbody>${sp.attack.filter(x => ['far', 'centre', 'near'].includes(x.k)).map(x => `<tr><td>Alvo aéreo — ${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td></tr>`).join('')}</tbody></table></div>
+          <button class="btn sm" onclick="A.genUse(false,'setpieces')">Ver diagramas dos cantos</button>`) : ''}
+      ${sec(6, 'Profundidade por posição', `<div class="depth">${dc.map(d => `<div><b>${esc(d.code)}</b>${d.list.map((x, i) => `<div class="small">${i + 1}. ${esc(x.p.name)} ${fitBadge(x.sc)}</div>`).join('')}</div>`).join('')}</div>`)}
+      ${sec(7, 'Onde reforçar', weak.length ? `<table><tbody>${weak.map(w => `<tr><td><b>${esc(w.code)}</b> · ${esc(w.role.name)}</td><td>titular ${fitBadge(w.sc)} · alternativa ${fitBadge(w.alt)}</td><td class="small muted">${w.lack.length ? 'procurar: ' + w.lack.map(attrName).join(', ') : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="small">Todas as posições têm titular ≥ 55 e alternativa ≥ 45. 👍</p>')}
+      ${sec(8, 'Treino', `<ol class="clean small">${tp.areas.slice(0, 4).map(a => `<li><b>${esc(TRAINING.areas[a.k].n)}</b> — ${esc([...new Set(a.why)][0])}</li>`).join('')}</ol><button class="btn sm" onclick="A.genUse(false,'training')">Plano de treino completo</button>`)}
+    </div>
+  </div>`;
 }
 
 ;
@@ -2432,6 +2965,13 @@ function vSheet() {
       <p class="small muted">${changed} instrução(ões) fora do default, a <b>negrito</b>. As restantes ficam como estão.</p>
       ${FM_SECTIONS.map(([sec, keys]) => `<h4 style="margin-top:12px">${esc(sec)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k]; const v = tiVal(t, k), ch = v !== d.def;
         return `<tr class="${ch ? '' : 'muted'}"><td>${ch ? ck : ''}</td><td>${esc(d.n)}</td><td>${ch ? `<b>${esc(d.opts[v])}</b>` : esc(d.opts[v])}</td></tr>`; }).join('')}</tbody></table>`).join('')}
+      ${(() => { const r = players().length >= 11 ? setPiecePlan(t, players(), oppPlayers()) : null; if (!r) return '';
+        const li = (l, x) => `<tr><td>${ck}</td><td>${esc(l)}</td><td>${x ? `<b>${esc(x.p.name)}</b>` : '—'}</td></tr>`;
+        return `<h4 style="margin-top:12px">Set Pieces &amp; Captains</h4><table><tbody>
+          ${li('Captain', r.caps[0])}${li('Vice Captain', r.caps[1])}${li('Corners (right)', r.corners.right.x)}${li('Corners (left)', r.corners.left.x)}
+          ${li('Free Kicks (direct)', r.fk.direct)}${li('Free Kicks (crossed)', r.fk.cross)}${r.pens.map((x, i) => li('Penalty ' + (i + 1), x)).join('')}${r.longThrow ? li('Long Throws', r.longThrow) : ''}
+          ${r.attack.filter(x => x.k !== 'taker').map(x => li('Canto ofensivo — ' + x.n, x.x)).join('')}
+          ${r.defend.map(x => li('Canto defensivo — ' + x.n, x.x)).join('')}</tbody></table>`; })()}
       ${t.ois ? `<p class="small" style="margin-top:12px">${ck} Opposition Instructions: ${t.ois} activa(s) — defina-as antes de cada jogo.</p>` : ''}
     </div>
   </div>`;
@@ -2445,6 +2985,63 @@ function sheetText(t) {
   return L.join('\n');
 }
 
+
+;
+// ---- ui/views_setpieces.js
+// ============================================================
+// Bolas paradas & capitães
+// ============================================================
+// Coordenadas da área vista de cima: x 0–68 (largura do campo), y 0 = linha de fundo
+const SP_POS = {
+  attack: { taker: [2, 1.5], near: [26, 4.5], centre: [34, 6.5], far: [43, 5], spot: [34, 13.5], edge: [34, 21.5], short: [9, 9], back0: [20, 35], back1: [48, 35], back2: [34, 37.5] },
+  defend: { zn: [26.5, 3.2], zc: [34, 7], zf: [41.5, 3.2], m0: [27.5, 12], m1: [40.5, 12], m2: [34, 16], m3: [21, 14], de: [34, 23], o0: [25, 36], o1: [43, 36] },
+};
+function spPitch(rows, layout, title, gk) {
+  const P = SP_POS[layout];
+  const dots = rows.map(r => { const xy = P[r.k]; if (!xy) return ''; const [x, y] = xy; const col = r.k.startsWith('back') || r.k.startsWith('o') ? '#2d5f8f' : r.k === 'taker' ? '#b7791f' : '#0b5d3a';
+    return `<g transform="translate(${x},${y})"><circle r="1.9" fill="${col}" stroke="#fff" stroke-width=".3"/><text y=".6" text-anchor="middle" font-size="1.5" font-weight="700" fill="#fff">${esc(r.x.code.replace(/[LR]$/, '').slice(0, 3))}</text>
+      <text y="3.7" text-anchor="middle" font-size="1.55" fill="#fff" stroke="rgba(0,0,0,.6)" stroke-width=".3" paint-order="stroke">${esc(shortName(r.x.p).slice(0, 11))}</text></g>`; }).join('');
+  return `<figure class="sp-fig"><svg viewBox="0 -1 68 42" class="sp-svg" role="img" aria-label="${esc(title)}">
+    <rect x="0" y="-1" width="68" height="43" fill="var(--pitch)"/>
+    <g fill="none" stroke="var(--pitchline)" stroke-width=".3"><line x1="0" y1="0" x2="68" y2="0"/><rect x="13.85" y="0" width="40.3" height="16.5"/><rect x="24.85" y="0" width="18.3" height="5.5"/>
+      <path d="M 26.7 16.5 A 9.15 9.15 0 0 0 41.3 16.5"/><circle cx="34" cy="11" r=".3" fill="var(--pitchline)"/><path d="M0,1 A1,1 0 0 0 1,0"/></g>
+    <rect x="30.34" y="-1" width="7.32" height="1" fill="rgba(255,255,255,.85)"/>
+    ${gk ? `<g transform="translate(34,1.2)"><circle r="1.6" fill="#3c3f46" stroke="#fff" stroke-width=".3"/><text y=".55" text-anchor="middle" font-size="1.3" font-weight="700" fill="#fff">GK</text></g>` : ''}
+    ${dots}</svg><figcaption class="small muted">${esc(title)}</figcaption></figure>`;
+}
+function vSetPieces() {
+  const ps = players();
+  if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div>`;
+  const r = setPiecePlan(ST.tactic, ps, oppPlayers()); ST._sp = r;
+  if (!r) return '<div class="panel empty">Não consegui montar o XI.</div>';
+  const row = (label, x, extra) => `<tr><td>${esc(label)}</td><td>${x ? `<b>${esc(x.p.name)}</b> <span class="muted small">${esc(x.code)}</span>` : '—'}</td><td class="small muted">${extra || ''}</td></tr>`;
+  const a = (x, ks) => ks.map(k => `${attrName(k)} ${Math.round(x.p.a[k] ?? 0)}`).join(' · ');
+  return `<div class="top"><div><h2>Bolas paradas & capitães</h2><p class="muted small" style="margin:0">Escolhidos entre o XI de “${esc(ST.tactic.name)}”.${oppPlayers().length ? ' Marcações individuais contra os mais fortes no ar do adversário carregado.' : ' Carregue o adversário para marcações individuais nominais.'}</p></div>
+    <div class="row"><button class="btn" onclick="A.tab('tactic','sheet')">Ver na Ficha para o FM27</button></div></div>
+  <div class="grid g2">
+    <div class="panel"><h3>Marcadores</h3><table><tbody>
+      ${row('Cantos do lado direito', r.corners.right.x, r.corners.right.swing ? 'curva ' + r.corners.right.swing : a(r.corners.right.x, ['cor', 'cro']))}
+      ${row('Cantos do lado esquerdo', r.corners.left.x, r.corners.left.swing ? 'curva ' + r.corners.left.swing : a(r.corners.left.x, ['cor', 'cro']))}
+      ${row('Livres directos', r.fk.direct, r.fk.direct ? a(r.fk.direct, ['fre', 'tec', 'lon']) : 'ninguém com Livres ≥ 14 — cruzar')}
+      ${row('Livres para cruzar', r.fk.cross, a(r.fk.cross, ['fre', 'cro']))}
+      ${r.pens.map((x, i) => row(`Penáltis — ${i + 1}.º`, x, a(x, ['pen', 'cmp']))).join('')}
+      ${row('Lançamentos longos', r.longThrow, r.longThrow ? a(r.longThrow, ['lth']) : 'ninguém com Lançamentos Longos ≥ 14')}
+      ${row('Capitão', r.caps[0], r.caps[0] ? a(r.caps[0], ['ldr', 'det']) : '')}
+      ${row('Vice-capitão', r.caps[1], r.caps[1] ? a(r.caps[1], ['ldr', 'det']) : '')}
+    </tbody></table>
+    <p class="small muted">Sem dados do pé preferido o efeito do canto não é indicado. Exportações com a coluna do pé (FM View Exporter, fmsave) mostram-no.</p></div>
+    <div class="panel"><h3>Ideias para os cantos e livres</h3>
+      ${r.tips.map((tp, i) => { const d = tp.ti && TI_BY_KEY[tp.ti], on = d && tiVal(ST.tactic, tp.ti) === tp.v;
+        return `<div class="finding"><div class="sev ${on ? 'good' : 'info'}">${on ? '✓' : i + 1}</div><div><span class="small">${esc(tp.t)}</span>${d && !on ? `<div><button class="btn sm" style="margin-top:4px" onclick="A.applySpTip(${i})">${esc(d.n)} → ${esc(d.opts[tp.v])}</button></div>` : ''}</div></div>`; }).join('') || '<p class="muted small">Nada a destacar.</p>'}
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="panel"><h3>Canto ofensivo</h3>${spPitch(r.attack, 'attack', 'Canto do lado esquerdo; do outro lado é o espelho.', false)}
+      <table><tbody>${r.attack.map(x => `<tr><td>${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td><td class="small muted">${esc(x.w)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="panel"><h3>Canto defensivo — ${esc(r.system)}</h3>${spPitch(r.defend, 'defend', 'Posições sem bola no canto contra.', true)}
+      <table><tbody>${r.defend.map(x => `<tr><td>${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td><td class="small muted">${esc(x.w)}</td></tr>`).join('')}</tbody></table></div>
+  </div>`;
+}
 
 ;
 // ---- ui/views_training.js
@@ -2581,6 +3178,88 @@ function vSettings() {
 }
 
 ;
+// ---- ui/views_lab.js
+// ============================================================
+// Laboratório — ligação ao FM Tactics Lab (motor original do FM27)
+// ============================================================
+function labState() { if (!ST.lab) ST.lab = { port: 8765, status: null, jobs: [], job: null, err: '', busy: false }; return ST.lab; }
+async function labCall(method, path, body, timeoutMs) {
+  const L = labState();
+  const r = await window.__TAURI__.core.invoke('lab_request', { port: L.port, method, path, body: body == null ? null : JSON.stringify(body), timeoutMs: timeoutMs || 4000 });
+  let data = r.body; try { data = JSON.parse(r.body); } catch (e) {}
+  if (r.status >= 400 || r.status === 0) throw new Error((data && data.error) || ('HTTP ' + r.status));
+  return data;
+}
+let LAB_POLL = 0;
+function labPoll() {
+  clearTimeout(LAB_POLL); const L = labState();
+  if (!L.job || !['queued', 'running'].includes(L.job.status) || ST.view !== 'lab') return;
+  LAB_POLL = setTimeout(async () => { try { L.job = await labCall('GET', '/api/jobs/' + L.job.id);
+    const it = L.jobs.find(j => j.id === L.job.id); if (it) Object.assign(it, { status: L.job.status, completed: L.job.completed, total: L.job.total });
+    if (!['queued', 'running'].includes(L.job.status)) toast('Experiência concluída no motor do FM27');
+    render(); labPoll(); } catch (e) { L.err = e.message; render(); } }, 3000);
+}
+const pct = (x) => x == null ? '—' : (x * 100).toFixed(0) + '%';
+const f2 = (x) => x == null ? '—' : x.toFixed(2);
+function ciBar(ci, unit) {
+  if (!ci || ci.lo == null) return '<span class="muted small">—</span>';
+  const span = Math.max(1, Math.abs(ci.lo), Math.abs(ci.hi)), X = (v) => 50 + v / span * 46;
+  const col = ci.lo > 0 ? 'var(--good)' : ci.hi < 0 ? 'var(--crit)' : 'var(--warn)';
+  return `<div class="cibar" title="95%: ${f2(ci.lo)} a ${f2(ci.hi)} ${unit}"><i class="zero"></i><b style="left:${X(ci.lo)}%;width:${X(ci.hi) - X(ci.lo)}%;background:${col}"></b><em style="left:${X(ci.mean)}%"></em></div>
+    <div class="small"><b>${ci.mean >= 0 ? '+' : ''}${f2(ci.mean)}</b> ${unit} <span class="muted">(95%: ${f2(ci.lo)} a ${f2(ci.hi)})</span></div>`;
+}
+function variantCard(label, s, name) {
+  if (!s) return '';
+  return `<div class="panel lab-var"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${label === 'A' ? 'A · referência' : label === 'B' ? 'B · nova' : esc(label)}</h3><span class="muted small">${esc(name || '')}</span></div>
+    <div class="kpis">
+      <div><span>Jogos</span><b>${s.n}</b></div><div><span>V-E-D</span><b>${s.w}-${s.d}-${s.l}</b></div>
+      <div><span>Vitórias</span><b>${pct(s.win && s.win.p)}</b><em>${s.win ? pct(s.win.lo) + '–' + pct(s.win.hi) : ''}</em></div>
+      <div><span>Pontos/jogo</span><b>${f2(s.pts)}</b></div>
+      <div><span>Golos</span><b>${f2(s.gf)} : ${f2(s.ga)}</b></div><div><span>xG</span><b>${f2(s.xg)} : ${f2(s.xga)}</b></div>
+      <div><span>Remates</span><b>${s.shots == null ? '—' : s.shots.toFixed(1)} : ${s.shotsA == null ? '—' : s.shotsA.toFixed(1)}</b></div><div><span>Posse</span><b>${s.poss == null ? '—' : s.poss.toFixed(0) + '%'}</b></div>
+    </div></div>`;
+}
+function vLabResults(job) {
+  const a = analyzeJob(job), L = labState(), running = ['queued', 'running'].includes(job.status);
+  const groups = Object.keys(a.per);
+  const free = !job.experiment_type || job.experiment_type === 'free';
+  return `<div class="panel"><div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div><h2 style="margin:0">${esc(a.name)}</h2><p class="small muted" style="margin:.2em 0 0">${a.type === 'save_opponents' ? 'Contra adversários reais do save' : a.mode === 'comparison' ? 'Comparação A/B com as mesmas sementes' : 'Tática única'} · ${a.completed || 0}/${a.total || a.rows.length} jogos · estado: ${esc(job.status || 'importado')}</p></div>
+      <div class="row">${DESKTOP && L.status ? `${running ? `<button class="btn" onclick="A.labCancel('${esc(job.id)}')">Cancelar</button>` : ''}
+        ${free && !running && job.id ? `${selectHTML([[50, '+50 jogos'], [100, '+100 jogos'], [200, '+200 jogos']], L.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
+        ${job.id ? groups.filter(g => g === 'A' || g === 'B').map(g => `<button class="btn" onclick="A.labFmf('${esc(job.id)}','${g}')">.fmf ${g}</button>`).join('') : ''}` : ''}</div></div>
+    ${running ? `<div class="progress"><i style="width:${(job.completed || 0) / Math.max(1, job.total || 1) * 100}%"></i></div><p class="small muted">A correr no motor do FM27… ${job.matches_per_minute ? job.matches_per_minute + ' jogos/min' : ''}${job.eta_seconds ? ' · faltam ~' + Math.ceil(job.eta_seconds / 60) + ' min' : ''}</p>` : ''}
+  </div>
+  ${a.comparison ? `<div class="panel verdict ${a.comparison.tone}"><h3 style="margin:0 0 6px">Veredicto (${a.comparison.n} pares de jogos com a mesma semente)</h3><p style="margin:0 0 10px">${esc(a.comparison.verdict)}</p>
+      <div class="grid g3"><div><span class="small muted">Saldo de xG por jogo (B − A)</span>${ciBar(a.comparison.dXG, 'xG')}</div><div><span class="small muted">Saldo de golos por jogo (B − A)</span>${ciBar(a.comparison.dGD, 'golos')}</div><div><span class="small muted">Pontos por jogo (B − A)</span>${ciBar(a.comparison.dPts, 'pts')}</div></div>
+      ${a.comparison.needN && a.comparison.tone === 'warn' ? `<p class="small" style="margin:10px 0 0">Para separar uma diferença deste tamanho são precisos ~<b>${a.comparison.needN}</b> pares de jogos${a.comparison.needN > a.comparison.n ? ` (faltam ${a.comparison.needN - a.comparison.n})` : ''}.</p>` : ''}</div>` : ''}
+  <div class="grid g2 lab-vars">${groups.map(g => variantCard(g, a.per[g], (a.names && a.names[g]) || '')).join('')}</div>
+  ${a.byOpp && a.byOpp.length ? `<div class="panel"><h3>Por adversário</h3><div class="table-wrap" style="max-height:none"><table><thead><tr><th>Adversário</th>${groups.map(g => `<th>${g}: pts/jogo</th><th>${g}: xG saldo</th>`).join('')}</tr></thead><tbody>
+      ${a.byOpp.map(o => `<tr><td>${esc(o.name)}</td>${groups.map(g => `<td>${o[g] ? f2(o[g].pts) : '—'}</td><td>${o[g] && o[g].xgd ? f2(o[g].xgd.mean) : '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>` : ''}`;
+}
+function vLab() {
+  const L = labState();
+  const howto = `<ol class="clean small"><li>Abra o <b>FM27 Tactics Lab</b> (o Steam tem de estar aberto com a conta do FM27).</li><li>Lá, carregue o save ou monte as equipas, defina a tática <b>A</b> (referência) e <b>B</b> (alteração) e corra 30–100 jogos com “comparar”.</li><li>Aqui aparecem os resultados com intervalo de confiança e veredicto; pode correr mais jogos ou exportar o .fmf da vencedora.</li></ol>`;
+  const left = DESKTOP ? `<div class="panel grid">
+      <h3>Ligação</h3>
+      <div class="row"><span class="dot ${L.status ? 'ok' : ''}"></span><b>${L.status ? 'Ligado ao Tactics Lab' : 'Desligado'}</b>${L.status ? `<span class="small muted">motor ${esc(L.status.engine || '')} · ${L.status.roles || '?'} papéis</span>` : ''}</div>
+      ${L.err ? `<div class="notice warn small">${esc(L.err)}</div>` : ''}
+      <div class="row"><label class="f" style="flex:1">Porta<input type="number" value="${L.port}" min="1024" max="65535" onchange="A.labSet('port',+this.value)"></label><button class="btn primary" onclick="A.labConnect()" ${L.busy ? 'disabled' : ''}>${L.busy ? 'A procurar…' : L.status ? 'Actualizar' : 'Ligar'}</button></div>
+      ${L.status ? `<button class="btn sm" onclick="A.labCatalog()">Exportar catálogo do motor (diagnóstico)</button>` : ''}
+    </div>
+    <div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Experiências</h3>${L.status ? '<button class="btn sm" onclick="A.labJobs()">↻</button>' : ''}</div>
+      ${L.jobs.length ? L.jobs.map(j => { const st = { complete: 'concluída', running: 'a correr', queued: 'em fila', error: 'erro', cancelled: 'cancelada' }[j.status] || j.status;
+        return `<button class="jobitem ${L.job && L.job.id === j.id ? 'on' : ''}" onclick="A.labOpen('${esc(j.id)}')"><b>${esc(j.name || j.id)}</b><span class="st ${esc(j.status)}">${esc(st)}</span><span class="small">${j.completed || 0}/${j.total || 0} jogos</span><div class="small muted">${j.created ? new Date(j.created * 1000).toLocaleString('pt-PT') : ''}</div></button>`; }).join('') : `<p class="small muted">${L.status ? 'Ainda não há experiências no Tactics Lab.' : 'Ligue-se para ver as experiências.'}</p>`}
+    </div>` : `<div class="panel"><h3>Ligação directa</h3><p class="small">Na <b>app instalada</b> (Windows) a app liga-se ao Tactics Lab, lista as experiências, corre mais jogos e exporta .fmf. No browser, importe o JSON exportado de uma experiência.</p></div>`;
+  return `<div class="top"><div><h2>Laboratório — motor do FM27</h2><p class="muted small" style="margin:0">Testa táticas com o motor de jogo original através do <a href="https://github.com/lqf0624/fm-tactics-lab" target="_blank" rel="noopener">FM Tactics Lab</a> (MIT) e decide com estatística, não com palpites.</p></div>
+    <label class="btn">Importar experiência (.json)<input type="file" accept=".json" hidden onchange="A.labImport(this)"></label></div>
+  <div class="grid" style="grid-template-columns:minmax(280px,340px) 1fr;gap:16px;align-items:start">
+    <div class="grid">${left}<div class="panel"><h3>Como usar</h3>${howto}</div></div>
+    <div class="grid">${L.job ? vLabResults(L.job) : `<div class="panel empty"><h3>Sem experiência aberta</h3><p>${DESKTOP ? 'Ligue-se ao Tactics Lab e escolha uma experiência à esquerda' : 'Importe o JSON de uma experiência'}.</p></div>`}</div>
+  </div>`;
+}
+
+;
 // ---- ui/actions.js
 // ============================================================
 // Acções (ligadas aos botões da interface)
@@ -2632,6 +3311,61 @@ const A = {
   applyPlan(list) { const rep = ST._oppRep; if (!rep) return; const items = list === 'all' ? rep.plan : [rep.plan[list]];
     items.forEach(x => { const d = TI_BY_KEY[x.ti]; if (x.v === d.def) delete ST.tactic.ti[x.ti]; else ST.tactic.ti[x.ti] = x.v; });
     save(); render(); toast(items.length === 1 ? `${TI_BY_KEY[items[0].ti].n}: ${TI_BY_KEY[items[0].ti].opts[items[0].v]}` : 'Plano aplicado à tática'); },
+  applySpTip(i) { const tp = ST._sp && ST._sp.tips[i]; if (!tp || !tp.ti) return; const d = TI_BY_KEY[tp.ti]; if (tp.v === d.def) delete ST.tactic.ti[tp.ti]; else ST.tactic.ti[tp.ti] = tp.v; save(); render(); toast(`${d.n}: ${d.opts[tp.v]}`); },
+  genOpt(k, v) { genOpts()[k] = v; save(); render(); },
+  genToggle(k, id) { const g = genOpts(); const i = g[k].indexOf(id); if (i >= 0) g[k].splice(i, 1); else if (k !== 'youth' || g[k].length < 3) g[k].push(id); else toast('Máximo 3 jovens'); save(); render(); },
+  genRun() { const g = genOpts(); toast('A gerar…'); setTimeout(() => { const t0 = performance.now(); g.res = generateTactic(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth }); g.pick = 0; save(); render(); toast(`Tática gerada em ${Math.round(performance.now() - t0)} ms`); }, 30); },
+  genPick(i) { genOpts().pick = i; save(); render(); },
+  genTactic() { const g = genOpts(); const all = [g.res.main, ...g.res.alts]; const t = JSON.parse(JSON.stringify((all[g.pick] || all[0]).t));
+    const pm = Object.fromEntries(players().map(p => [p.id, p]));
+    t.slots.forEach(s => { const r = recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], slotInfo(t.ipForm, s.ipCode).group)[0]; s.pis = r ? [r.pi] : []; });
+    t.name = `${t.ipForm} — gerada para ${ST.myClub || 'o plantel'}`; t.source = 'gerador'; return t; },
+  genUse(sim, tab) { const t = A.genTactic(); ST.tactic = t; ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(JSON.parse(JSON.stringify(t))); ST.sugg = null; save();
+    if (sim) return A.simOpen(); if (tab === 'training') return A.go('training'); A.tab('tactic', tab || 'analyze'); toast('Tática gerada carregada e guardada'); },
+  genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
+  labSet(k, v) { labState()[k] = v; save(); },
+  async labConnect() {
+    const L = labState(); L.busy = true; L.err = ''; render();
+    const ports = [L.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
+    for (const p of ports) {
+      L.port = p;
+      try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { L.status = s; break; } } catch (e) { /* tenta a seguinte */ }
+    }
+    L.busy = false;
+    if (!L.status) { L.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; L.port = ports[0]; render(); return; }
+    save(); await A.labJobs();
+  },
+  async labJobs() { const L = labState(); try { const j = await labCall('GET', '/api/jobs?brief=1'); L.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); L.err = ''; } catch (e) { L.err = e.message; L.status = null; } render(); },
+  async labOpen(id) { const L = labState(); try { L.job = await labCall('GET', '/api/jobs/' + id, null, 8000); L.err = ''; } catch (e) { L.err = e.message; } render(); },
+  async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
+  async labMore(id) {
+    const L = labState(), n = L.more || 100;
+    try {
+      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
+      const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
+      const used = ((pkg.provenance && pkg.provenance.seeds) || []); const start = used.length ? Math.max(...used) + 1 : 1;
+      const seeds = Array.from({ length: n }, (_, i) => start + i);
+      const body = { scenario: sc.B, seeds, event_details: false, name: `${(pkg.summary && pkg.summary.name) || 'Experiência'} · +${n}` };
+      if (sc.A) body.reference = sc.A;
+      const r = await labCall('POST', '/api/run', body, 15000);
+      toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
+    } catch (e) { toast(e.message); L.err = e.message; render(); }
+  },
+  async labFmf(id, g) {
+    try {
+      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
+      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error('Tática ' + g + ' indisponível');
+      const r = await labCall('POST', '/api/export-fmf', { side: 0, scenario: sc, name: `${(pkg.summary && pkg.summary.name) || 'Tatica'} ${g}`.slice(0, 90) }, 60000);
+      const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
+      toast('.fmf exportado e verificado pelo jogo — importe-o no FM27');
+    } catch (e) { toast(e.message); }
+  },
+  async labCatalog() {
+    try { const cat = await labCall('GET', '/api/catalog', null, 8000), def = await labCall('GET', '/api/defaults', null, 8000);
+      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); }
+  },
+  labImport(input) { const f = input.files[0]; if (!f) return; f.text().then(t => { try { ingestJSON(JSON.parse(t), f.name); } catch (e) { toast('JSON inválido'); } }); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
   setMyClub(v) { ST.myClub = v || null; save(); render(); },
   autoToggle() { ST.auto.on = !ST.auto.on; save(); render(); if (ST.auto.on) desktopPoll(true); },
@@ -2701,13 +3435,14 @@ const NAV = [
   ['home', 'Início', '⌂'],
   ['team', 'A minha equipa', '☰'],
   ['tactic', 'Tática', '◎'],
+  ['lab', 'Laboratório', '⚗'],
   ['training', 'Treino', '◷'],
   ['bible', 'Bíblia', '◆'],
   ['settings', 'Definições', '⚙'],
 ];
 const TABS = {
-  team: [['squad', 'Plantel'], ['xi', 'Melhor XI & sugestões'], ['opp', 'Adversário']],
-  tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
+  team: [['squad', 'Plantel'], ['gen', 'Gerar tática'], ['xi', 'Melhor XI & sistemas'], ['opp', 'Adversário']],
+  tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['setpieces', 'Bolas paradas'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
   bible: [['roles', 'Papéis'], ['ti', 'Instruções'], ['concepts', 'Conceitos & adversários'], ['btraining', 'Treino & Effectiveness']],
 };
 
@@ -2736,18 +3471,22 @@ function render(scrollTop) {
   if (!isSim) cancelAnimationFrame(SIM.raf);
   let body;
   if (v === 'home') body = vHome();
-  else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'xi' ? vXI() : vOpp());
-  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'sheet' ? vSheet() : vImport());
+  else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
+  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
+  else if (v === 'lab') body = vLab();
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
+  if (v === 'lab') labPoll();
 }
 
 // ---------- ficheiros: rota única para tudo o que entra ----------
 function ingestJSON(d, name) {
+  const job = jobFromAny(d);
+  if (job) { labState().job = job; ST.view = 'lab'; render(true); toast('Experiência importada: ' + (job.name || job.id)); return; }
   if (d.kind === 'fm27tb-tactic' && d.tactic) { ST.tactic = d.tactic; save(); A.go('tactic', 'analyze'); toast('Tática importada'); }
   else if (d.kind === 'fm27tb-all') { Object.assign(ST, { tactic: d.tactic || ST.tactic, squad: d.squad || ST.squad, opp: d.opp || ST.opp, saved: d.saved || [], myClub: d.myClub || ST.myClub }); save(); render(true); toast('Dados restaurados'); }
   else if (Array.isArray(d) || Array.isArray(d.players)) {

@@ -48,6 +48,61 @@ const A = {
   applyPlan(list) { const rep = ST._oppRep; if (!rep) return; const items = list === 'all' ? rep.plan : [rep.plan[list]];
     items.forEach(x => { const d = TI_BY_KEY[x.ti]; if (x.v === d.def) delete ST.tactic.ti[x.ti]; else ST.tactic.ti[x.ti] = x.v; });
     save(); render(); toast(items.length === 1 ? `${TI_BY_KEY[items[0].ti].n}: ${TI_BY_KEY[items[0].ti].opts[items[0].v]}` : 'Plano aplicado à tática'); },
+  applySpTip(i) { const tp = ST._sp && ST._sp.tips[i]; if (!tp || !tp.ti) return; const d = TI_BY_KEY[tp.ti]; if (tp.v === d.def) delete ST.tactic.ti[tp.ti]; else ST.tactic.ti[tp.ti] = tp.v; save(); render(); toast(`${d.n}: ${d.opts[tp.v]}`); },
+  genOpt(k, v) { genOpts()[k] = v; save(); render(); },
+  genToggle(k, id) { const g = genOpts(); const i = g[k].indexOf(id); if (i >= 0) g[k].splice(i, 1); else if (k !== 'youth' || g[k].length < 3) g[k].push(id); else toast('Máximo 3 jovens'); save(); render(); },
+  genRun() { const g = genOpts(); toast('A gerar…'); setTimeout(() => { const t0 = performance.now(); g.res = generateTactic(players(), { expect: g.expect, must: g.must, star: g.star || null, youth: g.youth }); g.pick = 0; save(); render(); toast(`Tática gerada em ${Math.round(performance.now() - t0)} ms`); }, 30); },
+  genPick(i) { genOpts().pick = i; save(); render(); },
+  genTactic() { const g = genOpts(); const all = [g.res.main, ...g.res.alts]; const t = JSON.parse(JSON.stringify((all[g.pick] || all[0]).t));
+    const pm = Object.fromEntries(players().map(p => [p.id, p]));
+    t.slots.forEach(s => { const r = recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], slotInfo(t.ipForm, s.ipCode).group)[0]; s.pis = r ? [r.pi] : []; });
+    t.name = `${t.ipForm} — gerada para ${ST.myClub || 'o plantel'}`; t.source = 'gerador'; return t; },
+  genUse(sim, tab) { const t = A.genTactic(); ST.tactic = t; ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(JSON.parse(JSON.stringify(t))); ST.sugg = null; save();
+    if (sim) return A.simOpen(); if (tab === 'training') return A.go('training'); A.tab('tactic', tab || 'analyze'); toast('Tática gerada carregada e guardada'); },
+  genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
+  labSet(k, v) { labState()[k] = v; save(); },
+  async labConnect() {
+    const L = labState(); L.busy = true; L.err = ''; render();
+    const ports = [L.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
+    for (const p of ports) {
+      L.port = p;
+      try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { L.status = s; break; } } catch (e) { /* tenta a seguinte */ }
+    }
+    L.busy = false;
+    if (!L.status) { L.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; L.port = ports[0]; render(); return; }
+    save(); await A.labJobs();
+  },
+  async labJobs() { const L = labState(); try { const j = await labCall('GET', '/api/jobs?brief=1'); L.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); L.err = ''; } catch (e) { L.err = e.message; L.status = null; } render(); },
+  async labOpen(id) { const L = labState(); try { L.job = await labCall('GET', '/api/jobs/' + id, null, 8000); L.err = ''; } catch (e) { L.err = e.message; } render(); },
+  async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
+  async labMore(id) {
+    const L = labState(), n = L.more || 100;
+    try {
+      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
+      const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
+      const used = ((pkg.provenance && pkg.provenance.seeds) || []); const start = used.length ? Math.max(...used) + 1 : 1;
+      const seeds = Array.from({ length: n }, (_, i) => start + i);
+      const body = { scenario: sc.B, seeds, event_details: false, name: `${(pkg.summary && pkg.summary.name) || 'Experiência'} · +${n}` };
+      if (sc.A) body.reference = sc.A;
+      const r = await labCall('POST', '/api/run', body, 15000);
+      toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
+    } catch (e) { toast(e.message); L.err = e.message; render(); }
+  },
+  async labFmf(id, g) {
+    try {
+      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
+      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error('Tática ' + g + ' indisponível');
+      const r = await labCall('POST', '/api/export-fmf', { side: 0, scenario: sc, name: `${(pkg.summary && pkg.summary.name) || 'Tatica'} ${g}`.slice(0, 90) }, 60000);
+      const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
+      toast('.fmf exportado e verificado pelo jogo — importe-o no FM27');
+    } catch (e) { toast(e.message); }
+  },
+  async labCatalog() {
+    try { const cat = await labCall('GET', '/api/catalog', null, 8000), def = await labCall('GET', '/api/defaults', null, 8000);
+      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); }
+  },
+  labImport(input) { const f = input.files[0]; if (!f) return; f.text().then(t => { try { ingestJSON(JSON.parse(t), f.name); } catch (e) { toast('JSON inválido'); } }); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
   setMyClub(v) { ST.myClub = v || null; save(); render(); },
   autoToggle() { ST.auto.on = !ST.auto.on; save(); render(); if (ST.auto.on) desktopPoll(true); },

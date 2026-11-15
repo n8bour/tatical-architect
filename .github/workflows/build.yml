@@ -3,7 +3,8 @@
 #  • cache do Rust entre execuções (2.ª execução em ~2–3 min)
 #  • perfil de release sem LTO e dependências com opt-level 1
 #  • a CLI do Tauri vem pré-compilada via npx (sem npm install)
-# Correr: Actions → "Build desktop app" → Run workflow (marque a opção para incluir macOS/Linux).
+# Corre sozinho a cada push para o main, ou em Actions → "Build desktop app" → Run workflow.
+# O .exe fica em Releases → "FM27 Tactical Bible — última build" (página principal do repositório).
 # Uma tag v* (ex.: git tag v3.0.0 && git push --tags) gera todas as plataformas e um Release em rascunho.
 name: Build desktop app
 
@@ -15,7 +16,9 @@ on:
         type: boolean
         default: false
   push:
+    branches: [main]
     tags: ['v*']
+    paths-ignore: ['README.md', 'docs/**']
 
 concurrency:
   group: build-${{ github.ref }}
@@ -97,11 +100,35 @@ jobs:
           name: FM27-Tactical-Bible-${{ matrix.platform }}
           path: dist/*
           if-no-files-found: error
-      - name: Release (só com tags v*)
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
+
+  # Publica os ficheiros em Releases (aparece na página principal do repositório):
+  #  • push/Run workflow → pré-release "ultima" (substituída a cada build)
+  #  • tag v* → release em rascunho com o nome da tag
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: FM27-Tactical-Bible-*
+          path: out
+          merge-multiple: true
+      - name: Publicar em Releases
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "${{ github.ref_name }}" --draft --title "FM27 Tactical Bible ${{ github.ref_name }}" --notes "Instalador e executável portátil." || true
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
+          ls -la out
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${{ github.ref_name }}"
+            gh release create "$TAG" --draft --title "FM27 Tactical Bible $TAG" --notes "Instalador, executável portátil e versão HTML." || true
+          else
+            TAG="ultima"
+            gh release delete "$TAG" -y --cleanup-tag || true
+            gh release create "$TAG" --prerelease --target "${{ github.sha }}" \
+              --title "FM27 Tactical Bible — última build" \
+              --notes "Gerada automaticamente (run ${{ github.run_number }}). Descarregue o ficheiro …setup.exe (instalador) ou FM27-Tactical-Bible-portatil.exe (corre sem instalar)."
+          fi
+          gh release upload "$TAG" out/* --clobber

@@ -1,7 +1,7 @@
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '3.1.0';
+const VERSION = '4.0.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -17,12 +17,12 @@ const ST = {
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
   saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
   auto: { on: true, dir: '', mtime: 0, last: '', save: true, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '' },   // carregamento automático (app instalada)
-  lastSave: null,
+  lastSave: null, gen: null, lab: null,
 };
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null })); } catch (e) {}
 }
 
 function load() {
@@ -37,6 +37,8 @@ function load() {
     if (d.myClub) ST.myClub = d.myClub;
     if (d.auto) ST.auto = Object.assign(ST.auto, d.auto);
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
+    if (d.gen) ST.gen = d.gen;
+    if (d.lab) ST.lab = { port: d.lab.port || 8765, more: d.lab.more || 100, status: null, jobs: [], job: null, err: '', busy: false };
     [ST.tactic, ...ST.saved].forEach(t => { if (t && t.ti && t.ti.loe > 2) t.ti.loe = 2; if (t && t.ti && t.ti.short_gk > 1) t.ti.short_gk = 1; });
   } catch (e) {}
 }
