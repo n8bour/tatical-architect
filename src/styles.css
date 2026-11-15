@@ -298,3 +298,10 @@ tr.cliprow td{background:var(--panel2)}
 .syn-phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:12px}
 .syn-phase{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);min-width:0}
 .syn-score{font-size:20px;font-weight:800}
+
+/* ---------- situações de jogo ---------- */
+.plan-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.plan-tabs button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 13px;cursor:pointer;font:inherit;font-size:13px;color:var(--text)}
+.plan-tabs button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.plan-sec{margin-top:14px}.plan-sec h4{margin:0 0 6px}
+.up{color:var(--good)}.down{color:var(--crit)}

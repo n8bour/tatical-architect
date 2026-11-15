@@ -12,7 +12,7 @@ const NAV = [
 ];
 const TABS = {
   team: [['squad', 'Plantel'], ['gen', 'Gerar tática'], ['xi', 'Melhor XI & sistemas'], ['opp', 'Adversário']],
-  tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['setpieces', 'Bolas paradas'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
+  tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['plans', 'Situações de jogo'], ['setpieces', 'Bolas paradas'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
   bible: [['roles', 'Papéis'], ['ti', 'Instruções'], ['concepts', 'Conceitos & adversários'], ['btraining', 'Treino & Effectiveness']],
 };
 
@@ -45,7 +45,7 @@ function render(scrollTop) {
   let body;
   if (v === 'home') body = vHome();
   else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
-  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
+  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
   else if (v === 'lab') body = vLab();
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());

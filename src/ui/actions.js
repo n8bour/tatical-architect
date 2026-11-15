@@ -121,6 +121,14 @@ const A = {
     save(); render();
   },
   sheetNames(v) { ST.sheetNames = v; save(); render(); },
+  planK(k) { ST.planK = k; save(); render(); },
+  planTactic() { const r = ST._plan || gamePlan(ST.tactic, players(), ST.planK || 'chase', { opp: oppPlayers() }); return JSON.parse(JSON.stringify(r.t)); },
+  planSave() { const t = A.planTactic(); ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(t); save(); render(); toast(L('Plano guardado: ', 'Plan saved: ') + t.name); },
+  planUse() { const t = A.planTactic(); ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(JSON.parse(JSON.stringify(t))); ST.tactic = t; save(); A.tab('tactic', 'analyze'); toast(L('Plano carregado no analisador', 'Plan loaded into the analyser')); },
+  planCopy() { const r = ST._plan; if (!r) return; const lines = [r.t.name, ''];
+    r.changes.forEach(c => lines.push(c.kind === 'ti' || c.kind === 'ment' ? `${c.label}: ${c.from} → ${c.to}` : c.kind === 'role' ? `${c.code} (${c.phase}) ${c.player}: ${c.from} → ${c.to}` : `${c.code} ${c.player}: ${c.removed ? '−' : '+'} ${c.to}`));
+    r.tweaks.forEach(x => lines.push('Tactical Tweak: ' + x.n)); r.subs.forEach(x => lines.push(`${L('Substituição', 'Substitution')} ${x.code}: ${x.out} → ${x.in}`));
+    const txt = lines.join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(L('Plano copiado', 'Plan copied')), () => download('plano.txt', txt, 'text/plain')); },
   navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
   clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },

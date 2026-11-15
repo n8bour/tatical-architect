@@ -245,3 +245,27 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
   console.log('sinergia defensiva: casos de manual verificados');
   if(bad) process.exitCode=1;
 }
+
+// 20. situações de jogo: tácticas válidas, substituições do banco e cada plano na direcção certa
+{
+  const c11={console,Math,performance}; vm.createContext(c11);
+  vm.runInContext(code+';\n'+['generator.js','gameplans.js'].map(f=>fs.readFileSync(require('path').join(__dirname,'..','src','core',f),'utf8')).join(';\n')+';this.P={generateTactic,parseSquad,gamePlan,SCENARIOS,slotInfo,validRole};',c11);
+  const P=c11.P, rd=f=>fs.readFileSync(require('path').join(__dirname,'fixtures',f),'utf8');
+  let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  const opp=P.parseSquad(rd('squad_de.csv')).players;
+  for (const f of ['fmsave_players.csv','squad_en.csv','squad_de.csv']) {
+    const ps=P.parseSquad(rd(f)).players, base=P.generateTactic(ps,{expect:'mid'}).main.t;
+    for (const s of P.SCENARIOS()) {
+      const r=P.gamePlan(base,ps,s.k,{opp}), tag=f+' '+s.k;
+      r.t.slots.forEach(x=>{ const a=P.slotInfo(r.t.ipForm,x.ipCode), b=P.slotInfo(r.t.oopForm,x.oopCode); chk(P.validRole(x.ip,a.group,'IP',a)&&P.validRole(x.oop,b.group,'OOP',b),'papel inválido '+tag+' '+x.ipCode); chk((x.pis||[]).length<=3,'no máximo 3 instruções individuais '+tag); });
+      const inXI=new Set(r.t.slots.map(x=>x.pid)); r.subs.forEach(x=>{ const p=ps.find(q=>q.name===x.in); chk(p && !inXI.has(p.id),'substituto tem de vir do banco '+tag); });
+      chk(new Set(r.subs.map(x=>x.in)).size===r.subs.length,'substitutos repetidos '+tag);
+      const A=r.intentBefore, B=r.intentAfter, sa=r.before.phases, sb=r.after.phases;
+      if (s.k==='chase'||s.k==='home_weak') { chk(B.att>A.att,'mais compromisso ofensivo '+tag); chk(sb.att.score>=sa.att.score,'a sinergia de ataque não pode piorar '+tag); }
+      if (s.k==='protect'||s.k==='away_strong') { chk(B.sec>A.sec,'mais segurança '+tag); chk(B.att<=A.att,'menos compromisso ofensivo '+tag); chk(sb.def.score>=sa.def.score-2,'a sinergia defensiva não pode piorar '+tag); }
+      if (s.k==='away_strong') chk(r.ois.length===3,'instruções de adversário para os 3 mais perigosos '+tag);
+    }
+  }
+  console.log('situações de jogo: 3 plantéis × 5 cenários verificados');
+  if(bad) process.exitCode=1;
+}
