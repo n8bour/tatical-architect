@@ -5,7 +5,7 @@ function vTactic() {
   const t = ST.tactic, au = auditTactic(t, players()), sel = ST.sel;
   const forms = Object.keys(FORMATIONS).map(f => [f, f]);
   const cats = Object.entries(au.scores);
-  return `<div class="top"><div><h2>${esc(ST.tactic.name)}</h2><p class="muted small" style="margin:0">Clique num jogador do campo para mudar papéis, jogador e instruções individuais.</p></div>
+  return `<div class="top"><div><h2>${esc(tName(ST.tactic))}</h2><p class="muted small" style="margin:0">Clique num jogador do campo para mudar papéis, jogador e instruções individuais.</p></div>
     <div class="row no-print">
       <button class="btn primary" onclick="A.simOpen()">▶ Ver em campo</button>
       <button class="btn" onclick="A.newTactic()">Nova</button>
@@ -133,7 +133,7 @@ function vSheet() {
   const t = ST.tactic, pm = Object.fromEntries(players().map(p => [p.id, p]));
   const ck = '<input type="checkbox" aria-label="feito">';
   const changed = TEAM_INSTRUCTIONS.filter(d => tiVal(t, d.k) !== d.def).length;
-  return `<div class="top"><div><h2><span>Ficha para o FM27</span> — ${esc(t.name)}</h2>
+  return `<div class="top"><div><h2><span>Ficha para o FM27</span> — ${esc(tName(t))}</h2>
     <p class="muted small" style="margin:0">Recrie a tática no jogo por esta ordem e guarde-a lá: o FM27 gera o .fmf. Marque cada passo à medida que avança.</p></div>
     <div class="row no-print">${LANG === 'pt' ? `<div class="seg" role="group" aria-label="Nomes na ficha"><button class="${ST.sheetNames !== 'pt' ? 'on' : ''}" onclick="A.sheetNames('en')" title="Como aparecem no FM27 em inglês">Nomes do jogo (EN)</button><button class="${ST.sheetNames === 'pt' ? 'on' : ''}" onclick="A.sheetNames('pt')">Português</button></div>` : ''}<button class="btn" onclick="A.print()">Imprimir/PDF</button><button class="btn" onclick="A.copySheet()">Copiar texto</button><button class="btn" onclick="A.tab('tactic','analyze')">Voltar</button></div></div>
   <div class="grid g2 sheet" data-gameterms="${ST.sheetNames === 'pt' ? 'pt' : 'en'}">

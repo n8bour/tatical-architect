@@ -186,8 +186,8 @@ async function desktopPoll(force) {
       busyStart('f9', 'A carregar a exportação F9', { detail: r.name }); await new Promise(res => setTimeout(res, 30));
       let where; try { where = ingestSquadText(r.content, r.name + ' (F9)'); } finally { busyEnd('f9'); }
       save(); if (where) render();
-    } else if (force) toast('Nenhuma exportação nova encontrada');
-  } catch (e) { if (force) toast('Não consegui ler a pasta de exportação'); }
+    } else if (force) toast(L('Nenhuma exportação nova encontrada', 'No new export found'));
+  } catch (e) { if (force) toast(L('Não consegui ler a pasta de exportação', 'Could not read the export folder')); }
   POLLING = false;
 }
 // ---------- app instalada: lê o save (.fm) com o fmsave sempre que o jogo grava ----------
@@ -222,6 +222,7 @@ document.addEventListener('click', (e) => {
 });
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; }
+  if (e.key === 'Escape' && ST.squadOpen) { A.squadClose(); return; }
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') { e.preventDefault(); if (DESKTOP) A.saveNow(); else A.pickFile(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();

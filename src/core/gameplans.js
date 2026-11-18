@@ -30,7 +30,7 @@ const gpRoleName = (r) => (r ? (typeof roleName === 'function' ? roleName(r) : r
 function gamePlan(base, players, k, opts = {}) {
   const t = JSON.parse(JSON.stringify(base)); t.ti = { ...(base.ti || {}) };
   const sc = SCENARIOS().find(s => s.k === k) || SCENARIOS()[0];
-  t.name = `${base.name} — ${sc.n}`; t.source = 'gameplan';
+  t.name = `${typeof tName === 'function' ? tName(base) : base.name} — ${sc.n}`; t.source = 'gameplan';
   const pm = Object.fromEntries((players || []).map(p => [p.id, p]));
   const a = (p, key) => (p && p.a && p.a[key] != null ? p.a[key] : 10);
   const q = (p, ks) => ks.reduce((s, key) => s + a(p, key), 0) / ks.length;

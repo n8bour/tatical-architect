@@ -1099,6 +1099,9 @@ function matchFormations(ipForm, oopForm) {
   return A.map((a, i) => ({ ipCode: a.code, oopCode: B[asg[i]].code }));
 }
 
+// nome por defeito mostrado na língua activa
+const DEFAULT_TACTIC_NAMES = ['Nova tática', 'New tactic'];
+function tName(t) { return t && DEFAULT_TACTIC_NAMES.includes(t.name) ? L('Nova tática', 'New tactic') : (t ? t.name : ''); }
 function newTactic(ipForm = '4-3-3 DM Wide', oopForm = '4-1-4-1 DM Wide') {
   const pairs = matchFormations(ipForm, oopForm);
   return {
@@ -1349,7 +1352,7 @@ function complexityOf(t) {
     if (s.pis && s.pis.length) { cx += s.pis.length * 0.5; parts.push([L(`${s.pis.length} instrução(ões) individuais (${s.ipCode})`, `${s.pis.length} player instruction(s) (${s.ipCode})`), s.pis.length * 0.5]); }
   });
   if (t.ois) { cx += t.ois * 0.5; parts.push([L(`${t.ois} instruções de adversário`, `${t.ois} opposition instructions`), t.ois * 0.5]); }
-  const level = cx <= 6 ? 'Baixa' : cx <= 12 ? L('Média', 'Medium') : 'Alta';
+  const level = cx <= 6 ? L('Baixa', 'Low') : cx <= 12 ? L('Média', 'Medium') : L('Alta', 'High');
   return { cx: Math.round(cx * 10) / 10, level, parts };
 }
 
@@ -1478,7 +1481,7 @@ function auditTactic(t, squad) {
     if (iq != null && C.cx > cap) add('Complexidade','warn',L(`Tática complexa para este plantel (${C.cx} > ${cap})`, `Tactic too complex for this squad (${C.cx} > ${cap})`),L(`Média tática do XI (Decisões/Antecipação/Trabalho de Equipa/…) ≈ ${iq.toFixed(1)}. No FM27 isto alonga a adaptação.`, `The XI’s tactical average (Decisions/Anticipation/Teamwork/…) ≈ ${iq.toFixed(1)}. In FM27 this lengthens adaptation.`),L('Remova instruções que não resolvem um problema concreto.', 'Remove instructions that do not solve a specific problem.'));
     else add('Complexidade','good',L(`Complexidade adequada (${C.cx} ≤ ${cap})`, `Suitable complexity (${C.cx} ≤ ${cap})`),L('O plantel deve conseguir absorver a tática.', 'The squad should be able to absorb the tactic.'));
   } else if (C.cx > 12) add('Complexidade','warn',L(`Complexidade alta (${C.cx})`, `High complexity (${C.cx})`),L('Muitas instruções fora do default: mais tempo de treino e jogadores mais capazes.', 'Many non-default instructions: more training time and more capable players needed.'),L('Comece simples; adicione instruções quando resolverem um problema identificado.', 'Start simple; add instructions when they solve an identified problem.'));
-  else add('Complexidade','good',`Complexidade ${C.level.toLowerCase()} (${C.cx})`,L('Fácil de assimilar.', 'Easy to learn.'));
+  else add('Complexidade','good',L(`Complexidade ${C.level.toLowerCase()} (${C.cx})`, `${C.level} complexity (${C.cx})`),L('Fácil de assimilar.', 'Easy to learn.'));
 
   // 12. plantel
   if (xiPlayers.length) {
@@ -1891,7 +1894,7 @@ function setPiecePlan(t, players, oppList) {
     { k: 'zn', n: L('Zona 1.º poste', 'Near-post zone'), x: zones[1] || zones[0], w: L('posicionamento e jogo aéreo', 'positioning and aerial ability') },
     { k: 'zc', n: L('Zona centro (pequena área)', 'Central zone (six-yard box)'), x: zones[0], w: why(zones[0], ['pos', 'hea', 'jum']) },
     { k: 'zf', n: L('Zona 2.º poste', 'Far-post zone'), x: zones[2], w: L('posicionamento e jogo aéreo', 'positioning and aerial ability') },
-    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? `Marca ${shortName(theirAir[i].p)}` : L('Marcação individual', 'Man-marking'), x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? L(` · ${theirAir[i].p.name} é dos melhores no ar deles`, ` · ${theirAir[i].p.name} is one of their best in the air`) : '') })),
+    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? L(`Marca ${shortName(theirAir[i].p)}`, `Marks ${shortName(theirAir[i].p)}`) : L('Marcação individual', 'Man-marking'), x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? L(` · ${theirAir[i].p.name} é dos melhores no ar deles`, ` · ${theirAir[i].p.name} is one of their best in the air`) : '') })),
     { k: 'de', n: L('Entrada da área (segundas bolas)', 'Edge of the box (second balls)'), x: dEdge, w: dEdge ? why(dEdge, ['acc', 'ant']) : '' },
     ...outlet.map((o, i) => ({ k: 'o' + i, n: L('Fica na frente (contra-ataque)', 'Stays forward (counter-attack)'), x: o, w: why(o, ['pac', 'acc']) })),
   ].filter(r => r.x);
@@ -2472,7 +2475,7 @@ const gpRoleName = (r) => (r ? (typeof roleName === 'function' ? roleName(r) : r
 function gamePlan(base, players, k, opts = {}) {
   const t = JSON.parse(JSON.stringify(base)); t.ti = { ...(base.ti || {}) };
   const sc = SCENARIOS().find(s => s.k === k) || SCENARIOS()[0];
-  t.name = `${base.name} — ${sc.n}`; t.source = 'gameplan';
+  t.name = `${typeof tName === 'function' ? tName(base) : base.name} — ${sc.n}`; t.source = 'gameplan';
   const pm = Object.fromEntries((players || []).map(p => [p.id, p]));
   const a = (p, key) => (p && p.a && p.a[key] != null ? p.a[key] : 10);
   const q = (p, ks) => ks.reduce((s, key) => s + a(p, key), 0) / ks.length;
@@ -2713,17 +2716,12 @@ const PA_RANGE = { '-1': [1, 20], '-2': [10, 40], '-25': [20, 50], '-3': [30, 60
   '-65': [100, 130], '-7': [110, 140], '-75': [120, 150], '-8': [130, 160], '-85': [140, 170], '-9': [150, 180], '-95': [160, 190], '-10': [170, 200] };
 
 // ---------- parser (por blocos, para não bloquear a janela) ----------
-async function parseScoutDB(text, opts = {}) {
-  const t0 = Date.now();
-  const src = String(text || '').replace(/\r/g, '');
-  let nl = src.indexOf('\n'); if (nl < 0) nl = src.length;
-  const head = splitCSV(src.slice(0, nl), ',');
+// prepara o leitor de linhas a partir do cabeçalho (partilhado pela leitura por blocos e pela síncrona)
+function scoutRowReader(head) {
   const ix = {}; head.forEach((h, i) => { ix[h.trim()] = i; });
   const col = (name) => ix[name] ?? -1;
-  const need = ['name', 'ability_current'];
-  if (need.some(n => col(n) < 0)) throw new Error(L('Este ficheiro não parece uma exportação de jogadores do fmsave (faltam as colunas name/ability_current).', 'This file does not look like an fmsave players export (the name/ability_current columns are missing).'));
-  // mapa das colunas de atributos para as chaves da app
-  const attrCols = []; const hidCols = [];
+  if (['name', 'ability_current'].some(n => col(n) < 0)) throw new Error(L('Este ficheiro não parece uma exportação de jogadores do fmsave (faltam as colunas name/ability_current).', 'This file does not look like an fmsave players export (the name/ability_current columns are missing).'));
+  const attrCols = [], hidCols = [];
   head.forEach((h, i) => {
     const m = h.match(/^attributes_(.+)$/); if (!m) return;
     if (SCOUT_HIDDEN[m[1]]) { hidCols.push([i, SCOUT_HIDDEN[m[1]]]); return; }
@@ -2734,44 +2732,62 @@ async function parseScoutDB(text, opts = {}) {
   const C = Object.fromEntries(['uid', 'unique_id', 'name', 'age', 'nation_id', 'height_cm', 'ability_current', 'ability_potential', 'ability_potential_range_code', 'reputation_current', 'reputation_world',
     'club_uid', 'club_name', 'club_nation_id', 'club_reputation', 'on_loan', 'loan_parent_club_name', 'transfer_value', 'contract_wage', 'contract_end', 'contract_squad_status', 'left_foot', 'right_foot'].map(n => [n, col(n)]));
   const num = (v) => { if (v == null || v === '') return null; const n = +v; return isFinite(n) ? n : null; };
+  let rows = 0;
+  const read = (line) => {
+    if (!line) return null;
+    const r = line.indexOf('"') >= 0 ? splitCSV(line, ',') : line.split(',');
+    const g = (c) => (c >= 0 ? r[c] : undefined);
+    const name = g(C.name); if (!name) return null;
+    const a = {}; for (const [i, k] of attrCols) { const v = num(r[i]); if (v != null) a[k] = v; }
+    const hid = {}; for (const [i, k] of hidCols) { const v = num(r[i]); if (v != null) hid[k] = v; }
+    const pers = {}; for (const [i, k] of persCols) { const v = num(r[i]); if (v != null) pers[k] = v; }
+    const posR = {}; const posSet = new Set(), natSet = new Set();
+    for (const [i, k] of posCols) { const v = num(r[i]); if (v == null) continue; posR[k] = v; if (v >= 15) SCOUT_POS_GROUP[k].forEach(x => posSet.add(x)); if (v >= 18) natSet.add(SCOUT_POS_GROUP[k][0]); }
+    const pa = num(g(C.ability_potential)), code = num(g(C.ability_potential_range_code)), rng = code != null ? PA_RANGE[String(code)] : null;
+    const lf = num(g(C.left_foot)), rf = num(g(C.right_foot));
+    const endStr = g(C.contract_end) || '';
+    const p = {
+      id: 'db' + (g(C.uid) || rows), uid: g(C.uid) || null, name, age: num(g(C.age)), nat: num(g(C.nation_id)), height: num(g(C.height_cm)),
+      ca: num(g(C.ability_current)), pa: pa != null ? pa : rng ? Math.round((rng[0] + rng[1]) / 2) : null, paRange: pa == null && rng ? rng : null,
+      rep: num(g(C.reputation_current)), wrep: num(g(C.reputation_world)), club: g(C.club_name) || '', clubUid: g(C.club_uid) || '', clubNat: num(g(C.club_nation_id)), clubRep: num(g(C.club_reputation)),
+      loan: /^true$/i.test(g(C.on_loan) || ''), loanFrom: g(C.loan_parent_club_name) || '', value: num(g(C.transfer_value)), wage: num(g(C.contract_wage)),
+      end: /^\d{4}-\d{2}-\d{2}/.test(endStr) ? endStr.slice(0, 10) : '', status: g(C.contract_squad_status) || '',
+      foot: lf != null && rf != null ? (lf >= 15 && rf >= 15 ? 'B' : lf > rf ? 'L' : 'R') : null, lf, rf,
+      posR, pos: [...posSet], natPos: [...natSet], a, hid, pers, src: 'db',
+    };
+    p.posRaw = Object.entries(posR).filter(([, v]) => v >= 15).sort((x, y) => y[1] - x[1]).map(([k]) => k.toUpperCase()).join(', ');
+    p.meta = { foot: p.foot === 'L' ? 'Left' : p.foot === 'R' ? 'Right' : p.foot === 'B' ? 'Either' : '', height: p.height };
+    rows++;
+    return p;
+  };
+  return { read, attrCols: attrCols.length };
+}
+// ---------- parser (por blocos, para não bloquear a janela) ----------
+async function parseScoutDB(text, opts = {}) {
+  const t0 = Date.now();
+  const src = String(text || '').replace(/\r/g, '');
+  let nl = src.indexOf('\n'); if (nl < 0) nl = src.length;
+  const head = splitCSV(src.slice(0, nl), ',');
+  const R = scoutRowReader(head);
   const players = [];
-  let pos = nl + 1, rows = 0;
+  let pos = nl + 1;
   const total = src.length;
   while (pos < total) {
     const end = Math.min(total, pos + 2_000_000);           // ~2 MB por bloco
     let cut = end >= total ? total : src.indexOf('\n', end); if (cut < 0) cut = total;
-    const chunk = src.slice(pos, cut).split('\n');
-    for (const line of chunk) {
-      if (!line) continue;
-      const r = line.indexOf('"') >= 0 ? splitCSV(line, ',') : line.split(',');
-      const g = (c) => (c >= 0 ? r[c] : undefined);
-      const name = g(C.name); if (!name) continue;
-      const a = {}; for (const [i, k] of attrCols) { const v = num(r[i]); if (v != null) a[k] = v; }
-      const hid = {}; for (const [i, k] of hidCols) { const v = num(r[i]); if (v != null) hid[k] = v; }
-      const pers = {}; for (const [i, k] of persCols) { const v = num(r[i]); if (v != null) pers[k] = v; }
-      const posR = {}; const posSet = new Set(), natSet = new Set();
-      for (const [i, k] of posCols) { const v = num(r[i]); if (v == null) continue; posR[k] = v; if (v >= 15) SCOUT_POS_GROUP[k].forEach(x => posSet.add(x)); if (v >= 18) natSet.add(SCOUT_POS_GROUP[k][0]); }
-      const pa = num(g(C.ability_potential)), code = num(g(C.ability_potential_range_code)), rng = code != null ? PA_RANGE[String(code)] : null;
-      const lf = num(g(C.left_foot)), rf = num(g(C.right_foot));
-      const endStr = g(C.contract_end) || '';
-      const p = {
-        id: 'db' + (g(C.uid) || rows), uid: g(C.uid) || null, name, age: num(g(C.age)), nat: num(g(C.nation_id)), height: num(g(C.height_cm)),
-        ca: num(g(C.ability_current)), pa: pa != null ? pa : rng ? Math.round((rng[0] + rng[1]) / 2) : null, paRange: pa == null && rng ? rng : null,
-        rep: num(g(C.reputation_current)), wrep: num(g(C.reputation_world)), club: g(C.club_name) || '', clubUid: g(C.club_uid) || '', clubNat: num(g(C.club_nation_id)), clubRep: num(g(C.club_reputation)),
-        loan: /^true$/i.test(g(C.on_loan) || ''), loanFrom: g(C.loan_parent_club_name) || '', value: num(g(C.transfer_value)), wage: num(g(C.contract_wage)),
-        end: /^\d{4}-\d{2}-\d{2}/.test(endStr) ? endStr.slice(0, 10) : '', status: g(C.contract_squad_status) || '',
-        foot: lf != null && rf != null ? (lf >= 15 && rf >= 15 ? 'B' : lf > rf ? 'L' : 'R') : null, lf, rf,
-        posR, pos: [...posSet], natPos: [...natSet], a, hid, pers, src: 'db',
-      };
-      p.posRaw = Object.entries(posR).filter(([, v]) => v >= 15).sort((x, y) => y[1] - x[1]).map(([k]) => k.toUpperCase()).join(', ');
-      p.meta = { foot: p.foot === 'L' ? 'Left' : p.foot === 'R' ? 'Right' : p.foot === 'B' ? 'Either' : '', height: p.height };
-      players.push(p); rows++;
-    }
+    for (const line of src.slice(pos, cut).split('\n')) { const p = R.read(line); if (p) players.push(p); }
     pos = cut + 1;
-    if (opts.onProgress) opts.onProgress(Math.min(1, pos / total), rows);
+    if (opts.onProgress) opts.onProgress(Math.min(1, pos / total), players.length);
     await new Promise(res => setTimeout(res, 0));
   }
-  return { players, ms: Date.now() - t0, columns: head.length, attrCols: attrCols.length };
+  return { players, ms: Date.now() - t0, columns: head.length, attrCols: R.attrCols };
+}
+// leitura síncrona (plantel: dezenas de jogadores)
+function parseScoutSync(text) {
+  const src = String(text || '').replace(/\r/g, '').replace(/^\uFEFF/, '');
+  const lines = src.split('\n'); const head = splitCSV(lines[0] || '', ',');
+  const R = scoutRowReader(head);
+  return lines.slice(1).map(R.read).filter(Boolean);
 }
 
 function parseNations(text) {
@@ -2947,6 +2963,22 @@ function scoutPresets(ctx) {
     { k: 'weak_spot', ic: '🎯', n: L('A minha posição mais fraca', 'My weakest position'), d: L('Jogadores naturais na posição onde o teu XI é mais fraco.', 'Natural players for the position where your XI is weakest.'),
       F: { ...d, caMin: Math.max(60, xiCA - 10), sort: 'gain' }, needSquad: true, weakSpot: true },
   ];
+}
+
+// enriquece um jogador do plantel com os campos ricos do fmsave (CA/PA, personalidade, ocultos, contrato…)
+const RICH_FIELDS = ['ca', 'pa', 'paRange', 'pers', 'hid', 'value', 'wage', 'end', 'status', 'rep', 'wrep', 'clubRep', 'clubNat', 'height', 'lf', 'rf', 'foot', 'loan', 'nat', 'uid'];
+function enrichFromScout(players, text) {
+  if (!/ability_current/.test(String(text || '').slice(0, 6000))) return 0;
+  let rich; try { rich = parseScoutSync(text); } catch (e) { return 0; }
+  const byUid = new Map(rich.filter(x => x.uid).map(x => [String(x.uid), x])), byName = new Map(rich.map(x => [x.name, x]));
+  let n = 0;
+  players.forEach(p => {
+    const x = (p.meta && p.meta.uid != null && byUid.get(String(p.meta.uid))) || byName.get(p.name); if (!x) return;
+    RICH_FIELDS.forEach(k => { if (x[k] != null && !(typeof x[k] === 'object' && !Object.keys(x[k]).length)) p[k] = x[k]; });
+    if (x.posR && Object.keys(x.posR).length) { p.posR = Object.assign({}, p.posR || {}, x.posR); p.natPos = x.natPos; }
+    n++;
+  });
+  return n;
 }
 
 ;
@@ -4457,7 +4489,7 @@ function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_I
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.11.1';
+const VERSION = '4.12.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -4477,7 +4509,7 @@ const ST = {
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [] })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [], sqMode: ST.sqMode, sqSort: ST.sqSort })); } catch (e) {}
 }
 
 function load() {
@@ -4503,6 +4535,7 @@ function load() {
     if (d.planK) ST.planK = d.planK;
     if (d.scout) ST.scout = { F: Object.assign(SCOUT_DEFAULT(), d.scout.F || {}), preset: d.scout.preset || '', page: 0, tab: d.scout.tab || 'results', open: null, weak: d.scout.weak || '' };
     if (Array.isArray(d.shortlist)) ST.shortlist = d.shortlist;
+    if (d.sqMode) ST.sqMode = d.sqMode; if (d.sqSort) ST.sqSort = d.sqSort;
     // v4.4: a tática de exemplo “Cenas v2” deixou de vir com a app — sai das guardadas e, se for a activa, dá lugar a uma nova
     const isCenas = (t) => t && typeof t.name === 'string' && /^Cenas v2\b/.test(t.name);
     ST.saved = ST.saved.filter(t => !isCenas(t));
@@ -4524,6 +4557,9 @@ function oppPlayers() { return ST.opp.players || []; }
 function ingestSquadText(text, sourceName, opts = {}) {
   const r = parseSquad(String(text || '').replace(/^\uFEFF/, ''));
   if (!r.players.length) { toast(L('Não encontrei jogadores em ', 'No players found in ') + sourceName); return null; }
+  // exportação do fmsave: CA/PA, personalidade, ocultos, contrato e valor (o resto dos formatos traz o que trouxer)
+  enrichFromScout(r.players, text);
+  r.players.forEach(p => { const m = p.meta || {}; if (p.ca == null && m.ca != null && isFinite(+m.ca)) p.ca = +m.ca; if (p.pa == null && m.pa != null && isFinite(+m.pa)) p.pa = +m.pa; });
   const mc = majorityClub(r.players);
   const pack = { players: r.players, warnings: r.warnings, mapped: r.mapped, source: sourceName, at: new Date().toISOString() };
   let target = opts.force || 'squad';
@@ -4695,7 +4731,7 @@ function vSim() {
   const ctl = (k) => { const d = TI_BY_KEY[k]; return `<label class="f ${sim.hl === k ? 'hl' : ''}">${esc(d.n)}${selectHTML(d.opts.map((o, i) => [i, o]), tiVal(t, k), `A.simTI('${k}',this.value)`)}</label>`; };
   const fr = sim.focus != null ? t.slots[sim.focus] : null;
   const fRole = fr ? [ROLE_BY_ID[fr.ip], ROLE_BY_ID[fr.oop]] : null;
-  return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : '<span>' + L('Campo animado', 'Animated pitch') + '</span> — ' + esc(t.name)}</h2>
+  return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : '<span>' + L('Campo animado', 'Animated pitch') + '</span> — ' + esc(tName(t))}</h2>
       <p class="muted small" style="margin:0">${esc(t.ipForm)} <span>com bola</span> → ${esc(t.oopForm)} <span>sem bola</span> · ${esc(t.ment)}. <span>Clique num jogador para o seguir.</span></p></div>
     <div class="row">${sim.src === 'demo' ? '<button class="btn" onclick="A.simBack()">Voltar à minha tática</button>' : '<button class="btn" onclick="A.tab(\'tactic\',\'analyze\')">Editar no analisador</button>'}</div></div>
   <div class="simgrid">
@@ -4898,7 +4934,7 @@ function vHome() {
   <div class="grid g3">
     ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${L(`${ps.length} jogadores`, `${ps.length} players`)}</b>${ST.myClub ? ' · ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.save ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Plantel.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : ST.f9Found ? (ST.auto.on ? 'Carregue F9 no ecrã do plantel no FM27.' : 'Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.') : 'Ligue a leitura do save ou instale o plugin do F9 — veja Plantel.') : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
       ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : dataButtons() + `<button class="btn" onclick="A.tab('team','squad')">Como carregar</button>` + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
-    ${step(2, true, 'Tática', `<div class="score-ring" style="gap:12px">${ring(au.overall, 64)}<div><b>${esc(t.name)}</b><br><span class="muted">${esc(t.ipForm)} → ${esc(t.oopForm)} · ${esc(t.ment)}</span></div></div>`,
+    ${step(2, true, 'Tática', `<div class="score-ring" style="gap:12px">${ring(au.overall, 64)}<div><b>${esc(tName(t))}</b><br><span class="muted">${esc(t.ipForm)} → ${esc(t.oopForm)} · ${esc(t.ment)}</span></div></div>`,
       (ps.length >= 11 ? `<button class="btn primary" onclick="A.tab('team','gen')">Gerar tática para o plantel</button>` : '') + `<button class="btn ${ps.length >= 11 ? '' : 'primary'}" onclick="A.tab('tactic','analyze')">Analisar</button><button class="btn" onclick="A.simOpen()">▶ Ver em campo</button>`)}
     ${step(3, op.length > 0, 'Adversário', op.length ? `<b>${esc(ST._oppRep && ST._oppRep.club || ST.opp.source)}</b> carregado` : 'No FM27, abra o plantel do adversário e carregue <b>F9</b>. A app reconhece que é outro clube.',
       `<button class="btn ${op.length ? '' : 'primary'}" onclick="A.tab('team','opp')">${op.length ? 'Ver relatório' : 'Como carregar'}</button>`)}
@@ -4931,20 +4967,11 @@ function vSquad() {
       <label class="btn">Escolher ficheiro<input type="file" accept=".html,.htm,.txt,.csv,.tsv,.json" hidden onchange="A.squadFile(this)"></label>
       <label class="btn">Carregar como adversário<input type="file" accept=".html,.htm,.txt,.csv,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
       ${(ST.squad.warnings || []).map(w => `<div class="notice warn">${esc(w)}</div>`).join('')}
-      ${ST.squad.mapped && ST.squad.mapped.length ? `<details><summary>Colunas reconhecidas (${ST.squad.mapped.filter(m => m.k).length}/${ST.squad.mapped.length})</summary><p class="small">${ST.squad.mapped.map(m => `<span class="chip" style="${m.k ? '' : 'opacity:.5'}">${esc(m.h)}${m.k ? ' → ' + esc(m.k === 'name' || m.k === 'position' || m.k === 'age' ? m.k : attrName(m.k)) : ''}</span>`).join('')}</p></details>` : ''}
+      ${ST.squad.mapped && ST.squad.mapped.length ? `<details><summary>${L('Colunas reconhecidas', 'Recognised columns')} (${ST.squad.mapped.filter(m => m.k).length}/${ST.squad.mapped.length})</summary><p class="small" data-raw>${ST.squad.mapped.map(m => `<span class="chip" style="${m.k ? '' : 'opacity:.5'}">${esc(m.h)}${m.k ? ' → ' + esc(m.k === 'name' || m.k === 'position' || m.k === 'age' ? m.k : attrName(m.k)) : ''}</span>`).join('')}</p></details>` : ''}
     </div>
   </div>
-  ${ps.length ? `<div class="panel" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h3>Melhores papéis de cada jogador</h3><span class="small muted">Melhores papéis por pontuação de atributos (0–100). Posições naturais são respeitadas.</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Jogador</th><th>Pos</th><th>Idade</th>${ps.some(p => p.meta && p.meta.ability) ? '<th>Adjunto (CA/PA ★)</th>' : ''}<th>Melhores papéis com bola</th><th>Melhores papéis sem bola</th></tr></thead><tbody>
-    ${ps.map(p => {
-      const groups = p.pos.length ? [...new Set(p.pos.filter(x => !x.includes(':')))] : Object.keys(GROUPS);
-      const best = (phase) => groups.flatMap(g => rolesFor(g, phase, g === 'DC')).filter((r, i, a) => a.indexOf(r) === i)
-        .map(r => ({ r, s: (roleScore(p, r) || { score: 0 }).score })).sort((x, y) => y.s - x.s).slice(0, 3);
-      const adj = ps.some(q => q.meta && q.meta.ability) ? `<td class="small">${esc((p.meta && p.meta.ability) || '—')} / ${esc((p.meta && p.meta.potential) || '—')}${p.meta && p.meta.bestRole ? `<br><span class="muted">${esc(p.meta.bestRole)}</span>` : ''}</td>` : '';
-      return `<tr><td><b>${esc(p.name)}</b></td><td class="small">${esc(p.posRaw || '—')}</td><td>${p.age ?? '—'}</td>${adj}
-        <td>${best('IP').map(x => `${fitBadge(x.s)} <span class="small">${esc(x.r.name)}</span>`).join('<br>')}</td>
-        <td>${best('OOP').map(x => `${fitBadge(x.s)} <span class="small">${esc(x.r.name)}</span>`).join('<br>')}</td></tr>`;
-    }).join('')}</tbody></table></div></div>` : ''}`;
+  ${ps.length ? squadTable(ps) : ''}
+  ${ST.squadOpen && ps.find(p => p.id === ST.squadOpen) ? scoutCard(ps.find(p => p.id === ST.squadOpen), { own: true }) : ''}`;
 }
 
 function vSuggest() {
@@ -4962,8 +4989,8 @@ function vSuggest() {
       <div class="bars" style="max-width:420px">
         ${[['XI', x.xiAvg], ['Estilo', x.fit], ['Profundidade', x.depth], ['Coerência', x.audit.overall]].map(([n, v]) => `<div class="bar"><span>${n}</span><div class="t"><i style="width:${v}%;background:${fitColor(v)}"></i></div><b>${v}</b></div>`).join('')}
       </div>
-      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} como ${esc(roleName(ROLE_BY_ID[y.s.ip]))} (${y.sc})`).join(' · ')}</p>
-      <p class="small"><b>Pontos fracos:</b> ${x.weakest.map(y => `${esc(y.p ? y.p.name : '?')} em ${esc(y.s.ipCode)} (${y.sc})`).join(' · ')} — alvo de recrutamento/treino.</p>
+      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} ${L('como', 'as')} ${esc(roleName(ROLE_BY_ID[y.s.ip]))} (${y.sc})`).join(' · ')}</p>
+      <p class="small"><b>Pontos fracos:</b> ${x.weakest.map(y => `${esc(y.p ? y.p.name : '?')} ${L('em', 'at')} ${esc(y.s.ipCode)} (${y.sc})`).join(' · ')} ${L('— alvo de recrutamento/treino.', '— a recruitment/training target.')}</p>
       <button class="btn primary sm" onclick="A.useSuggestion(${i})">Abrir no analisador</button></div></div></div>`).join('')}</div>`;
 }
 
@@ -4989,7 +5016,7 @@ function vXI() {
       <td class="small">${b.bench ? `${esc(b.bench.p.name)} ${fitBadge(b.bench.sc)}` : '—'}</td>
       <td class="small">${b.succ ? `${esc(b.succ.p.name)} <span class="muted">${b.succ.p.age}a</span> ${fitBadge(b.succ.sc)}` : '—'}</td></tr>`;
   }).join('');
-  return `<div class="top"><div><h2><span>Melhor XI</span> — ${esc(t.name)}</h2><p class="muted small" style="margin:0">Passe o rato numa instrução para ver porquê. As instruções aplicadas entram na tática e na Ficha para o FM27.</p></div>
+  return `<div class="top"><div><h2><span>Melhor XI</span> — ${esc(tName(t))}</h2><p class="muted small" style="margin:0">Passe o rato numa instrução para ver porquê. As instruções aplicadas entram na tática e na Ficha para o FM27.</p></div>
     <div class="row"><button class="btn" onclick="A.autoXI()">Escolher XI automaticamente</button><button class="btn primary" onclick="A.applyAllPIs()">Aplicar a principal de cada jogador</button></div></div>
   <div class="grid" style="grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:start">
     <div class="panel">${pitchSVG(t, 'IP', null, { static: true })}<p class="small muted">Cor = adequação ao par de papéis (verde ≥ 70).</p></div>
@@ -5069,7 +5096,7 @@ function vGen() {
       ${sp ? sec(6, 'Bolas paradas e capitães', `<div class="grid g2"><table><tbody>
           <tr><td>Capitão</td><td><b>${esc(sp.caps[0].p.name)}</b></td></tr><tr><td>Vice-capitão</td><td><b>${esc(sp.caps[1].p.name)}</b></td></tr>
           <tr><td>Cantos (dir./esq.)</td><td><b>${esc(sp.corners.right.x.p.name)}</b> / <b>${esc(sp.corners.left.x.p.name)}</b></td></tr>
-          <tr><td>Livres</td><td><b>${esc((sp.fk.direct || sp.fk.cross).p.name)}</b>${sp.fk.direct ? ' (directos)' : ' (cruzar)'}</td></tr>
+          <tr><td>Livres</td><td><b>${esc((sp.fk.direct || sp.fk.cross).p.name)}</b>${sp.fk.direct ? L(' (directos)', ' (direct)') : L(' (cruzar)', ' (cross)')}</td></tr>
           <tr><td>Penáltis</td><td>${sp.pens.map(x => esc(x.p.name)).join(' → ')}</td></tr></tbody></table>
           <table><tbody>${sp.attack.filter(x => ['far', 'centre', 'near'].includes(x.k)).map(x => `<tr><td><span>Alvo aéreo</span> — ${esc(x.n)}</td><td><b>${esc(x.x.p.name)}</b></td></tr>`).join('')}</tbody></table></div>
           <button class="btn sm" onclick="A.genUse(false,'setpieces')">Ver diagramas dos cantos</button>`) : ''}
@@ -5136,7 +5163,7 @@ function vGamePlans() {
   const tiRows = grpC('ti'), roleRows = grpC('role'), piRows = grpC('pi'), ment = grpC('ment')[0];
   const sec = (title, body) => body ? `<div class="plan-sec"><h4>${title}</h4>${body}</div>` : '';
   const tbl = (rows) => `<table><tbody>${rows.join('')}</tbody></table>`;
-  return `<div class="top"><div><h2>${L('Situações de jogo', 'Game states')}</h2><p class="muted small" style="margin:0">${L(`Planos a partir de “${esc(ST.tactic.name)}”${ps.length ? ' e do teu plantel' : ''}. No FM27 pode guardar até 3 táticas: use a base como A e estes planos como B e C (por exemplo, B = Precisamos de golos, C = Segurar o resultado).`, `Plans built from “${esc(ST.tactic.name)}”${ps.length ? ' and your squad' : ''}. FM27 lets you keep up to 3 tactics: use the base as A and these plans as B and C (e.g. B = We need goals, C = Protect the lead).`)}</p></div>
+  return `<div class="top"><div><h2>${L('Situações de jogo', 'Game states')}</h2><p class="muted small" style="margin:0">${L(`Planos a partir de “${esc(tName(ST.tactic))}”${ps.length ? ' e do teu plantel' : ''}. No FM27 pode guardar até 3 táticas: use a base como A e estes planos como B e C (por exemplo, B = Precisamos de golos, C = Segurar o resultado).`, `Plans built from “${esc(tName(ST.tactic))}”${ps.length ? ' and your squad' : ''}. FM27 lets you keep up to 3 tactics: use the base as A and these plans as B and C (e.g. B = We need goals, C = Protect the lead).`)}</p></div>
     <div class="row"><button class="btn primary" onclick="A.planSave()">${L('Guardar como tática', 'Save as tactic')}</button><button class="btn" onclick="A.planUse()">${L('Usar agora', 'Use now')}</button><button class="btn" onclick="A.planCopy()">${L('Copiar como texto', 'Copy as text')}</button></div></div>
   <div class="plan-tabs" role="tablist">${sc.map(s => `<button role="tab" aria-selected="${s.k === k}" class="${s.k === k ? 'on' : ''}" onclick="A.planK('${s.k}')"><span aria-hidden="true">${s.ic}</span> ${esc(s.n)}</button>`).join('')}</div>
   ${!ps.length ? `<div class="notice small" style="margin:10px 0">${L('Sem plantel carregado: os ajustes seguem só a estrutura da tática; as substituições e as instruções individuais precisam do plantel.', 'No squad loaded: adjustments follow the tactic’s structure only; substitutions and player instructions need the squad.')}</div>` : ''}
@@ -5269,20 +5296,24 @@ function scoutTable(list, extra) {
       <td><b>${p.ca ?? '—'}</b></td><td>${p.pa ?? '—'}${p.paRange ? '*' : ''}</td><td>${p.value == null && p.club ? `<span class="muted" title="${esc(L('Valor desconhecido: o fmsave não o conseguiu ler deste jogador.', 'Unknown value: fmsave could not read it for this player.'))}">?</span>` : fmtMoney(p.value)}</td><td>${fmtMoney(p.wage)}</td><td class="small">${fmtDate(p.end)}</td>${ext ? `<td>${ext[1](p) ?? '—'}</td>` : ''}</tr>`).join('')}
   </tbody></table></div>`;
 }
-function scoutCard(p) {
-  const ctx = scoutCtx(), jn = joinLikelihood(p, ctx), g = ctx.squad.length ? bestGain(p, ST.tactic, ctx.squad) : null, roles = bestRolesAny(p, 5), lk = p.age != null && p.age <= 23 ? reachLikelihood(p) : null;
+function scoutCard(p, opts = {}) {
+  const own = !!opts.own, close = own ? 'A.squadClose()' : 'A.scoutClose()';
+  const ctx = scoutCtx(), jn = own ? null : joinLikelihood(p, ctx), g = ctx.squad.length ? bestGain(p, ST.tactic, ctx.squad) : null, roles = bestRolesAny(p, 5), lk = p.age != null && p.age <= 23 ? reachLikelihood(p) : null;
   const grp = (c) => Object.keys(ATTRS).filter(k => ATTRS[k].c === c && p.a[k] != null);
   const cell = (k) => { const v = Math.round(p.a[k]); return `<div class="attr"><span>${esc(attrName(k))}</span><b class="v v${v >= 16 ? 4 : v >= 13 ? 3 : v >= 10 ? 2 : 1}">${v}</b></div>`; };
   const gkR = p.posR ? (p.posR.gk ?? 0) : 0, isGK = gkR >= 15 && gkR >= Math.max(0, ...Object.entries(p.posR || {}).filter(([k]) => k !== 'gk').map(([, v]) => v));   // só se a melhor posição for GR
   const pers = [['professionalism', L('Profissionalismo', 'Professionalism')], ['ambition', L('Ambição', 'Ambition')], ['pressure', L('Pressão', 'Pressure')], ['loyalty', L('Lealdade', 'Loyalty')], ['temperament', L('Temperamento', 'Temperament')], ['adaptability', L('Adaptabilidade', 'Adaptability')]];
   const hid = [['cons', L('Consistência', 'Consistency')], ['imp', L('Jogos importantes', 'Important matches')], ['inj', L('Propensão a lesões', 'Injury proneness')], ['vers', L('Versatilidade', 'Versatility')]];
-  return `<div class="modal-back" onclick="if(event.target===this)A.scoutClose()"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(p.name)}">
+  const mySlot = own ? ST.tactic.slots.find(s => s.pid === p.id) : null;
+  const ownNote = own ? (mySlot ? L(`Titular em <b>${esc(mySlot.ipCode)}</b> na tática actual (adequação ${slotScore(p, ST.tactic, mySlot)}).`, `Starts at <b>${esc(mySlot.ipCode)}</b> in the current tactic (fit ${slotScore(p, ST.tactic, mySlot)}).`)
+    : g ? L(`Não está no XI. Melhor casa: <b>${esc(g.code)}</b> (${g.his} contra ${g.cur} de ${esc(g.starter || 'ninguém')}).`, `Not in the XI. Best slot: <b>${esc(g.code)}</b> (${g.his} vs ${g.cur} for ${esc(g.starter || 'nobody')}).`) : '') : '';
+  return `<div class="modal-back" onclick="if(event.target===this)${close}"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(p.name)}">
     <div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">${esc(p.name)}</h2>
       <p class="small muted" style="margin:.2em 0 0">${p.age ?? '—'} ${L('anos', 'years')} · ${p.club ? esc(p.club) : L('sem clube', 'no club')}${SCOUT.nations[p.nat] ? ' · ' + esc(SCOUT.nations[p.nat]) : ''} · ${esc(p.posRaw || '')}${p.height ? ' · ' + p.height + ' cm' : ''}${p.foot ? ' · ' + (p.foot === 'L' ? L('esquerdino', 'left-footed') : p.foot === 'R' ? L('destro', 'right-footed') : L('ambos os pés', 'two-footed')) : ''}</p></div>
-      <div class="row"><button class="btn ${ (ST.shortlist || []).some(x => x.id === p.id) ? 'primary' : ''}" onclick="A.scoutStar('${esc(p.id)}')">${(ST.shortlist || []).some(x => x.id === p.id) ? '★ ' + L('Na lista', 'On shortlist') : '☆ ' + L('Pôr na lista', 'Add to shortlist')}</button><button class="btn" onclick="A.scoutClose()" aria-label="${L('Fechar', 'Close')}">✕</button></div></div>
+      <div class="row">${own ? '' : `<button class="btn ${(ST.shortlist || []).some(x => x.id === p.id) ? 'primary' : ''}" onclick="A.scoutStar('${esc(p.id)}')">${(ST.shortlist || []).some(x => x.id === p.id) ? '★ ' + L('Na lista', 'On shortlist') : '☆ ' + L('Pôr na lista', 'Add to shortlist')}</button>`}<button class="btn" onclick="${close}" aria-label="${L('Fechar', 'Close')}">✕</button></div></div>
     <div class="kpis" style="margin-top:12px"><div><span>CA</span><b>${p.ca ?? '—'}</b></div><div><span>PA</span><b>${p.pa ?? '—'}${p.paRange ? ` <span class="small muted">(${p.paRange[0]}–${p.paRange[1]})</span>` : ''}</b></div><div><span>${L('Valor', 'Value')}</span><b>${p.value == null && p.club ? L('desconhecido', 'unknown') : fmtMoney(p.value)}</b></div><div><span>${L('Salário/semana', 'Wage/week')}</span><b>${fmtMoney(p.wage)}</b></div><div><span>${L('Contrato até', 'Contract until')}</span><b>${fmtDate(p.end)}</b></div>${lk != null ? `<div><span>${L('Prob. de atingir o PA', 'Chance to reach PA')}</span><b>${lk}</b></div>` : ''}</div>
     ${jn && !(ctx.myClub && p.club && p.club.toLowerCase() === ctx.myClub.toLowerCase()) ? `<div class="notice small" style="margin-top:10px"><b>${L('Probabilidade de querer vir', 'Chance he would join you')}: ${jn.score}/100</b> <span class="muted">(${L('estimativa', 'estimate')})</span> — ${esc(jn.why.join(' · '))}</div>` : ''}
-    ${g ? `<div class="notice small" style="margin-top:10px">${g.gain > 0 ? L(`No teu XI entraria em <b>${esc(g.code)}</b>: adequação ${g.his} contra ${g.cur} de ${esc(g.starter || 'ninguém')} (<b>+${g.gain}</b>).`, `In your XI he would play at <b>${esc(g.code)}</b>: fit ${g.his} vs ${g.cur} for ${esc(g.starter || 'nobody')} (<b>+${g.gain}</b>).`) : L(`Não melhoraria o teu XI (melhor casa: ${esc(g.code)}, ${g.his} contra ${g.cur}).`, `He would not improve your XI (best slot: ${esc(g.code)}, ${g.his} vs ${g.cur}).`)}</div>` : ''}
+    ${own ? (ownNote ? `<div class="notice small" style="margin-top:10px">${ownNote}</div>` : '') : g ? `<div class="notice small" style="margin-top:10px">${g.gain > 0 ? L(`No teu XI entraria em <b>${esc(g.code)}</b>: adequação ${g.his} contra ${g.cur} de ${esc(g.starter || 'ninguém')} (<b>+${g.gain}</b>).`, `In your XI he would play at <b>${esc(g.code)}</b>: fit ${g.his} vs ${g.cur} for ${esc(g.starter || 'nobody')} (<b>+${g.gain}</b>).`) : L(`Não melhoraria o teu XI (melhor casa: ${esc(g.code)}, ${g.his} contra ${g.cur}).`, `He would not improve your XI (best slot: ${esc(g.code)}, ${g.his} vs ${g.cur}).`)}</div>` : ''}
     <div class="grid g3 attrs-grid" style="margin-top:12px">${(isGK ? ['G', 'M', 'F'] : ['T', 'M', 'F']).map(c => `<div><h4>${{ T: L('Técnicos', 'Technical'), M: L('Mentais', 'Mental'), F: L('Físicos', 'Physical'), G: L('Guarda-redes', 'Goalkeeping') }[c]}</h4>${grp(c).map(cell).join('')}</div>`).join('')}</div>
     <div class="grid g2" style="margin-top:12px;align-items:start">
       <div><h4>${L('Melhores papéis', 'Best roles')}</h4>${roles.map(x => `<div class="row small" style="justify-content:space-between"><span>${esc(roleName(x.r))} <span class="muted">(<span>${esc(GROUPS[x.g] || x.g)}</span>)</span></span>${fitBadge(x.s)}</div>`).join('')}</div>
@@ -5324,6 +5355,50 @@ function vScout() {
 }
 
 ;
+// ---- ui/views_squadtable.js
+// ============================================================
+// Tabela do plantel: papéis · habilidade e contrato · personalidade e ocultos
+// ============================================================
+const SQ_PERS = () => [['professionalism', L('Profissionalismo', 'Professionalism'), 'pers'], ['ambition', L('Ambição', 'Ambition'), 'pers'], ['pressure', L('Pressão', 'Pressure'), 'pers'],
+  ['loyalty', L('Lealdade', 'Loyalty'), 'pers'], ['temperament', L('Temperamento', 'Temperament'), 'pers'], ['adaptability', L('Adaptabilidade', 'Adaptability'), 'pers'],
+  ['cons', L('Consistência', 'Consistency'), 'hid'], ['imp', L('Jogos importantes', 'Important matches'), 'hid'], ['inj', L('Propensão a lesões', 'Injury proneness'), 'hid', true], ['vers', L('Versatilidade', 'Versatility'), 'hid']];
+function sqVal(p, k) {
+  if (k === 'name') return p.name; if (k === 'age') return p.age; if (k === 'ca') return p.ca; if (k === 'pa') return p.pa; if (k === 'value') return p.value; if (k === 'wage') return p.wage; if (k === 'end') return p.end || null;
+  if (k === 'lk') return p.age != null && p.age <= 23 ? reachLikelihood(p) : null; if (k === 'rep') return p.rep;
+  const d = SQ_PERS().find(x => x[0] === k); if (d) { const v = (p[d[2]] || {})[k]; return v == null ? null : v; }
+  return null;
+}
+function squadTable(ps) {
+  const mode = ST.sqMode || 'roles', S = ST.sqSort || { k: '', dir: 'desc' };
+  const rich = ps.some(p => p.ca != null), richP = ps.some(p => p.pers && Object.keys(p.pers).length);
+  const list = S.k ? [...ps].sort((a, b) => { const x = sqVal(a, S.k), y = sqVal(b, S.k); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (x > y ? 1 : x < y ? -1 : 0) * (S.dir === 'asc' ? 1 : -1); }) : ps;
+  const th = (k, label) => `<th><button class="th-sort ${S.k === k ? 'on' : ''}" onclick="A.sqSort('${k}')">${label}${S.k === k ? (S.dir === 'asc' ? ' ▲' : ' ▼') : ''}</button></th>`;
+  const badge = (v, inv) => v == null ? '<span class="muted">—</span>' : `<b class="v v${inv ? (v <= 6 ? 4 : v <= 10 ? 3 : v <= 14 ? 2 : 1) : (v >= 16 ? 4 : v >= 13 ? 3 : v >= 10 ? 2 : 1)}">${v}</b>`;
+  const tabs = `<div class="seg" role="tablist" aria-label="${L('Colunas', 'Columns')}">${[['roles', L('Papéis', 'Roles')], ['ability', L('Habilidade e contrato', 'Ability and contract')], ['pers', L('Personalidade e ocultos', 'Personality and hidden')]].map(([k, n]) => `<button class="${mode === k ? 'on' : ''}" onclick="A.sqMode('${k}')" aria-pressed="${mode === k}">${n}</button>`).join('')}</div>`;
+  const note = (mode === 'ability' && !rich) || (mode === 'pers' && !richP) ? `<div class="notice small" style="margin:8px 0">${L('Estes dados vêm do save: leia o plantel com “Ler o save agora” (fmsave) para ver CA/PA, personalidade, atributos ocultos, contrato e valor. O F9 e outros CSV só trazem o que a vista exportar.', 'This data comes from the save: read the squad with “Read the save now” (fmsave) to see CA/PA, personality, hidden attributes, contract and value. F9 and other CSVs only include what the view exports.')}</div>` : '';
+  let head, row;
+  if (mode === 'ability') {
+    head = `${th('ca', 'CA')}${th('pa', 'PA')}${th('lk', L('Prob. PA', 'PA chance'))}${th('value', L('Valor', 'Value'))}${th('wage', L('Salário', 'Wage'))}${th('end', L('Contrato até', 'Contract until'))}<th>${L('Estatuto', 'Status')}</th>`;
+    row = (p) => `<td><b>${p.ca ?? '—'}</b></td><td>${p.pa ?? '—'}${p.paRange ? '*' : ''}</td><td>${sqVal(p, 'lk') ?? '<span class="muted">—</span>'}</td><td>${fmtMoney(p.value)}</td><td>${fmtMoney(p.wage)}</td><td class="small">${fmtDate(p.end)}</td><td class="small">${esc(p.status || '—')}</td>`;
+  } else if (mode === 'pers') {
+    head = SQ_PERS().map(([k, n]) => th(k, n)).join('');
+    row = (p) => SQ_PERS().map(([k, , g, inv]) => `<td>${badge((p[g] || {})[k], inv)}</td>`).join('');
+  } else {
+    head = `${rich ? th('ca', 'CA') : ''}<th>${L('Melhores papéis com bola', 'Best in-possession roles')}</th><th>${L('Melhores papéis sem bola', 'Best out-of-possession roles')}</th>`;
+    row = (p) => {
+      const groups = p.pos.length ? [...new Set(p.pos.filter(x => !x.includes(':')))] : Object.keys(GROUPS);
+      const best = (phase) => groups.flatMap(g => rolesFor(g, phase, g === 'DC')).filter((r, i, a) => a.indexOf(r) === i).map(r => ({ r, s: (roleScore(p, r) || { score: 0 }).score })).sort((x, y) => y.s - x.s).slice(0, 3);
+      return `${rich ? `<td><b>${p.ca ?? '—'}</b></td>` : ''}<td>${best('IP').map(x => `${fitBadge(x.s)} <span class="small">${esc(roleName(x.r))}</span>`).join('<br>')}</td><td>${best('OOP').map(x => `${fitBadge(x.s)} <span class="small">${esc(roleName(x.r))}</span>`).join('<br>')}</td>`;
+    };
+  }
+  return `<div class="panel" style="margin-top:16px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">${L('Jogadores do plantel', 'Squad players')}</h3>${tabs}</div>
+    ${note}<p class="small muted" style="margin:6px 0">${L('Clique num jogador para ver a ficha completa; clique no título de uma coluna para ordenar.', 'Click a player for the full card; click a column title to sort.')}</p>
+    <div class="table-wrap" style="max-height:none"><table class="scout-table"><thead><tr>${th('name', L('Jogador', 'Player'))}<th>${L('Pos', 'Pos')}</th>${th('age', L('Idade', 'Age'))}${head}</tr></thead><tbody>
+    ${list.map(p => `<tr class="click" onclick="A.squadOpen('${esc(p.id)}')"><td><b>${esc(p.name)}</b></td><td class="small">${esc(p.posRaw || '—')}</td><td>${p.age ?? '—'}</td>${row(p)}</tr>`).join('')}
+    </tbody></table></div></div>`;
+}
+
+;
 // ---- ui/views_tactic.js
 // ============================================================
 // Vistas da Tática: analisar, importar, ficha FM27
@@ -5332,7 +5407,7 @@ function vTactic() {
   const t = ST.tactic, au = auditTactic(t, players()), sel = ST.sel;
   const forms = Object.keys(FORMATIONS).map(f => [f, f]);
   const cats = Object.entries(au.scores);
-  return `<div class="top"><div><h2>${esc(ST.tactic.name)}</h2><p class="muted small" style="margin:0">Clique num jogador do campo para mudar papéis, jogador e instruções individuais.</p></div>
+  return `<div class="top"><div><h2>${esc(tName(ST.tactic))}</h2><p class="muted small" style="margin:0">Clique num jogador do campo para mudar papéis, jogador e instruções individuais.</p></div>
     <div class="row no-print">
       <button class="btn primary" onclick="A.simOpen()">▶ Ver em campo</button>
       <button class="btn" onclick="A.newTactic()">Nova</button>
@@ -5460,7 +5535,7 @@ function vSheet() {
   const t = ST.tactic, pm = Object.fromEntries(players().map(p => [p.id, p]));
   const ck = '<input type="checkbox" aria-label="feito">';
   const changed = TEAM_INSTRUCTIONS.filter(d => tiVal(t, d.k) !== d.def).length;
-  return `<div class="top"><div><h2><span>Ficha para o FM27</span> — ${esc(t.name)}</h2>
+  return `<div class="top"><div><h2><span>Ficha para o FM27</span> — ${esc(tName(t))}</h2>
     <p class="muted small" style="margin:0">Recrie a tática no jogo por esta ordem e guarde-a lá: o FM27 gera o .fmf. Marque cada passo à medida que avança.</p></div>
     <div class="row no-print">${LANG === 'pt' ? `<div class="seg" role="group" aria-label="Nomes na ficha"><button class="${ST.sheetNames !== 'pt' ? 'on' : ''}" onclick="A.sheetNames('en')" title="Como aparecem no FM27 em inglês">Nomes do jogo (EN)</button><button class="${ST.sheetNames === 'pt' ? 'on' : ''}" onclick="A.sheetNames('pt')">Português</button></div>` : ''}<button class="btn" onclick="A.print()">Imprimir/PDF</button><button class="btn" onclick="A.copySheet()">Copiar texto</button><button class="btn" onclick="A.tab('tactic','analyze')">Voltar</button></div></div>
   <div class="grid g2 sheet" data-gameterms="${ST.sheetNames === 'pt' ? 'pt' : 'en'}">
@@ -5534,7 +5609,7 @@ function vSetPieces() {
   if (!r) return '<div class="panel empty">Não consegui montar o XI.</div>';
   const row = (label, x, extra) => `<tr><td>${esc(label)}</td><td>${x ? `<b>${esc(x.p.name)}</b> <span class="muted small">${esc(x.code)}</span>` : '—'}</td><td class="small muted">${extra || ''}</td></tr>`;
   const a = (x, ks) => ks.map(k => `${attrName(k)} ${Math.round(x.p.a[k] ?? 0)}`).join(' · ');
-  return `<div class="top"><div><h2>Bolas paradas & capitães</h2><p class="muted small" style="margin:0"><span>Escolhidos entre o XI de</span> “${esc(ST.tactic.name)}”. <span>${oppPlayers().length ? 'Marcações individuais contra os mais fortes no ar do adversário carregado.' : 'Carregue o adversário para marcações individuais nominais.'}</span></p></div>
+  return `<div class="top"><div><h2>Bolas paradas & capitães</h2><p class="muted small" style="margin:0"><span>Escolhidos entre o XI de</span> “${esc(tName(ST.tactic))}”. <span>${oppPlayers().length ? 'Marcações individuais contra os mais fortes no ar do adversário carregado.' : 'Carregue o adversário para marcações individuais nominais.'}</span></p></div>
     <div class="row"><button class="btn" onclick="A.tab('tactic','sheet')">Ver na Ficha para o FM27</button></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Marcadores</h3><table><tbody>
@@ -5568,7 +5643,7 @@ function vSetPieces() {
 // ============================================================
 function vTraining() {
   const t = ST.tactic, au = auditTactic(t, players()), plan = trainingPlan(t, players(), au);
-  return `<div class="top"><div><h2><span>Plano de treino para</span> “${esc(t.name)}”</h2>
+  return `<div class="top"><div><h2><span>Plano de treino para</span> “${esc(tName(t))}”</h2>
     <p class="muted small">Ligado às áreas de Tactical Understanding do FM27: treine primeiro o que a sua tática mais exige.</p></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Prioridades de Tactical Understanding</h3>
@@ -5586,7 +5661,7 @@ function vTraining() {
     ${plan.indiv.length ? `<div class="table-wrap"><table><thead><tr><th>Jogador</th><th>Pos</th><th>IP</th><th>OOP</th><th>Role Training</th><th>Foco adicional</th></tr></thead><tbody>
       ${plan.indiv.map(x => `<tr><td><b>${esc(x.p.name)}</b></td><td>${x.slot}</td><td>${fitBadge(x.si)}</td><td>${fitBadge(x.so)}</td><td>${esc(roleName(x.role))}</td><td>${x.weak.map(k => `<span class="chip">${esc(attrName(k))} ${Math.round(x.p.a[k])}</span>`).join('')}</td></tr>`).join('')}
     </tbody></table></div>` : '<p class="muted">Atribua jogadores ao XI (Plantel → Analisador → Auto XI) para recomendações individuais.</p>'}
-    ${plan.mentors.length && plan.youth.length ? `<h4 style="margin-top:12px">Mentoria</h4><p class="small">Mentores (Determinação ≥ 15, ≥ 26 anos): ${plan.mentors.slice(0, 4).map(p => esc(p.name)).join(', ')}. Jovens ≤ 21: ${plan.youth.slice(0, 8).map(p => esc(p.name)).join(', ')}.</p>` : ''}
+    ${plan.mentors.length && plan.youth.length ? `<h4 style="margin-top:12px">Mentoria</h4><p class="small">${L('Mentores (Determinação ≥ 15, ≥ 26 anos)', 'Mentors (Determination ≥ 15, aged 26+)')}: ${plan.mentors.slice(0, 4).map(p => esc(p.name)).join(', ')}. ${L('Jovens ≤ 21', 'Youngsters ≤ 21')}: ${plan.youth.slice(0, 8).map(p => esc(p.name)).join(', ')}.</p>` : ''}
   </div>`;
 }
 
@@ -5684,7 +5759,7 @@ function integrationsHTML(compact) {
        <div class="small">${ST.lastSave ? `<span>Último save:</span> <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br><span>Lido:</span> ${esc(ST.auto.saveLast)}` : ''}</div>` : ''}
      ${err && DESKTOP ? `<div class="notice warn small">${esc(saveErrText(err))}</div>` : ''}
      <p class="small muted">${L('A app usa sempre a versão mais recente do fmsave (verifica o PyPI a cada leitura; sem internet, usa a que já tem). Se instalou o fmsave com pip, actualize com', 'The app always uses the latest fmsave (it checks PyPI on every read; offline, it uses the one you already have). If you installed fmsave with pip, update it with')} <code>python -m pip install --upgrade fmsave</code>.</p>`,
-    DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">📥 Ler o save agora</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
+    DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">📥 ${L('Ler o save agora', 'Read the save now')}</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
   const f9Card = card('F9 no jogo — FM View Exporter',
     DESKTOP ? pill(f9, 'plugin encontrado', 'plugin não encontrado') + (f9 ? pill(ST.auto.on, 'automático', 'manual') : '') : '',
     `<p class="small"><b>Requer</b> o plugin gratuito <a href="${LINKS.fmve}" target="_blank" rel="noopener">FM View Exporter</a> (Windows + Steam): descarregue o <code>setup.exe</code>, clique Install, e no FM importe a vista <code>FM27-PlayerAnalyzer-Squad-Standard.fmf</code>. Depois, F9 no ecrã do plantel exporta-o${DESKTOP ? ' e a app carrega-o sozinha' : ''}. F9 no plantel de outro clube entra como adversário.</p>
@@ -5701,7 +5776,7 @@ function vSettings() {
   if (DESKTOP) setTimeout(async () => {
     const el = document.getElementById('dirs'); if (!el) return;
     const ds = await desktopDirs(); const uniq = []; ds.forEach(([p, ok]) => { if (!uniq.some(u => u[0] === p)) uniq.push([p, ok]); });
-    el.innerHTML = uniq.map(([p, ok]) => `<div class="small"><span class="dot ${ok ? 'ok' : ''}"></span><code>${esc(p)}</code>${ok ? ' — encontrada' : ''}</div>`).join('');
+    el.innerHTML = uniq.map(([p, ok]) => `<div class="small"><span class="dot ${ok ? 'ok' : ''}"></span><code>${esc(p)}</code>${ok ? L(' — encontrada', ' — found') : ''}</div>`).join('');
   }, 0);
   return `<div class="top"><div><h2>Definições</h2></div></div>
   <div class="grid g2">
@@ -5777,7 +5852,7 @@ function vLabResults(job) {
   return `<div class="panel"><div class="row" style="justify-content:space-between;align-items:flex-start">
       <div><h2 style="margin:0">${esc(a.name)}</h2><p class="small muted" style="margin:.2em 0 0"><span>${a.type === 'save_opponents' ? 'Contra adversários reais do save' : a.mode === 'comparison' ? 'Comparação A/B com as mesmas sementes' : 'Tática única'}</span> · ${L(`${a.completed || 0}/${a.total || a.rows.length} jogos`, `${a.completed || 0}/${a.total || a.rows.length} matches`)} · <span>estado:</span> <span>${esc(job.status || 'importado')}</span></p></div>
       <div class="row">${DESKTOP && LS.status ? `${running ? `<button class="btn" onclick="A.labCancel('${esc(job.id)}')">Cancelar</button>` : ''}
-        ${free && !running && job.id ? `${selectHTML([[50, '+50 jogos'], [100, '+100 jogos'], [200, '+200 jogos']], LS.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" data-busy="lab-more" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
+        ${free && !running && job.id ? `${selectHTML([[50, L('+50 jogos', '+50 matches')], [100, L('+100 jogos', '+100 matches')], [200, L('+200 jogos', '+200 matches')]], LS.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" data-busy="lab-more" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
         ${job.id ? groups.filter(g => g === 'A' || g === 'B').map(g => `<button class="btn" data-busy="lab-fmf" onclick="A.labFmf('${esc(job.id)}','${g}')">.fmf ${g}</button>`).join('') : ''}` : ''}</div></div>
     ${running ? `<div class="progress"><i style="width:${(job.completed || 0) / Math.max(1, job.total || 1) * 100}%"></i></div><p class="small muted">A correr no motor do FM27… ${job.matches_per_minute ? job.matches_per_minute + ' jogos/min' : ''}${job.eta_seconds ? ' · faltam ~' + Math.ceil(job.eta_seconds / 60) + ' min' : ''}</p>` : ''}
   </div>
@@ -5935,6 +6010,11 @@ const A = {
     save(); render();
   },
   sheetNames(v) { ST.sheetNames = v; save(); render(); },
+  // ---------- tabela e ficha do plantel ----------
+  sqMode(m) { ST.sqMode = m; save(); render(); },
+  sqSort(k) { const S = ST.sqSort || { k: '', dir: 'desc' }; ST.sqSort = S.k === k ? { k, dir: S.dir === 'asc' ? 'desc' : 'asc' } : { k, dir: ['name', 'age', 'end', 'value', 'wage'].includes(k) ? 'asc' : 'desc' }; save(); render(); },
+  squadOpen(id) { ST.squadOpen = id; render(); },
+  squadClose() { ST.squadOpen = null; render(); },
   // ---------- prospeção ----------
   async scoutLoad() {
     if (BUSY.scout) return; SCOUT.err = '';
@@ -6250,8 +6330,8 @@ async function desktopPoll(force) {
       busyStart('f9', 'A carregar a exportação F9', { detail: r.name }); await new Promise(res => setTimeout(res, 30));
       let where; try { where = ingestSquadText(r.content, r.name + ' (F9)'); } finally { busyEnd('f9'); }
       save(); if (where) render();
-    } else if (force) toast('Nenhuma exportação nova encontrada');
-  } catch (e) { if (force) toast('Não consegui ler a pasta de exportação'); }
+    } else if (force) toast(L('Nenhuma exportação nova encontrada', 'No new export found'));
+  } catch (e) { if (force) toast(L('Não consegui ler a pasta de exportação', 'Could not read the export folder')); }
   POLLING = false;
 }
 // ---------- app instalada: lê o save (.fm) com o fmsave sempre que o jogo grava ----------
@@ -6286,6 +6366,7 @@ document.addEventListener('click', (e) => {
 });
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; }
+  if (e.key === 'Escape' && ST.squadOpen) { A.squadClose(); return; }
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') { e.preventDefault(); if (DESKTOP) A.saveNow(); else A.pickFile(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();

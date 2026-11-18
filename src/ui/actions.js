@@ -121,6 +121,11 @@ const A = {
     save(); render();
   },
   sheetNames(v) { ST.sheetNames = v; save(); render(); },
+  // ---------- tabela e ficha do plantel ----------
+  sqMode(m) { ST.sqMode = m; save(); render(); },
+  sqSort(k) { const S = ST.sqSort || { k: '', dir: 'desc' }; ST.sqSort = S.k === k ? { k, dir: S.dir === 'asc' ? 'desc' : 'asc' } : { k, dir: ['name', 'age', 'end', 'value', 'wage'].includes(k) ? 'asc' : 'desc' }; save(); render(); },
+  squadOpen(id) { ST.squadOpen = id; render(); },
+  squadClose() { ST.squadOpen = null; render(); },
   // ---------- prospeção ----------
   async scoutLoad() {
     if (BUSY.scout) return; SCOUT.err = '';

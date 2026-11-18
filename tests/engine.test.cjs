@@ -368,3 +368,20 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
     if(bad) process.exitCode=1;
   })();
 }
+
+// 25. plantel lido do save (formato fmsave): CA/PA, personalidade, ocultos e contrato chegam ao plantel
+{
+  const c16={console,Math,performance,setTimeout}; vm.createContext(c16);
+  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','scouting.js'),'utf8')+';this.E={parseSquad,enrichFromScout};',c16);
+  const E=c16.E; let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  const {gen}=require('./gen_scout_db.cjs'); const csv=gen(25,11);
+  const ps=E.parseSquad(csv).players; const n=E.enrichFromScout(ps,csv);
+  chk(n===25,'25 jogadores enriquecidos: '+n);
+  chk(ps.every(p=>p.ca>0 && p.pa>=p.ca),'CA/PA em todos');
+  chk(ps.every(p=>Object.keys(p.pers).length===8 && Object.keys(p.hid).length===5),'personalidade (8) e ocultos (5)');
+  chk(ps.filter(p=>p.club).every(p=>p.value!=null && /^\d{4}-\d{2}-\d{2}$/.test(p.end)),'valor e fim de contrato');
+  chk(ps.some(p=>p.pos.includes('ST')),'avançados (positions_stc)');
+  const f9=E.parseSquad('Name,Position,Age,Finishing\nA,ST,22,14\nB,DC,25,8').players; chk(E.enrichFromScout(f9,'Name,Position,Age,Finishing')===0,'CSV do F9 não é tocado');
+  console.log('plantel do save: CA/PA, personalidade, ocultos e contrato verificados');
+  if(bad) process.exitCode=1;
+}

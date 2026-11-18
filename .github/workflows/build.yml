@@ -135,6 +135,8 @@ jobs:
         run: python tests/ui_i18n.py
       - name: Verificar nomes do FM em português (nada em inglês com a app em português)
         run: python tests/ui_pt_terms.py
+      - name: Auditoria de idioma nos dois sentidos (vocabulário tirado do código)
+        run: python tests/ui_lang_audit.py
 
   # Publica os ficheiros em Releases (aparece na página principal do repositório):
   #  • push/Run workflow → pré-release "ultima" (substituída a cada build)

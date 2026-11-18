@@ -73,6 +73,9 @@ function matchFormations(ipForm, oopForm) {
   return A.map((a, i) => ({ ipCode: a.code, oopCode: B[asg[i]].code }));
 }
 
+// nome por defeito mostrado na língua activa
+const DEFAULT_TACTIC_NAMES = ['Nova tática', 'New tactic'];
+function tName(t) { return t && DEFAULT_TACTIC_NAMES.includes(t.name) ? L('Nova tática', 'New tactic') : (t ? t.name : ''); }
 function newTactic(ipForm = '4-3-3 DM Wide', oopForm = '4-1-4-1 DM Wide') {
   const pairs = matchFormations(ipForm, oopForm);
   return {
@@ -323,7 +326,7 @@ function complexityOf(t) {
     if (s.pis && s.pis.length) { cx += s.pis.length * 0.5; parts.push([L(`${s.pis.length} instrução(ões) individuais (${s.ipCode})`, `${s.pis.length} player instruction(s) (${s.ipCode})`), s.pis.length * 0.5]); }
   });
   if (t.ois) { cx += t.ois * 0.5; parts.push([L(`${t.ois} instruções de adversário`, `${t.ois} opposition instructions`), t.ois * 0.5]); }
-  const level = cx <= 6 ? 'Baixa' : cx <= 12 ? L('Média', 'Medium') : 'Alta';
+  const level = cx <= 6 ? L('Baixa', 'Low') : cx <= 12 ? L('Média', 'Medium') : L('Alta', 'High');
   return { cx: Math.round(cx * 10) / 10, level, parts };
 }
 
@@ -452,7 +455,7 @@ function auditTactic(t, squad) {
     if (iq != null && C.cx > cap) add('Complexidade','warn',L(`Tática complexa para este plantel (${C.cx} > ${cap})`, `Tactic too complex for this squad (${C.cx} > ${cap})`),L(`Média tática do XI (Decisões/Antecipação/Trabalho de Equipa/…) ≈ ${iq.toFixed(1)}. No FM27 isto alonga a adaptação.`, `The XI’s tactical average (Decisions/Anticipation/Teamwork/…) ≈ ${iq.toFixed(1)}. In FM27 this lengthens adaptation.`),L('Remova instruções que não resolvem um problema concreto.', 'Remove instructions that do not solve a specific problem.'));
     else add('Complexidade','good',L(`Complexidade adequada (${C.cx} ≤ ${cap})`, `Suitable complexity (${C.cx} ≤ ${cap})`),L('O plantel deve conseguir absorver a tática.', 'The squad should be able to absorb the tactic.'));
   } else if (C.cx > 12) add('Complexidade','warn',L(`Complexidade alta (${C.cx})`, `High complexity (${C.cx})`),L('Muitas instruções fora do default: mais tempo de treino e jogadores mais capazes.', 'Many non-default instructions: more training time and more capable players needed.'),L('Comece simples; adicione instruções quando resolverem um problema identificado.', 'Start simple; add instructions when they solve an identified problem.'));
-  else add('Complexidade','good',`Complexidade ${C.level.toLowerCase()} (${C.cx})`,L('Fácil de assimilar.', 'Easy to learn.'));
+  else add('Complexidade','good',L(`Complexidade ${C.level.toLowerCase()} (${C.cx})`, `${C.level} complexity (${C.cx})`),L('Fácil de assimilar.', 'Easy to learn.'));
 
   // 12. plantel
   if (xiPlayers.length) {

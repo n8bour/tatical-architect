@@ -23,17 +23,12 @@ const PA_RANGE = { '-1': [1, 20], '-2': [10, 40], '-25': [20, 50], '-3': [30, 60
   '-65': [100, 130], '-7': [110, 140], '-75': [120, 150], '-8': [130, 160], '-85': [140, 170], '-9': [150, 180], '-95': [160, 190], '-10': [170, 200] };
 
 // ---------- parser (por blocos, para não bloquear a janela) ----------
-async function parseScoutDB(text, opts = {}) {
-  const t0 = Date.now();
-  const src = String(text || '').replace(/\r/g, '');
-  let nl = src.indexOf('\n'); if (nl < 0) nl = src.length;
-  const head = splitCSV(src.slice(0, nl), ',');
+// prepara o leitor de linhas a partir do cabeçalho (partilhado pela leitura por blocos e pela síncrona)
+function scoutRowReader(head) {
   const ix = {}; head.forEach((h, i) => { ix[h.trim()] = i; });
   const col = (name) => ix[name] ?? -1;
-  const need = ['name', 'ability_current'];
-  if (need.some(n => col(n) < 0)) throw new Error(L('Este ficheiro não parece uma exportação de jogadores do fmsave (faltam as colunas name/ability_current).', 'This file does not look like an fmsave players export (the name/ability_current columns are missing).'));
-  // mapa das colunas de atributos para as chaves da app
-  const attrCols = []; const hidCols = [];
+  if (['name', 'ability_current'].some(n => col(n) < 0)) throw new Error(L('Este ficheiro não parece uma exportação de jogadores do fmsave (faltam as colunas name/ability_current).', 'This file does not look like an fmsave players export (the name/ability_current columns are missing).'));
+  const attrCols = [], hidCols = [];
   head.forEach((h, i) => {
     const m = h.match(/^attributes_(.+)$/); if (!m) return;
     if (SCOUT_HIDDEN[m[1]]) { hidCols.push([i, SCOUT_HIDDEN[m[1]]]); return; }
@@ -44,44 +39,62 @@ async function parseScoutDB(text, opts = {}) {
   const C = Object.fromEntries(['uid', 'unique_id', 'name', 'age', 'nation_id', 'height_cm', 'ability_current', 'ability_potential', 'ability_potential_range_code', 'reputation_current', 'reputation_world',
     'club_uid', 'club_name', 'club_nation_id', 'club_reputation', 'on_loan', 'loan_parent_club_name', 'transfer_value', 'contract_wage', 'contract_end', 'contract_squad_status', 'left_foot', 'right_foot'].map(n => [n, col(n)]));
   const num = (v) => { if (v == null || v === '') return null; const n = +v; return isFinite(n) ? n : null; };
+  let rows = 0;
+  const read = (line) => {
+    if (!line) return null;
+    const r = line.indexOf('"') >= 0 ? splitCSV(line, ',') : line.split(',');
+    const g = (c) => (c >= 0 ? r[c] : undefined);
+    const name = g(C.name); if (!name) return null;
+    const a = {}; for (const [i, k] of attrCols) { const v = num(r[i]); if (v != null) a[k] = v; }
+    const hid = {}; for (const [i, k] of hidCols) { const v = num(r[i]); if (v != null) hid[k] = v; }
+    const pers = {}; for (const [i, k] of persCols) { const v = num(r[i]); if (v != null) pers[k] = v; }
+    const posR = {}; const posSet = new Set(), natSet = new Set();
+    for (const [i, k] of posCols) { const v = num(r[i]); if (v == null) continue; posR[k] = v; if (v >= 15) SCOUT_POS_GROUP[k].forEach(x => posSet.add(x)); if (v >= 18) natSet.add(SCOUT_POS_GROUP[k][0]); }
+    const pa = num(g(C.ability_potential)), code = num(g(C.ability_potential_range_code)), rng = code != null ? PA_RANGE[String(code)] : null;
+    const lf = num(g(C.left_foot)), rf = num(g(C.right_foot));
+    const endStr = g(C.contract_end) || '';
+    const p = {
+      id: 'db' + (g(C.uid) || rows), uid: g(C.uid) || null, name, age: num(g(C.age)), nat: num(g(C.nation_id)), height: num(g(C.height_cm)),
+      ca: num(g(C.ability_current)), pa: pa != null ? pa : rng ? Math.round((rng[0] + rng[1]) / 2) : null, paRange: pa == null && rng ? rng : null,
+      rep: num(g(C.reputation_current)), wrep: num(g(C.reputation_world)), club: g(C.club_name) || '', clubUid: g(C.club_uid) || '', clubNat: num(g(C.club_nation_id)), clubRep: num(g(C.club_reputation)),
+      loan: /^true$/i.test(g(C.on_loan) || ''), loanFrom: g(C.loan_parent_club_name) || '', value: num(g(C.transfer_value)), wage: num(g(C.contract_wage)),
+      end: /^\d{4}-\d{2}-\d{2}/.test(endStr) ? endStr.slice(0, 10) : '', status: g(C.contract_squad_status) || '',
+      foot: lf != null && rf != null ? (lf >= 15 && rf >= 15 ? 'B' : lf > rf ? 'L' : 'R') : null, lf, rf,
+      posR, pos: [...posSet], natPos: [...natSet], a, hid, pers, src: 'db',
+    };
+    p.posRaw = Object.entries(posR).filter(([, v]) => v >= 15).sort((x, y) => y[1] - x[1]).map(([k]) => k.toUpperCase()).join(', ');
+    p.meta = { foot: p.foot === 'L' ? 'Left' : p.foot === 'R' ? 'Right' : p.foot === 'B' ? 'Either' : '', height: p.height };
+    rows++;
+    return p;
+  };
+  return { read, attrCols: attrCols.length };
+}
+// ---------- parser (por blocos, para não bloquear a janela) ----------
+async function parseScoutDB(text, opts = {}) {
+  const t0 = Date.now();
+  const src = String(text || '').replace(/\r/g, '');
+  let nl = src.indexOf('\n'); if (nl < 0) nl = src.length;
+  const head = splitCSV(src.slice(0, nl), ',');
+  const R = scoutRowReader(head);
   const players = [];
-  let pos = nl + 1, rows = 0;
+  let pos = nl + 1;
   const total = src.length;
   while (pos < total) {
     const end = Math.min(total, pos + 2_000_000);           // ~2 MB por bloco
     let cut = end >= total ? total : src.indexOf('\n', end); if (cut < 0) cut = total;
-    const chunk = src.slice(pos, cut).split('\n');
-    for (const line of chunk) {
-      if (!line) continue;
-      const r = line.indexOf('"') >= 0 ? splitCSV(line, ',') : line.split(',');
-      const g = (c) => (c >= 0 ? r[c] : undefined);
-      const name = g(C.name); if (!name) continue;
-      const a = {}; for (const [i, k] of attrCols) { const v = num(r[i]); if (v != null) a[k] = v; }
-      const hid = {}; for (const [i, k] of hidCols) { const v = num(r[i]); if (v != null) hid[k] = v; }
-      const pers = {}; for (const [i, k] of persCols) { const v = num(r[i]); if (v != null) pers[k] = v; }
-      const posR = {}; const posSet = new Set(), natSet = new Set();
-      for (const [i, k] of posCols) { const v = num(r[i]); if (v == null) continue; posR[k] = v; if (v >= 15) SCOUT_POS_GROUP[k].forEach(x => posSet.add(x)); if (v >= 18) natSet.add(SCOUT_POS_GROUP[k][0]); }
-      const pa = num(g(C.ability_potential)), code = num(g(C.ability_potential_range_code)), rng = code != null ? PA_RANGE[String(code)] : null;
-      const lf = num(g(C.left_foot)), rf = num(g(C.right_foot));
-      const endStr = g(C.contract_end) || '';
-      const p = {
-        id: 'db' + (g(C.uid) || rows), uid: g(C.uid) || null, name, age: num(g(C.age)), nat: num(g(C.nation_id)), height: num(g(C.height_cm)),
-        ca: num(g(C.ability_current)), pa: pa != null ? pa : rng ? Math.round((rng[0] + rng[1]) / 2) : null, paRange: pa == null && rng ? rng : null,
-        rep: num(g(C.reputation_current)), wrep: num(g(C.reputation_world)), club: g(C.club_name) || '', clubUid: g(C.club_uid) || '', clubNat: num(g(C.club_nation_id)), clubRep: num(g(C.club_reputation)),
-        loan: /^true$/i.test(g(C.on_loan) || ''), loanFrom: g(C.loan_parent_club_name) || '', value: num(g(C.transfer_value)), wage: num(g(C.contract_wage)),
-        end: /^\d{4}-\d{2}-\d{2}/.test(endStr) ? endStr.slice(0, 10) : '', status: g(C.contract_squad_status) || '',
-        foot: lf != null && rf != null ? (lf >= 15 && rf >= 15 ? 'B' : lf > rf ? 'L' : 'R') : null, lf, rf,
-        posR, pos: [...posSet], natPos: [...natSet], a, hid, pers, src: 'db',
-      };
-      p.posRaw = Object.entries(posR).filter(([, v]) => v >= 15).sort((x, y) => y[1] - x[1]).map(([k]) => k.toUpperCase()).join(', ');
-      p.meta = { foot: p.foot === 'L' ? 'Left' : p.foot === 'R' ? 'Right' : p.foot === 'B' ? 'Either' : '', height: p.height };
-      players.push(p); rows++;
-    }
+    for (const line of src.slice(pos, cut).split('\n')) { const p = R.read(line); if (p) players.push(p); }
     pos = cut + 1;
-    if (opts.onProgress) opts.onProgress(Math.min(1, pos / total), rows);
+    if (opts.onProgress) opts.onProgress(Math.min(1, pos / total), players.length);
     await new Promise(res => setTimeout(res, 0));
   }
-  return { players, ms: Date.now() - t0, columns: head.length, attrCols: attrCols.length };
+  return { players, ms: Date.now() - t0, columns: head.length, attrCols: R.attrCols };
+}
+// leitura síncrona (plantel: dezenas de jogadores)
+function parseScoutSync(text) {
+  const src = String(text || '').replace(/\r/g, '').replace(/^\uFEFF/, '');
+  const lines = src.split('\n'); const head = splitCSV(lines[0] || '', ',');
+  const R = scoutRowReader(head);
+  return lines.slice(1).map(R.read).filter(Boolean);
 }
 
 function parseNations(text) {
@@ -257,4 +270,20 @@ function scoutPresets(ctx) {
     { k: 'weak_spot', ic: '🎯', n: L('A minha posição mais fraca', 'My weakest position'), d: L('Jogadores naturais na posição onde o teu XI é mais fraco.', 'Natural players for the position where your XI is weakest.'),
       F: { ...d, caMin: Math.max(60, xiCA - 10), sort: 'gain' }, needSquad: true, weakSpot: true },
   ];
+}
+
+// enriquece um jogador do plantel com os campos ricos do fmsave (CA/PA, personalidade, ocultos, contrato…)
+const RICH_FIELDS = ['ca', 'pa', 'paRange', 'pers', 'hid', 'value', 'wage', 'end', 'status', 'rep', 'wrep', 'clubRep', 'clubNat', 'height', 'lf', 'rf', 'foot', 'loan', 'nat', 'uid'];
+function enrichFromScout(players, text) {
+  if (!/ability_current/.test(String(text || '').slice(0, 6000))) return 0;
+  let rich; try { rich = parseScoutSync(text); } catch (e) { return 0; }
+  const byUid = new Map(rich.filter(x => x.uid).map(x => [String(x.uid), x])), byName = new Map(rich.map(x => [x.name, x]));
+  let n = 0;
+  players.forEach(p => {
+    const x = (p.meta && p.meta.uid != null && byUid.get(String(p.meta.uid))) || byName.get(p.name); if (!x) return;
+    RICH_FIELDS.forEach(k => { if (x[k] != null && !(typeof x[k] === 'object' && !Object.keys(x[k]).length)) p[k] = x[k]; });
+    if (x.posR && Object.keys(x.posR).length) { p.posR = Object.assign({}, p.posR || {}, x.posR); p.natPos = x.natPos; }
+    n++;
+  });
+  return n;
 }

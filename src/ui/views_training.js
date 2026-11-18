@@ -3,7 +3,7 @@
 // ============================================================
 function vTraining() {
   const t = ST.tactic, au = auditTactic(t, players()), plan = trainingPlan(t, players(), au);
-  return `<div class="top"><div><h2><span>Plano de treino para</span> “${esc(t.name)}”</h2>
+  return `<div class="top"><div><h2><span>Plano de treino para</span> “${esc(tName(t))}”</h2>
     <p class="muted small">Ligado às áreas de Tactical Understanding do FM27: treine primeiro o que a sua tática mais exige.</p></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Prioridades de Tactical Understanding</h3>
@@ -21,6 +21,6 @@ function vTraining() {
     ${plan.indiv.length ? `<div class="table-wrap"><table><thead><tr><th>Jogador</th><th>Pos</th><th>IP</th><th>OOP</th><th>Role Training</th><th>Foco adicional</th></tr></thead><tbody>
       ${plan.indiv.map(x => `<tr><td><b>${esc(x.p.name)}</b></td><td>${x.slot}</td><td>${fitBadge(x.si)}</td><td>${fitBadge(x.so)}</td><td>${esc(roleName(x.role))}</td><td>${x.weak.map(k => `<span class="chip">${esc(attrName(k))} ${Math.round(x.p.a[k])}</span>`).join('')}</td></tr>`).join('')}
     </tbody></table></div>` : '<p class="muted">Atribua jogadores ao XI (Plantel → Analisador → Auto XI) para recomendações individuais.</p>'}
-    ${plan.mentors.length && plan.youth.length ? `<h4 style="margin-top:12px">Mentoria</h4><p class="small">Mentores (Determinação ≥ 15, ≥ 26 anos): ${plan.mentors.slice(0, 4).map(p => esc(p.name)).join(', ')}. Jovens ≤ 21: ${plan.youth.slice(0, 8).map(p => esc(p.name)).join(', ')}.</p>` : ''}
+    ${plan.mentors.length && plan.youth.length ? `<h4 style="margin-top:12px">Mentoria</h4><p class="small">${L('Mentores (Determinação ≥ 15, ≥ 26 anos)', 'Mentors (Determination ≥ 15, aged 26+)')}: ${plan.mentors.slice(0, 4).map(p => esc(p.name)).join(', ')}. ${L('Jovens ≤ 21', 'Youngsters ≤ 21')}: ${plan.youth.slice(0, 8).map(p => esc(p.name)).join(', ')}.</p>` : ''}
   </div>`;
 }

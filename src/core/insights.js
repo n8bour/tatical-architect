@@ -222,7 +222,7 @@ function setPiecePlan(t, players, oppList) {
     { k: 'zn', n: L('Zona 1.º poste', 'Near-post zone'), x: zones[1] || zones[0], w: L('posicionamento e jogo aéreo', 'positioning and aerial ability') },
     { k: 'zc', n: L('Zona centro (pequena área)', 'Central zone (six-yard box)'), x: zones[0], w: why(zones[0], ['pos', 'hea', 'jum']) },
     { k: 'zf', n: L('Zona 2.º poste', 'Far-post zone'), x: zones[2], w: L('posicionamento e jogo aéreo', 'positioning and aerial ability') },
-    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? `Marca ${shortName(theirAir[i].p)}` : L('Marcação individual', 'Man-marking'), x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? L(` · ${theirAir[i].p.name} é dos melhores no ar deles`, ` · ${theirAir[i].p.name} is one of their best in the air`) : '') })),
+    ...markers.map((m, i) => ({ k: 'm' + i, n: theirAir[i] ? L(`Marca ${shortName(theirAir[i].p)}`, `Marks ${shortName(theirAir[i].p)}`) : L('Marcação individual', 'Man-marking'), x: m, w: why(m, ['mar', 'hea', 'str']) + (theirAir[i] ? L(` · ${theirAir[i].p.name} é dos melhores no ar deles`, ` · ${theirAir[i].p.name} is one of their best in the air`) : '') })),
     { k: 'de', n: L('Entrada da área (segundas bolas)', 'Edge of the box (second balls)'), x: dEdge, w: dEdge ? why(dEdge, ['acc', 'ant']) : '' },
     ...outlet.map((o, i) => ({ k: 'o' + i, n: L('Fica na frente (contra-ataque)', 'Stays forward (counter-attack)'), x: o, w: why(o, ['pac', 'acc']) })),
   ].filter(r => r.x);

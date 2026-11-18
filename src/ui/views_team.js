@@ -16,20 +16,11 @@ function vSquad() {
       <label class="btn">Escolher ficheiro<input type="file" accept=".html,.htm,.txt,.csv,.tsv,.json" hidden onchange="A.squadFile(this)"></label>
       <label class="btn">Carregar como adversário<input type="file" accept=".html,.htm,.txt,.csv,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
       ${(ST.squad.warnings || []).map(w => `<div class="notice warn">${esc(w)}</div>`).join('')}
-      ${ST.squad.mapped && ST.squad.mapped.length ? `<details><summary>Colunas reconhecidas (${ST.squad.mapped.filter(m => m.k).length}/${ST.squad.mapped.length})</summary><p class="small">${ST.squad.mapped.map(m => `<span class="chip" style="${m.k ? '' : 'opacity:.5'}">${esc(m.h)}${m.k ? ' → ' + esc(m.k === 'name' || m.k === 'position' || m.k === 'age' ? m.k : attrName(m.k)) : ''}</span>`).join('')}</p></details>` : ''}
+      ${ST.squad.mapped && ST.squad.mapped.length ? `<details><summary>${L('Colunas reconhecidas', 'Recognised columns')} (${ST.squad.mapped.filter(m => m.k).length}/${ST.squad.mapped.length})</summary><p class="small" data-raw>${ST.squad.mapped.map(m => `<span class="chip" style="${m.k ? '' : 'opacity:.5'}">${esc(m.h)}${m.k ? ' → ' + esc(m.k === 'name' || m.k === 'position' || m.k === 'age' ? m.k : attrName(m.k)) : ''}</span>`).join('')}</p></details>` : ''}
     </div>
   </div>
-  ${ps.length ? `<div class="panel" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h3>Melhores papéis de cada jogador</h3><span class="small muted">Melhores papéis por pontuação de atributos (0–100). Posições naturais são respeitadas.</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Jogador</th><th>Pos</th><th>Idade</th>${ps.some(p => p.meta && p.meta.ability) ? '<th>Adjunto (CA/PA ★)</th>' : ''}<th>Melhores papéis com bola</th><th>Melhores papéis sem bola</th></tr></thead><tbody>
-    ${ps.map(p => {
-      const groups = p.pos.length ? [...new Set(p.pos.filter(x => !x.includes(':')))] : Object.keys(GROUPS);
-      const best = (phase) => groups.flatMap(g => rolesFor(g, phase, g === 'DC')).filter((r, i, a) => a.indexOf(r) === i)
-        .map(r => ({ r, s: (roleScore(p, r) || { score: 0 }).score })).sort((x, y) => y.s - x.s).slice(0, 3);
-      const adj = ps.some(q => q.meta && q.meta.ability) ? `<td class="small">${esc((p.meta && p.meta.ability) || '—')} / ${esc((p.meta && p.meta.potential) || '—')}${p.meta && p.meta.bestRole ? `<br><span class="muted">${esc(p.meta.bestRole)}</span>` : ''}</td>` : '';
-      return `<tr><td><b>${esc(p.name)}</b></td><td class="small">${esc(p.posRaw || '—')}</td><td>${p.age ?? '—'}</td>${adj}
-        <td>${best('IP').map(x => `${fitBadge(x.s)} <span class="small">${esc(x.r.name)}</span>`).join('<br>')}</td>
-        <td>${best('OOP').map(x => `${fitBadge(x.s)} <span class="small">${esc(x.r.name)}</span>`).join('<br>')}</td></tr>`;
-    }).join('')}</tbody></table></div></div>` : ''}`;
+  ${ps.length ? squadTable(ps) : ''}
+  ${ST.squadOpen && ps.find(p => p.id === ST.squadOpen) ? scoutCard(ps.find(p => p.id === ST.squadOpen), { own: true }) : ''}`;
 }
 
 function vSuggest() {
@@ -47,8 +38,8 @@ function vSuggest() {
       <div class="bars" style="max-width:420px">
         ${[['XI', x.xiAvg], ['Estilo', x.fit], ['Profundidade', x.depth], ['Coerência', x.audit.overall]].map(([n, v]) => `<div class="bar"><span>${n}</span><div class="t"><i style="width:${v}%;background:${fitColor(v)}"></i></div><b>${v}</b></div>`).join('')}
       </div>
-      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} como ${esc(roleName(ROLE_BY_ID[y.s.ip]))} (${y.sc})`).join(' · ')}</p>
-      <p class="small"><b>Pontos fracos:</b> ${x.weakest.map(y => `${esc(y.p ? y.p.name : '?')} em ${esc(y.s.ipCode)} (${y.sc})`).join(' · ')} — alvo de recrutamento/treino.</p>
+      <p class="small" style="margin-top:8px"><b>Pontos fortes:</b> ${x.strongest.map(y => `${esc(y.p ? y.p.name : '?')} ${L('como', 'as')} ${esc(roleName(ROLE_BY_ID[y.s.ip]))} (${y.sc})`).join(' · ')}</p>
+      <p class="small"><b>Pontos fracos:</b> ${x.weakest.map(y => `${esc(y.p ? y.p.name : '?')} ${L('em', 'at')} ${esc(y.s.ipCode)} (${y.sc})`).join(' · ')} ${L('— alvo de recrutamento/treino.', '— a recruitment/training target.')}</p>
       <button class="btn primary sm" onclick="A.useSuggestion(${i})">Abrir no analisador</button></div></div></div>`).join('')}</div>`;
 }
 
@@ -74,7 +65,7 @@ function vXI() {
       <td class="small">${b.bench ? `${esc(b.bench.p.name)} ${fitBadge(b.bench.sc)}` : '—'}</td>
       <td class="small">${b.succ ? `${esc(b.succ.p.name)} <span class="muted">${b.succ.p.age}a</span> ${fitBadge(b.succ.sc)}` : '—'}</td></tr>`;
   }).join('');
-  return `<div class="top"><div><h2><span>Melhor XI</span> — ${esc(t.name)}</h2><p class="muted small" style="margin:0">Passe o rato numa instrução para ver porquê. As instruções aplicadas entram na tática e na Ficha para o FM27.</p></div>
+  return `<div class="top"><div><h2><span>Melhor XI</span> — ${esc(tName(t))}</h2><p class="muted small" style="margin:0">Passe o rato numa instrução para ver porquê. As instruções aplicadas entram na tática e na Ficha para o FM27.</p></div>
     <div class="row"><button class="btn" onclick="A.autoXI()">Escolher XI automaticamente</button><button class="btn primary" onclick="A.applyAllPIs()">Aplicar a principal de cada jogador</button></div></div>
   <div class="grid" style="grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:start">
     <div class="panel">${pitchSVG(t, 'IP', null, { static: true })}<p class="small muted">Cor = adequação ao par de papéis (verde ≥ 70).</p></div>
