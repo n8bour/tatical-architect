@@ -305,3 +305,26 @@ tr.cliprow td{background:var(--panel2)}
 .plan-tabs button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .plan-sec{margin-top:14px}.plan-sec h4{margin:0 0 6px}
 .up{color:var(--good)}.down{color:var(--crit)}
+
+/* ---------- prospeção ---------- */
+.scout-grid{grid-template-columns:minmax(250px,310px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1100px){.scout-grid{grid-template-columns:minmax(0,1fr)}}
+.scout-filters details{border-top:1px solid var(--line);padding:8px 0}
+.scout-filters summary{cursor:pointer;font-weight:600;font-size:13px;margin-bottom:6px}
+.scout-filters .f{margin:6px 0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pair.attr-row{grid-template-columns:minmax(0,1fr) 64px auto;margin:4px 0}
+.scout-table td,.scout-table th{white-space:nowrap}
+.scout-table td:nth-child(2){white-space:normal;min-width:140px}
+.scout-table tr.click{cursor:pointer}.scout-table tr.click:hover td{background:var(--panel2)}
+.th-sort{background:none;border:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;padding:0;text-transform:inherit;letter-spacing:inherit}
+.th-sort.on{color:var(--accent)}
+.star{background:none;border:0;font-size:16px;cursor:pointer;color:var(--muted);padding:0 4px}.star.on{color:#f5b301}
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:grid;place-items:center;padding:20px}
+.modal{background:var(--panel);border-radius:14px;max-width:920px;width:100%;max-height:90vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.attrs-grid h4{margin:0 0 6px}.attr{display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;border-bottom:1px dashed var(--line)}
+.attr .v{min-width:26px;text-align:right}.v4{color:var(--good)}.v3{color:#5aa469}.v2{color:var(--text)}.v1{color:var(--muted)}
+.chip.ok{background:color-mix(in srgb,var(--good) 22%,transparent)}
+.pair>*{min-width:0;width:100%;box-sizing:border-box}
+.pair.attr-row>button{width:auto}
+.scout-filters input,.scout-filters select{min-width:0;width:100%;box-sizing:border-box}

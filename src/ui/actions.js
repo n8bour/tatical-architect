@@ -121,6 +121,59 @@ const A = {
     save(); render();
   },
   sheetNames(v) { ST.sheetNames = v; save(); render(); },
+  // ---------- prospeção ----------
+  async scoutLoad() {
+    if (BUSY.scout) return; SCOUT.err = '';
+    try {
+      const info = await window.__TAURI__.core.invoke('latest_save', { customDir: ST.auto.saveDir || null });
+      if (!info) throw new Error(L('Não encontrei nenhum save do FM27 — defina a pasta dos saves nas Definições.', 'No FM27 save found — set the saves folder in Settings.'));
+      const t0 = performance.now();
+      await withBusy('scout', L('A ler todos os jogadores de ', 'Reading every player in ') + info.name, async (prog) => {
+        prog(null, L('o fmsave está a ler o save (sobre uma cópia)', 'fmsave is reading the save (from a copy)'));
+        const r = await window.__TAURI__.core.invoke('export_save_db', { path: info.path });
+        await A.scoutIngest(r.players, { nations: r.nations, info: r.info, save: r.save, cached: r.cached, prog, t0 });
+      }, { slow: L('a primeira leitura da base de dados inteira pode demorar 1–3 minutos', 'the first read of the whole database can take 1–3 minutes'), slowAfter: 15 });
+    } catch (e) { SCOUT.err = String((e && e.message) || e); toast(L('Não consegui ler a base de dados', 'Could not read the database')); }
+    render();
+  },
+  async scoutIngest(text, o = {}) {
+    const t0 = o.t0 || performance.now();
+    const db = await parseScoutDB(text, { onProgress: (f, n) => o.prog && o.prog(f, L(`a interpretar ${n.toLocaleString(LOCALE())} jogadores`, `parsing ${n.toLocaleString(LOCALE())} players`)) });
+    SCOUT.db = db; SCOUT.nations = parseNations(o.nations || ''); SCOUT._val = null; SCOUT.cache = null; SCOUT.cacheKey = '';
+    const d = o.info ? gameDateFromInfo(o.info) : null; SCOUT.date = d || inferGameDate(db.players); SCOUT.dateGuess = !d;
+    SCOUT.save = o.save || L('ficheiro', 'file'); SCOUT.cached = !!o.cached; SCOUT.ms = performance.now() - t0;
+    const S = scoutState(); S.open = null; ST.view = 'scout'; save(); render();
+    toast(L(`${db.players.length.toLocaleString(LOCALE())} jogadores carregados`, `${db.players.length.toLocaleString(LOCALE())} players loaded`));
+  },
+  scoutPreset(k) {
+    const S = scoutState(), pr = scoutPresets(scoutCtx()).find(x => x.k === k); if (!pr) return;
+    S.F = JSON.parse(JSON.stringify(pr.F)); S.preset = k; S.page = 0; S.weak = ''; S.tab = 'results';
+    if (pr.weakSpot) { const w = weakestSlot(); if (w) { S.F.pos = w.group; S.F.posLevel = 'nat'; S.weak = w.s.ipCode; } }
+    save(); render();
+  },
+  scoutF(k, v) { const S = scoutState(); S.F[k] = v; S.preset = ''; S.page = 0; save(); render(); },
+  scoutAttrAdd() { const S = scoutState(); S.F.attrs.push({ k: '', min: '' }); save(); render(); },
+  scoutAttr(i, f, v) { const S = scoutState(); if (S.F.attrs[i]) S.F.attrs[i][f] = v; S.preset = ''; S.page = 0; save(); render(); },
+  scoutAttrDel(i) { const S = scoutState(); S.F.attrs.splice(i, 1); S.page = 0; save(); render(); },
+  scoutReset() { const S = scoutState(); S.F = SCOUT_DEFAULT(); S.preset = ''; S.page = 0; S.weak = ''; save(); render(); },
+  scoutSort(k) { const S = scoutState(); if (S.F.sort === k) S.F.dir = S.F.dir === 'asc' ? 'desc' : 'asc'; else { S.F.sort = k; S.F.dir = ['name', 'age', 'value', 'wage', 'end'].includes(k) ? 'asc' : 'desc'; } S.page = 0; save(); render(); },
+  scoutPage(n) { scoutState().page = Math.max(0, n); save(); render(); document.getElementById('main').scrollTop = 0; },
+  scoutTab(t) { scoutState().tab = t; save(); render(); },
+  scoutOpen(id) { scoutState().open = id; render(); },
+  scoutClose() { scoutState().open = null; render(); },
+  scoutStar(id) {
+    ST.shortlist = ST.shortlist || []; const i = ST.shortlist.findIndex(x => x.id === id);
+    if (i >= 0) ST.shortlist.splice(i, 1);
+    else { const p = SCOUT.db && SCOUT.db.players.find(x => x.id === id); if (p) ST.shortlist.push({ id: p.id, name: p.name, age: p.age, club: p.club, posRaw: p.posRaw, ca: p.ca, pa: p.pa, value: p.value, wage: p.wage, end: p.end, pos: p.pos, natPos: p.natPos, a: {}, pers: {}, hid: {} }); }
+    save(); render();
+  },
+  scoutExport() {
+    const S = scoutState(), list = S.tab === 'list' ? (ST.shortlist || []) : (SCOUT.db ? scoutResults() : []);
+    const head = ['name', 'age', 'club', 'positions', 'ca', 'pa', 'value', 'wage', 'contract_end'];
+    const q = (v) => { const s = v == null ? '' : String(v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const csv = [head.join(','), ...list.map(p => [p.name, p.age, p.club, p.posRaw, p.ca, p.pa, p.value, p.wage, p.end].map(q).join(','))].join('\n');
+    download(S.tab === 'list' ? 'shortlist.csv' : 'scouting.csv', csv, 'text/csv'); toast(L(`${list.length} jogadores exportados`, `${list.length} players exported`));
+  },
   planK(k) { ST.planK = k; save(); render(); },
   planTactic() { const r = ST._plan || gamePlan(ST.tactic, players(), ST.planK || 'chase', { opp: oppPlayers() }); return JSON.parse(JSON.stringify(r.t)); },
   planSave() { const t = A.planTactic(); ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(t); save(); render(); toast(L('Plano guardado: ', 'Plan saved: ') + t.name); },

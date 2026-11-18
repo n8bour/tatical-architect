@@ -11,13 +11,15 @@ from playwright.sync_api import sync_playwright
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = pathlib.Path(HERE, '..', 'app', 'index.html').resolve().as_uri()
+import subprocess
+SCOUT_DB = subprocess.run(['node', os.path.join(HERE, 'gen_scout_db.cjs'), '1500'], capture_output=True, text=True).stdout
 RIVAL = open(os.path.join(HERE, 'fixtures', 'squad_de.csv'), encoding='utf8').read().replace(';Clube;', ';Rival FC;')
 LANG = os.environ.get('LAYOUT_LANG', 'en')               # LAYOUT_LANG=pt para verificar em português
 WIDTHS = [1024, 1100, 1280, 1366, 1920, 2560]          # 1024/1100 ≈ 1366 ou 1920 com escala 125–150% no Windows
 MODES = ['normal', 'menu recolhido', 'painéis fechados']
 if os.environ.get('LAYOUT_QUICK'): WIDTHS, MODES = [1024, 1366, 1920], ['normal']   # passagem rápida (ex.: segunda língua no CI)
 VIEWS = [('home', None), ('team', 'squad'), ('team', 'gen'), ('team', 'xi'), ('team', 'opp'),
-         ('tactic', 'analyze'), ('tactic', 'sim'), ('tactic', 'plans'), ('tactic', 'setpieces'), ('tactic', 'sheet'), ('tactic', 'import'),
+         ('scout', None), ('tactic', 'analyze'), ('tactic', 'sim'), ('tactic', 'plans'), ('tactic', 'setpieces'), ('tactic', 'sheet'), ('tactic', 'import'),
          ('lab', None), ('training', None), ('bible', 'roles'), ('bible', 'ti'), ('bible', 'concepts'), ('bible', 'btraining'), ('settings', None)]
 
 CHECK = r"""() => {
@@ -76,12 +78,18 @@ def main():
                 pg.evaluate(SETUP)
                 pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", RIVAL)
                 pg.evaluate("() => { genOpts(); A.genRun(); }"); pg.wait_for_timeout(900)
+                pg.evaluate("t => A.scoutIngest(t, { save: 'db.csv' })", SCOUT_DB); pg.wait_for_function("SCOUT.db", timeout=20000)
                 if mode == 'menu recolhido': pg.evaluate("() => { ST.ui.navMini = true; render(); }")
                 for v, t in VIEWS:
                     pg.evaluate(f"A.go('{v}'{', ' + repr(t) if t else ''})"); pg.wait_for_timeout(100)
                     if mode == 'painéis fechados': pg.evaluate("A.collapseAll(true)"); pg.wait_for_timeout(60)
                     r = pg.evaluate(CHECK)
                     if r: problems[(w, mode, v, t)] = r
+                    if v == 'scout':          # também com a ficha do jogador aberta
+                        pg.evaluate("() => { A.scoutPreset('upgrade'); A.scoutOpen(scoutResults()[0].id); }"); pg.wait_for_timeout(80)
+                        r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('.modal')"))
+                        if r: problems[(w, mode, 'scout-card', None)] = r
+                        pg.evaluate("A.scoutClose()")
                 if mode == 'painéis fechados': pg.evaluate("() => { ST.ui.collapsed = {}; save(); }")
                 pg.close()
         b.close()

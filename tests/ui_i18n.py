@@ -36,6 +36,10 @@ with sync_playwright() as p:
         pg.evaluate("() => { ST.lang = LANG = 'en'; render(); }"); [texts.add(x) for x in pg.evaluate(GRAB)]
         pg.evaluate(SETUP); pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", U.RIVAL)
         pg.evaluate("() => { genOpts(); A.genRun(); }"); pg.wait_for_timeout(1000)
+        pg.evaluate("t => A.scoutIngest(t, { save: 'db.csv' })", U.SCOUT_DB); pg.wait_for_function("SCOUT.db", timeout=20000)
+        for k in ['cheap_wonder', 'reach', 'upgrade', 'weak_spot']:
+            pg.evaluate(f"() => {{ A.scoutPreset('{k}'); A.scoutOpen(scoutResults()[0].id); }}"); [texts.add(x) for x in pg.evaluate(GRAB)]; pg.evaluate("A.scoutClose()")
+        pg.evaluate("() => { A.scoutTab('list'); }"); [texts.add(x) for x in pg.evaluate(GRAB)]; pg.evaluate("() => { A.scoutTab('results'); }")
         if desktop: pg.evaluate("() => { ST.auto.save = true; ST.auto.saveErr = 'x'; ST.lastSave = { name: 'T.fm', size: 1e8 }; ST.f9Found = true; render(); }")
         for v, t in U.VIEWS:
             pg.evaluate(f"A.go('{v}'{', ' + repr(t) if t else ''})"); pg.wait_for_timeout(80); [texts.add(x) for x in pg.evaluate(GRAB)]

@@ -130,7 +130,7 @@ function normHeader(h) {
     .replace(/^(attributes?|technical|mental|physical|goalkeeping|goalkeeper|gk attributes) /, '');
 }
 const POS_RATING = { gk:['GK'], dl:['D_LR','D_LR:L'], dc:['DC'], dr:['D_LR','D_LR:R'], wbl:['WB_LR','WB_LR:L'], wbr:['WB_LR','WB_LR:R'], dm:['DM'], dmc:['DM'],
-  ml:['M_LR','M_LR:L'], mc:['MC'], mr:['M_LR','M_LR:R'], aml:['AM_LR','AM_LR:L'], amc:['AMC'], amr:['AM_LR','AM_LR:R'], st:['ST'], sc:['ST'] };
+  ml:['M_LR','M_LR:L'], mc:['MC'], mr:['M_LR','M_LR:R'], aml:['AM_LR','AM_LR:L'], amc:['AMC'], amr:['AM_LR','AM_LR:R'], st:['ST'], sc:['ST'], stc:['ST'] };   // stc = avançado no fmsave
 
 function headerToKey(h) {
   const n = normHeader(h);
@@ -140,7 +140,7 @@ function headerToKey(h) {
   if (AGE_ALIASES.includes(n)) return 'age';
   if (META_ALIASES[n]) return 'meta:' + META_ALIASES[n];
   if (/ code$/.test(n)) return null;                                      // colunas *_code do fmsave (há uma coluna de texto ao lado)
-  const pr = n.match(/^(?:positions?|position rating|proficienc(?:y|ies)|pos) (gk|dl|dc|dr|wbl|wbr|dm|dmc|ml|mc|mr|aml|amc|amr|st|sc)$/);
+  const pr = n.match(/^(?:positions?|position rating|proficienc(?:y|ies)|pos) (gk|dl|dc|dr|wbl|wbr|dm|dmc|ml|mc|mr|aml|amc|amr|stc|st|sc)$/);
   if (pr) return 'posr:' + pr[1];
   for (const [k, a] of Object.entries(ATTRS)) if (a.a.includes(n) || normHeader(a.n) === n) return k;
   return null;

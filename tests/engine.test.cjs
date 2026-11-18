@@ -269,3 +269,44 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
   console.log('situações de jogo: 3 plantéis × 5 cenários verificados');
   if(bad) process.exitCode=1;
 }
+
+// 21. prospeção: base de dados inteira no formato do fmsave, filtros e pesquisas pré-definidas
+{
+  const c12={console,Math,performance,setTimeout}; vm.createContext(c12);
+  vm.runInContext(code+';\n'+['scouting.js'].map(f=>fs.readFileSync(require('path').join(__dirname,'..','src','core',f),'utf8')).join(';\n')+';this.S={parseScoutDB,scoutFilter,scoutPresets,reachLikelihood,SCOUT_COLUMNS,SCOUT_DEFAULT,bestGain,bestRolesAny,inferGameDate,parseSquad,tacticFromTemplate,TEMPLATES,autoPickXI,monthsUntil};',c12);
+  const S=c12.S, {gen,COLS}=require('./gen_scout_db.cjs');
+  let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  // as colunas pedidas ao fmsave existem todas na exportação real (mesmos nomes)
+  S.SCOUT_COLUMNS.forEach(cn=>chk(COLS.includes(cn),'coluna pedida inexistente: '+cn));
+  (async()=>{
+    const db=await S.parseScoutDB(gen(5000));
+    chk(db.players.length===5000,'5000 jogadores lidos: '+db.players.length);
+    chk(db.attrCols>=45,'atributos mapeados: '+db.attrCols);
+    const p=db.players[0]; chk(p.ca>0 && p.pa>=p.ca && Object.keys(p.a).length>=45 && p.pers.professionalism>0 && p.hid.inj>0,'campos do jogador');
+    chk(db.players.some(x=>x.pos.includes('ST')),'avançados reconhecidos (positions_stc)');
+    chk(db.players.find(x=>x.club && x.club.includes('"B"')),'nomes de clube com aspas');
+    const date=S.inferGameDate(db.players); chk(/^\d{4}-\d{2}-\d{2}$/.test(date),'data do jogo inferida '+date);
+    const squad=S.parseSquad(fs.readFileSync(require('path').join(__dirname,'fixtures','fmsave_players.csv'),'utf8')).players;
+    const t=S.tacticFromTemplate(S.TEMPLATES[0]); S.autoPickXI(t,squad);
+    const ctx={date, myClub:'', tactic:t, squad, xiCA:120};
+    for (const pr of S.scoutPresets(ctx)) {
+      const res=S.scoutFilter(db,pr.F,ctx);
+      if (pr.k==='cheap_wonder') chk(res.length>0 && res.every(x=>x.age<=19 && x.pa>=150 && (x.value==null||x.value<=pr.F.valueMax)),'wonderkids baratos');
+      if (pr.k==='reach') chk(res.every(x=>x._lk>=70 && x.age<=20),'probabilidade de atingir o potencial');
+      if (pr.k==='expiring') chk(res.length>0 && res.every(x=>{ const m=S.monthsUntil(x.end,date); return m!=null && m<=6; }),'contratos a terminar');
+      if (pr.k==='free') chk(res.length>0 && res.every(x=>!x.club),'jogadores livres');
+      if (pr.k==='upgrade') chk(res.length>0 && res[0]._gain>=res[res.length-1]._gain,'reforços ordenados pelo ganho');
+      if (pr.k==='hidden') chk(res.every(x=>x.clubRep==null||x.clubRep<=4000),'joias em clubes pequenos');
+    }
+    // filtros combinados
+    const F={...S.SCOUT_DEFAULT(), pos:'DC', posLevel:'nat', attrs:[{k:'hea',min:12},{k:'pac',min:12}], heightMin:185, sort:'ca'};
+    const r2=S.scoutFilter(db,F,ctx); chk(r2.every(x=>x.natPos.includes('DC') && x.a.hea>=12 && x.a.pac>=12 && x.height>=185),'filtros combinados');
+    const g=S.bestGain(db.players.find(x=>x.ca>150), t, squad); chk(g && g.code,'onde entraria no XI');
+    // velocidade: 100 mil jogadores
+    const big=gen(100000); const t0=Date.now(); const db2=await S.parseScoutDB(big); const ms=Date.now()-t0;
+    const t1=Date.now(); S.scoutFilter(db2,{...S.SCOUT_DEFAULT(), ageMax:21, paMin:150},ctx); const fms=Date.now()-t1;
+    chk(db2.players.length===100000,'100 mil lidos'); chk(ms<15000,'leitura de 100 mil em menos de 15 s: '+ms+' ms'); chk(fms<500,'filtro em menos de 0,5 s: '+fms+' ms');
+    console.log(`prospeção: 10 pesquisas e filtros verificados · 100 mil jogadores lidos em ${(ms/1000).toFixed(1)} s (${(big.length/1048576).toFixed(0)} MB), filtro em ${fms} ms`);
+    if(bad) process.exitCode=1;
+  })();
+}

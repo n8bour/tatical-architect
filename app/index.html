@@ -314,6 +314,29 @@ tr.cliprow td{background:var(--panel2)}
 .plan-sec{margin-top:14px}.plan-sec h4{margin:0 0 6px}
 .up{color:var(--good)}.down{color:var(--crit)}
 
+/* ---------- prospeção ---------- */
+.scout-grid{grid-template-columns:minmax(250px,310px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1100px){.scout-grid{grid-template-columns:minmax(0,1fr)}}
+.scout-filters details{border-top:1px solid var(--line);padding:8px 0}
+.scout-filters summary{cursor:pointer;font-weight:600;font-size:13px;margin-bottom:6px}
+.scout-filters .f{margin:6px 0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pair.attr-row{grid-template-columns:minmax(0,1fr) 64px auto;margin:4px 0}
+.scout-table td,.scout-table th{white-space:nowrap}
+.scout-table td:nth-child(2){white-space:normal;min-width:140px}
+.scout-table tr.click{cursor:pointer}.scout-table tr.click:hover td{background:var(--panel2)}
+.th-sort{background:none;border:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;padding:0;text-transform:inherit;letter-spacing:inherit}
+.th-sort.on{color:var(--accent)}
+.star{background:none;border:0;font-size:16px;cursor:pointer;color:var(--muted);padding:0 4px}.star.on{color:#f5b301}
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:grid;place-items:center;padding:20px}
+.modal{background:var(--panel);border-radius:14px;max-width:920px;width:100%;max-height:90vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.attrs-grid h4{margin:0 0 6px}.attr{display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;border-bottom:1px dashed var(--line)}
+.attr .v{min-width:26px;text-align:right}.v4{color:var(--good)}.v3{color:#5aa469}.v2{color:var(--text)}.v1{color:var(--muted)}
+.chip.ok{background:color-mix(in srgb,var(--good) 22%,transparent)}
+.pair>*{min-width:0;width:100%;box-sizing:border-box}
+.pair.attr-row>button{width:auto}
+.scout-filters input,.scout-filters select{min-width:0;width:100%;box-sizing:border-box}
+
 </style>
 </head>
 <body>
@@ -1120,7 +1143,7 @@ function normHeader(h) {
     .replace(/^(attributes?|technical|mental|physical|goalkeeping|goalkeeper|gk attributes) /, '');
 }
 const POS_RATING = { gk:['GK'], dl:['D_LR','D_LR:L'], dc:['DC'], dr:['D_LR','D_LR:R'], wbl:['WB_LR','WB_LR:L'], wbr:['WB_LR','WB_LR:R'], dm:['DM'], dmc:['DM'],
-  ml:['M_LR','M_LR:L'], mc:['MC'], mr:['M_LR','M_LR:R'], aml:['AM_LR','AM_LR:L'], amc:['AMC'], amr:['AM_LR','AM_LR:R'], st:['ST'], sc:['ST'] };
+  ml:['M_LR','M_LR:L'], mc:['MC'], mr:['M_LR','M_LR:R'], aml:['AM_LR','AM_LR:L'], amc:['AMC'], amr:['AM_LR','AM_LR:R'], st:['ST'], sc:['ST'], stc:['ST'] };   // stc = avançado no fmsave
 
 function headerToKey(h) {
   const n = normHeader(h);
@@ -1130,7 +1153,7 @@ function headerToKey(h) {
   if (AGE_ALIASES.includes(n)) return 'age';
   if (META_ALIASES[n]) return 'meta:' + META_ALIASES[n];
   if (/ code$/.test(n)) return null;                                      // colunas *_code do fmsave (há uma coluna de texto ao lado)
-  const pr = n.match(/^(?:positions?|position rating|proficienc(?:y|ies)|pos) (gk|dl|dc|dr|wbl|wbr|dm|dmc|ml|mc|mr|aml|amc|amr|st|sc)$/);
+  const pr = n.match(/^(?:positions?|position rating|proficienc(?:y|ies)|pos) (gk|dl|dc|dr|wbl|wbr|dm|dmc|ml|mc|mr|aml|amc|amr|stc|st|sc)$/);
   if (pr) return 'posr:' + pr[1];
   for (const [k, a] of Object.entries(ATTRS)) if (a.a.includes(n) || normHeader(a.n) === n) return k;
   return null;
@@ -2651,6 +2674,239 @@ function gamePlan(base, players, k, opts = {}) {
 }
 
 ;
+// ---- core/scouting.js
+// ============================================================
+// Prospeção (scouting): todos os jogadores do save, lidos pelo fmsave
+// (`fmsave export SAVE players --all`). Parser rápido por blocos, métricas
+// derivadas (potencial provável, idade, contrato) e pesquisas pré-definidas.
+// ============================================================
+
+// colunas pedidas ao fmsave (nomes planos: <grupo>_<campo>); a ordem não importa
+const SCOUT_ATTR_FM = ['crossing','dribbling','finishing','heading','long_shots','marking','off_the_ball','passing','penalty_taking','tackling','vision','handling','aerial_reach',
+  'command_of_area','communication','kicking','throwing','anticipation','decisions','one_on_ones','positioning','reflexes','first_touch','technique','flair','corners','teamwork',
+  'work_rate','long_throws','eccentricity','rushing_out','punching','acceleration','free_kick_taking','strength','stamina','pace','jumping_reach','leadership','dirtiness','balance',
+  'bravery','consistency','aggression','agility','important_matches','injury_proneness','versatility','natural_fitness','determination','composure','concentration'];
+const SCOUT_POS_FM = ['gk','dl','dc','dr','dm','ml','mc','mr','aml','amc','amr','stc','wbl','wbr'];
+const SCOUT_PERS = ['ambition','professionalism','pressure','loyalty','temperament','adaptability','sportsmanship','controversy'];
+const SCOUT_COLUMNS = ['uid','unique_id','name','age','nation_id','height_cm','ability_current','ability_potential','ability_potential_range_code','reputation_current','reputation_world',
+  'club_uid','club_name','club_nation_id','club_reputation','on_loan','loan_parent_club_name','transfer_value','contract_wage','contract_end','contract_squad_status','left_foot','right_foot',
+  ...SCOUT_POS_FM.map(x => 'positions_' + x), ...SCOUT_PERS.map(x => 'personality_' + x), ...SCOUT_ATTR_FM.map(x => 'attributes_' + x)];
+const SCOUT_HIDDEN = { consistency: 'cons', important_matches: 'imp', injury_proneness: 'inj', versatility: 'vers', dirtiness: 'dirt' };
+// grupos de posição da app a partir das 14 notas do fmsave
+const SCOUT_POS_GROUP = { gk: ['GK'], dl: ['D_LR', 'D_LR:L'], dc: ['DC'], dr: ['D_LR', 'D_LR:R'], dm: ['DM'], ml: ['M_LR', 'M_LR:L'], mc: ['MC'], mr: ['M_LR', 'M_LR:R'],
+  aml: ['AM_LR', 'AM_LR:L'], amc: ['AMC'], amr: ['AM_LR', 'AM_LR:R'], stc: ['ST'], wbl: ['WB_LR', 'WB_LR:L'], wbr: ['WB_LR', 'WB_LR:R'] };
+// potencial guardado como intervalo (código negativo do FM) → [mín, máx]
+const PA_RANGE = { '-1': [1, 20], '-2': [10, 40], '-25': [20, 50], '-3': [30, 60], '-35': [40, 70], '-4': [50, 80], '-45': [60, 90], '-5': [70, 100], '-55': [80, 110], '-6': [90, 120],
+  '-65': [100, 130], '-7': [110, 140], '-75': [120, 150], '-8': [130, 160], '-85': [140, 170], '-9': [150, 180], '-95': [160, 190], '-10': [170, 200] };
+
+// ---------- parser (por blocos, para não bloquear a janela) ----------
+async function parseScoutDB(text, opts = {}) {
+  const t0 = Date.now();
+  const src = String(text || '').replace(/\r/g, '');
+  let nl = src.indexOf('\n'); if (nl < 0) nl = src.length;
+  const head = splitCSV(src.slice(0, nl), ',');
+  const ix = {}; head.forEach((h, i) => { ix[h.trim()] = i; });
+  const col = (name) => ix[name] ?? -1;
+  const need = ['name', 'ability_current'];
+  if (need.some(n => col(n) < 0)) throw new Error(L('Este ficheiro não parece uma exportação de jogadores do fmsave (faltam as colunas name/ability_current).', 'This file does not look like an fmsave players export (the name/ability_current columns are missing).'));
+  // mapa das colunas de atributos para as chaves da app
+  const attrCols = []; const hidCols = [];
+  head.forEach((h, i) => {
+    const m = h.match(/^attributes_(.+)$/); if (!m) return;
+    if (SCOUT_HIDDEN[m[1]]) { hidCols.push([i, SCOUT_HIDDEN[m[1]]]); return; }
+    const k = headerToKey(h); if (k && ATTRS[k]) attrCols.push([i, k]);
+  });
+  const posCols = SCOUT_POS_FM.map(p => [col('positions_' + p), p]).filter(x => x[0] >= 0);
+  const persCols = SCOUT_PERS.map(p => [col('personality_' + p), p]).filter(x => x[0] >= 0);
+  const C = Object.fromEntries(['uid', 'unique_id', 'name', 'age', 'nation_id', 'height_cm', 'ability_current', 'ability_potential', 'ability_potential_range_code', 'reputation_current', 'reputation_world',
+    'club_uid', 'club_name', 'club_nation_id', 'club_reputation', 'on_loan', 'loan_parent_club_name', 'transfer_value', 'contract_wage', 'contract_end', 'contract_squad_status', 'left_foot', 'right_foot'].map(n => [n, col(n)]));
+  const num = (v) => { if (v == null || v === '') return null; const n = +v; return isFinite(n) ? n : null; };
+  const players = [];
+  let pos = nl + 1, rows = 0;
+  const total = src.length;
+  while (pos < total) {
+    const end = Math.min(total, pos + 2_000_000);           // ~2 MB por bloco
+    let cut = end >= total ? total : src.indexOf('\n', end); if (cut < 0) cut = total;
+    const chunk = src.slice(pos, cut).split('\n');
+    for (const line of chunk) {
+      if (!line) continue;
+      const r = line.indexOf('"') >= 0 ? splitCSV(line, ',') : line.split(',');
+      const g = (c) => (c >= 0 ? r[c] : undefined);
+      const name = g(C.name); if (!name) continue;
+      const a = {}; for (const [i, k] of attrCols) { const v = num(r[i]); if (v != null) a[k] = v; }
+      const hid = {}; for (const [i, k] of hidCols) { const v = num(r[i]); if (v != null) hid[k] = v; }
+      const pers = {}; for (const [i, k] of persCols) { const v = num(r[i]); if (v != null) pers[k] = v; }
+      const posR = {}; const posSet = new Set(), natSet = new Set();
+      for (const [i, k] of posCols) { const v = num(r[i]); if (v == null) continue; posR[k] = v; if (v >= 15) SCOUT_POS_GROUP[k].forEach(x => posSet.add(x)); if (v >= 18) natSet.add(SCOUT_POS_GROUP[k][0]); }
+      const pa = num(g(C.ability_potential)), code = num(g(C.ability_potential_range_code)), rng = code != null ? PA_RANGE[String(code)] : null;
+      const lf = num(g(C.left_foot)), rf = num(g(C.right_foot));
+      const endStr = g(C.contract_end) || '';
+      const p = {
+        id: 'db' + (g(C.uid) || rows), uid: g(C.uid) || null, name, age: num(g(C.age)), nat: num(g(C.nation_id)), height: num(g(C.height_cm)),
+        ca: num(g(C.ability_current)), pa: pa != null ? pa : rng ? Math.round((rng[0] + rng[1]) / 2) : null, paRange: pa == null && rng ? rng : null,
+        rep: num(g(C.reputation_current)), wrep: num(g(C.reputation_world)), club: g(C.club_name) || '', clubUid: g(C.club_uid) || '', clubNat: num(g(C.club_nation_id)), clubRep: num(g(C.club_reputation)),
+        loan: /^true$/i.test(g(C.on_loan) || ''), loanFrom: g(C.loan_parent_club_name) || '', value: num(g(C.transfer_value)), wage: num(g(C.contract_wage)),
+        end: /^\d{4}-\d{2}-\d{2}/.test(endStr) ? endStr.slice(0, 10) : '', status: g(C.contract_squad_status) || '',
+        foot: lf != null && rf != null ? (lf >= 15 && rf >= 15 ? 'B' : lf > rf ? 'L' : 'R') : null, lf, rf,
+        posR, pos: [...posSet], natPos: [...natSet], a, hid, pers, src: 'db',
+      };
+      p.posRaw = Object.entries(posR).filter(([, v]) => v >= 15).sort((x, y) => y[1] - x[1]).map(([k]) => k.toUpperCase()).join(', ');
+      p.meta = { foot: p.foot === 'L' ? 'Left' : p.foot === 'R' ? 'Right' : p.foot === 'B' ? 'Either' : '', height: p.height };
+      players.push(p); rows++;
+    }
+    pos = cut + 1;
+    if (opts.onProgress) opts.onProgress(Math.min(1, pos / total), rows);
+    await new Promise(res => setTimeout(res, 0));
+  }
+  return { players, ms: Date.now() - t0, columns: head.length, attrCols: attrCols.length };
+}
+
+function parseNations(text) {
+  const rows = tableFromText(text || ''); if (rows.length < 2) return {};
+  const h = rows[0].map(x => x.trim().toLowerCase());
+  const id = ['uid', 'nation_id', 'id'].map(k => h.indexOf(k)).find(i => i >= 0), nm = ['name', 'nation_name', 'short_name'].map(k => h.indexOf(k)).find(i => i >= 0);
+  if (id == null || nm == null) return {};
+  return Object.fromEntries(rows.slice(1).filter(r => r[id] !== '' && r[nm]).map(r => [+r[id], r[nm]]));
+}
+// data do jogo (fmsave info --json): o primeiro campo com uma data ISO cujo nome fale de data
+function gameDateFromInfo(json) {
+  try {
+    const o = typeof json === 'string' ? JSON.parse(json) : json; let found = null;
+    const walk = (x, key) => { if (found) return; if (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}/.test(x) && /date|day|clock|current/i.test(key || '')) found = x.slice(0, 10); else if (x && typeof x === 'object') for (const [k, v] of Object.entries(x)) walk(v, k); };
+    walk(o, ''); return found;
+  } catch (e) { return null; }
+}
+// sem data do jogo: o fim de época mais próximo (a data de fim de contrato mais comum entre as próximas)
+function inferGameDate(players) {
+  const ends = players.map(p => p.end).filter(Boolean).sort();
+  if (!ends.length) return null;
+  const years = {}; ends.forEach(e => { const y = e.slice(0, 4); years[y] = (years[y] || 0) + 1; });
+  const ys = Object.keys(years).sort(); const first = ys.find(y => years[y] >= ends.length * 0.04) || ys[0];
+  return `${first}-01-15`;    // aproximação: janela de Janeiro da época que termina nesse ano
+}
+
+// ---------- métricas derivadas ----------
+// probabilidade (0–100) de um jovem atingir o potencial: personalidade, determinação, idade, lesões e contexto
+function reachLikelihood(p) {
+  if (p.pa == null || p.ca == null) return null;
+  const P = (k, d = 10) => (p.pers && p.pers[k] != null ? p.pers[k] : d), H = (k, d = 10) => (p.hid && p.hid[k] != null ? p.hid[k] : d), A = (k, d = 10) => (p.a && p.a[k] != null ? p.a[k] : d);
+  const age = p.age ?? 20, ageF = age <= 17 ? 1 : age <= 18 ? 0.92 : age <= 19 ? 0.82 : age <= 20 ? 0.7 : age <= 21 ? 0.56 : age <= 23 ? 0.38 : 0.2;
+  const gap = Math.max(0, p.pa - p.ca), gapF = gap === 0 ? 1 : Math.max(0, 1 - gap / 120);
+  const env = p.clubRep != null ? Math.min(1, 0.45 + p.clubRep / 10000 * 0.7) : 0.7;
+  const s = P('professionalism') / 20 * 0.30 + A('det') / 20 * 0.18 + P('ambition') / 20 * 0.10 + (21 - H('inj')) / 20 * 0.10 + H('cons') / 20 * 0.04 + ageF * 0.16 + gapF * 0.06 + env * 0.06;
+  return Math.round(Math.min(100, s * 100));
+}
+function monthsUntil(dateISO, fromISO) { if (!dateISO || !fromISO) return null; const a = new Date(fromISO), b = new Date(dateISO); return (b - a) / (1000 * 60 * 60 * 24 * 30.44); }
+
+// ---------- filtros ----------
+const SCOUT_DEFAULT = () => ({ q: '', ageMin: '', ageMax: '', caMin: '', caMax: '', paMin: '', paMax: '', pos: '', posLevel: 'acc', foot: '', nation: '', club: '', league: '',
+  valueMax: '', wageMax: '', endMonths: '', free: false, excludeMine: true, loan: 'any', profMin: '', ambMin: '', detMin: '', consMin: '', impMin: '', injMax: '', heightMin: '',
+  attrs: [], role: '', roleMin: '', likelyMin: '', clubRepMax: '', sort: 'ca', dir: 'desc' });
+
+function scoutFilter(db, F, ctx = {}) {
+  const n = (v) => (v === '' || v == null ? null : +v);
+  const ageMin = n(F.ageMin), ageMax = n(F.ageMax), caMin = n(F.caMin), caMax = n(F.caMax), paMin = n(F.paMin), paMax = n(F.paMax), valueMax = n(F.valueMax), wageMax = n(F.wageMax), endM = n(F.endMonths);
+  const clubRepMax = n(F.clubRepMax), profMin = n(F.profMin), ambMin = n(F.ambMin), detMin = n(F.detMin), consMin = n(F.consMin), impMin = n(F.impMin), injMax = n(F.injMax), heightMin = n(F.heightMin), likelyMin = n(F.likelyMin);
+  const q = (F.q || '').trim().toLowerCase(), club = (F.club || '').trim().toLowerCase();
+  const mine = ctx.myClub ? ctx.myClub.toLowerCase() : null;
+  const attrs = (F.attrs || []).filter(x => x.k && x.min !== '' && x.min != null);
+  const out = [];
+  for (const p of db.players) {
+    if (q && !p.name.toLowerCase().includes(q)) continue;
+    if (ageMin != null && !(p.age >= ageMin)) continue; if (ageMax != null && !(p.age <= ageMax)) continue;
+    if (caMin != null && !(p.ca >= caMin)) continue; if (caMax != null && !(p.ca <= caMax)) continue;
+    if (paMin != null && !(p.pa >= paMin)) continue; if (paMax != null && !(p.pa <= paMax)) continue;
+    if (F.pos) { const list = F.posLevel === 'nat' ? p.natPos : p.pos; if (!list.includes(F.pos)) continue; }
+    if (F.foot === 'L' && !(p.lf >= 15)) continue; if (F.foot === 'R' && !(p.rf >= 15)) continue; if (F.foot === 'B' && p.foot !== 'B') continue;
+    if (F.nation !== '' && F.nation != null && p.nat !== +F.nation) continue;
+    if (F.league !== '' && F.league != null && p.clubNat !== +F.league) continue;
+    if (club && !p.club.toLowerCase().includes(club)) continue;
+    if (F.free && p.club) continue;
+    if (clubRepMax != null && p.clubRep != null && p.clubRep > clubRepMax) continue;
+    if (F.excludeMine && mine && p.club.toLowerCase() === mine) continue;
+    if (F.loan === 'exclude' && p.loan) continue; if (F.loan === 'only' && !p.loan) continue;
+    if (valueMax != null && p.value != null && p.value > valueMax) continue;
+    if (wageMax != null && p.wage != null && p.wage > wageMax) continue;
+    if (endM != null) { const m = monthsUntil(p.end, ctx.date); if (m == null || m > endM || m < -1) continue; }
+    if (profMin != null && !((p.pers.professionalism ?? 0) >= profMin)) continue;
+    if (ambMin != null && !((p.pers.ambition ?? 0) >= ambMin)) continue;
+    if (detMin != null && !((p.a.det ?? 0) >= detMin)) continue;
+    if (consMin != null && !((p.hid.cons ?? 0) >= consMin)) continue;
+    if (impMin != null && !((p.hid.imp ?? 0) >= impMin)) continue;
+    if (injMax != null && !((p.hid.inj ?? 20) <= injMax)) continue;
+    if (heightMin != null && !((p.height ?? 0) >= heightMin)) continue;
+    let okA = true; for (const x of attrs) if (!((p.a[x.k] ?? 0) >= +x.min)) { okA = false; break; } if (!okA) continue;
+    out.push(p);
+  }
+  // métricas caras só no resultado já filtrado
+  if (likelyMin != null || F.sort === 'likely') out.forEach(p => { p._lk = reachLikelihood(p); });
+  let res = likelyMin != null ? out.filter(p => (p._lk ?? 0) >= likelyMin) : out;
+  if (F.role) {
+    const r = ROLE_BY_ID[F.role], rm = n(F.roleMin);
+    const pool = res.length > 30000 ? res.sort((x, y) => (y.ca ?? 0) - (x.ca ?? 0)).slice(0, 30000) : res;
+    pool.forEach(p => { p._rs = (roleScore(p, r) || { score: 0 }).score; });
+    res = pool.filter(p => rm == null || p._rs >= rm);
+  }
+  if (F.sort === 'gain' && ctx.tactic && ctx.squad && ctx.squad.length) {
+    const pool = res.sort((x, y) => (y.ca ?? 0) - (x.ca ?? 0)).slice(0, 3000);
+    pool.forEach(p => { const g = bestGain(p, ctx.tactic, ctx.squad); p._gain = g ? g.gain : -99; p._gainSlot = g ? g.code : ''; });
+    res = pool;
+  }
+  const key = { ca: 'ca', pa: 'pa', age: 'age', value: 'value', wage: 'wage', likely: '_lk', role: '_rs', gain: '_gain', name: 'name', end: 'end' }[F.sort] || 'ca';
+  const dir = F.dir === 'asc' ? 1 : -1;
+  res.sort((x, y) => { const a = x[key], b = y[key]; if (a == null && b == null) return 0; if (a == null) return 1; if (b == null) return -1; return (a > b ? 1 : a < b ? -1 : 0) * dir; });
+  return res;
+}
+
+// onde entraria no meu XI e quanto melhora (adequação na casa vs o titular actual)
+function bestGain(p, t, squad) {
+  if (!t || !t.slots) return null;
+  const pm = Object.fromEntries((squad || []).map(x => [x.id, x]));
+  let best = null;
+  for (const s of t.slots) {
+    const a = slotInfo(t.ipForm, s.ipCode); if (!a) continue;
+    if (posFactor(p, a.group, a.side) < 0.85) continue;
+    const mine = pm[s.pid], cur = mine ? slotScore(mine, t, s) : 0, his = slotScore(p, t, s);
+    const g = his - cur;
+    if (!best || g > best.gain) best = { code: s.ipCode, gain: g, his, cur, starter: mine ? mine.name : '' };
+  }
+  return best;
+}
+// melhores papéis (todas as posições onde é pelo menos competente)
+function bestRolesAny(p, n = 5) {
+  const groups = [...new Set(p.pos.filter(x => !x.includes(':')))];
+  const seen = new Set(), out = [];
+  for (const g of groups) for (const r of rolesFor(g, 'IP', g === 'DC')) { if (seen.has(r.id)) continue; seen.add(r.id); out.push({ r, g, s: (roleScore(p, r) || { score: 0 }).score }); }
+  return out.sort((x, y) => y.s - x.s).slice(0, n);
+}
+
+// ---------- pesquisas pré-definidas ----------
+function scoutPresets(ctx) {
+  const xiCA = ctx.xiCA || 120, d = SCOUT_DEFAULT();
+  return [
+    { k: 'cheap_wonder', ic: '💎', n: L('Wonderkids baratos', 'Cheap wonderkids'), d: L('Até 19 anos, potencial ≥ 150 e valor baixo.', 'Up to 19, potential ≥ 150 and a low value.'),
+      F: { ...d, ageMax: 19, paMin: 150, valueMax: ctx.cheapValue || 3000000, sort: 'pa' } },
+    { k: 'reach', ic: '📈', n: L('Wonderkids que vão lá chegar', 'Wonderkids likely to reach potential'), d: L('Até 20 anos, potencial ≥ 145 e alta probabilidade de o atingir (profissionalismo, determinação, ambição, lesões).', 'Up to 20, potential ≥ 145 and a high chance of reaching it (professionalism, determination, ambition, injuries).'),
+      F: { ...d, ageMax: 20, paMin: 145, likelyMin: 70, sort: 'likely' } },
+    { k: 'expiring', ic: '⏳', n: L('Contrato a terminar', 'Contract expiring'), d: L(`Contrato acaba nos próximos 6 meses e CA perto do teu XI (≥ ${Math.max(60, xiCA - 15)}).`, `Contract ends within 6 months and CA close to your XI (≥ ${Math.max(60, xiCA - 15)}).`),
+      F: { ...d, endMonths: 6, caMin: Math.max(60, xiCA - 15), ageMax: 32, sort: 'ca' } },
+    { k: 'free', ic: '🆓', n: L('Jogadores livres', 'Free agents'), d: L('Sem clube: sem custo de transferência.', 'Without a club: no transfer fee.'), F: { ...d, free: true, caMin: Math.max(50, xiCA - 30), sort: 'ca' } },
+    { k: 'bargain', ic: '🏷', n: L('Pechinchas', 'Bargains'), d: L(`Entre 21 e 29 anos, CA ao nível do teu XI e valor baixo.`, `Between 21 and 29, CA at your XI’s level and a low value.`),
+      F: { ...d, ageMin: 21, ageMax: 29, caMin: Math.max(60, xiCA - 5), valueMax: ctx.bargainValue || 5000000, sort: 'ca' } },
+    { k: 'upgrade', ic: '⬆', n: L('Reforços para a minha tática', 'Upgrades for my tactic'), d: L('Quem mais melhora o teu XI, posição a posição (adequação ao papel da tua tática).', 'Who improves your XI the most, position by position (fit for your tactic’s role).'),
+      F: { ...d, caMin: Math.max(60, xiCA - 10), sort: 'gain' }, needSquad: true },
+    { k: 'veteran', ic: '🎖', n: L('Veteranos a custo zero', 'Veterans on a free'), d: L('30 anos ou mais, qualidade alta e contrato a acabar em 12 meses (ou sem clube).', '30 or older, high quality and a contract ending within 12 months (or no club).'),
+      F: { ...d, ageMin: 30, caMin: Math.max(60, xiCA), endMonths: 12, sort: 'ca' } },
+    { k: 'hidden', ic: '🔍', n: L('Joias escondidas', 'Hidden gems'), d: L('Até 21 anos, potencial ≥ 140 em clubes pequenos (reputação baixa).', 'Up to 21, potential ≥ 140 at small clubs (low reputation).'),
+      F: { ...d, ageMax: 21, paMin: 140, valueMax: ctx.cheapValue || 3000000, clubRepMax: 4000, sort: 'pa' } },
+    { k: 'elite_pers', ic: '🧠', n: L('Personalidade de elite', 'Elite personality'), d: L('Até 23 anos, Profissionalismo ≥ 17 e Determinação ≥ 15: bons para o balneário e para evoluir.', 'Up to 23, Professionalism ≥ 17 and Determination ≥ 15: good for the dressing room and for development.'),
+      F: { ...d, ageMax: 23, profMin: 17, detMin: 15, paMin: 120, sort: 'pa' } },
+    { k: 'weak_spot', ic: '🎯', n: L('A minha posição mais fraca', 'My weakest position'), d: L('Jogadores naturais na posição onde o teu XI é mais fraco.', 'Natural players for the position where your XI is weakest.'),
+      F: { ...d, caMin: Math.max(60, xiCA - 10), sort: 'gain' }, needSquad: true, weakSpot: true },
+  ];
+}
+
+;
 // ---- core/lab.js
 // ============================================================
 // Laboratório: análise das experiências do FM Tactics Lab
@@ -3041,6 +3297,7 @@ const SIM_TI = new Set(['buildup','goal_kicks','passing','tempo','width','suppor
 // ---- i18n/en_dict.js
 // Dicionário PT → EN (texto fixo da interface e da Bíblia). Chaves com '#' = números (repostos na tradução).
 addEN({
+  "Prospeção": "Scouting",
   "Situações de jogo": "Game states",
   "Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.": "Press F9 in FM27 and then “Load the latest F9” — or turn on automatic loading in Squad.",
   "Exportar catálogo do motor (diagnóstico)": "Export the engine catalogue (diagnostics)",
@@ -4157,7 +4414,7 @@ function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_I
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.9.0';
+const VERSION = '4.10.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -4177,7 +4434,7 @@ const ST = {
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [] })); } catch (e) {}
 }
 
 function load() {
@@ -4201,6 +4458,8 @@ function load() {
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
     if (d.sheetNames) ST.sheetNames = d.sheetNames;
     if (d.planK) ST.planK = d.planK;
+    if (d.scout) ST.scout = { F: Object.assign(SCOUT_DEFAULT(), d.scout.F || {}), preset: d.scout.preset || '', page: 0, tab: d.scout.tab || 'results', open: null, weak: d.scout.weak || '' };
+    if (Array.isArray(d.shortlist)) ST.shortlist = d.shortlist;
     // v4.4: a tática de exemplo “Cenas v2” deixou de vir com a app — sai das guardadas e, se for a activa, dá lugar a uma nova
     const isCenas = (t) => t && typeof t.name === 'string' && /^Cenas v2\b/.test(t.name);
     ST.saved = ST.saved.filter(t => !isCenas(t));
@@ -4870,6 +5129,153 @@ function vGamePlans() {
 }
 
 ;
+// ---- ui/views_scout.js
+// ============================================================
+// Prospeção (scouting) — todos os jogadores do save
+// ============================================================
+const SCOUT = { db: null, nations: {}, date: null, save: '', ms: 0, cached: false, cache: null, cacheKey: '' };
+const PAGE = 50;
+function scoutState() { if (!ST.scout) ST.scout = { F: SCOUT_DEFAULT(), preset: '', page: 0, tab: 'results', open: null }; if (!ST.scout.F) ST.scout.F = SCOUT_DEFAULT(); return ST.scout; }
+const fmtMoney = (v) => v == null ? '—' : new Intl.NumberFormat(LOCALE(), { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString(LOCALE(), { year: 'numeric', month: 'short' }) : '—';
+function pctile(list, q) { const v = list.filter(x => x != null).sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(v.length * q))] : null; }
+function scoutCtx() {
+  const squad = players(), pm = Object.fromEntries(squad.map(p => [p.id, p]));
+  const xi = ST.tactic.slots.map(s => pm[s.pid]).filter(Boolean);
+  const cas = xi.map(p => +(p.meta && p.meta.ca) || null).filter(Boolean);
+  const xiCA = cas.length ? Math.round(cas.reduce((a, b) => a + b, 0) / cas.length) : 120;
+  const db = SCOUT.db;
+  if (db && !SCOUT._val) SCOUT._val = { cheapValue: pctile(db.players.filter(p => p.age <= 19 && p.pa >= 150).map(p => p.value), 0.35) || 3000000 };
+  const bargainValue = db ? pctile(db.players.filter(p => p.age >= 21 && p.age <= 29 && p.ca >= xiCA - 5).map(p => p.value), 0.3) : null;
+  return { date: SCOUT.date, myClub: ST.myClub || '', tactic: ST.tactic, squad, xiCA, cheapValue: SCOUT._val ? SCOUT._val.cheapValue : null, bargainValue };
+}
+// casa mais fraca do meu XI (para a pesquisa "A minha posição mais fraca")
+function weakestSlot() {
+  const pm = Object.fromEntries(players().map(p => [p.id, p])); let w = null;
+  ST.tactic.slots.forEach(s => { const p = pm[s.pid]; const sc = p ? slotScore(p, ST.tactic, s) : 0; const a = slotInfo(ST.tactic.ipForm, s.ipCode); if (a.group !== 'GK' && (!w || sc < w.sc)) w = { s, sc, group: a.group }; });
+  return w;
+}
+function scoutResults() {
+  const S = scoutState(), key = JSON.stringify(S.F) + '|' + (SCOUT.db ? SCOUT.db.players.length : 0) + '|' + ST.tactic.slots.map(s => s.pid + s.ip).join();
+  if (SCOUT.cacheKey === key && SCOUT.cache) return SCOUT.cache;
+  SCOUT.cache = scoutFilter(SCOUT.db, S.F, scoutCtx()); SCOUT.cacheKey = key; return SCOUT.cache;
+}
+const GROUP_OPTS = () => [['', L('Todas as posições', 'All positions')], ...Object.entries(GROUPS).map(([k, v]) => [k, v])];
+function scoutFilters() {
+  const F = scoutState().F, nat = Object.entries(SCOUT.nations).sort((a, b) => a[1].localeCompare(b[1]));
+  const inp = (k, label, ph, type = 'number', step = '') => `<label class="f">${label}<input type="${type}" ${step ? `step="${step}"` : ''} value="${esc(F[k] ?? '')}" placeholder="${esc(ph || '')}" onchange="A.scoutF('${k}', this.value)"></label>`;
+  const pair = (a, b, label) => `<div class="f"><span>${label}</span><div class="pair">${a}${b}</div></div>`;
+  const mini = (k, ph) => `<input type="number" value="${esc(F[k] ?? '')}" placeholder="${ph}" onchange="A.scoutF('${k}', this.value)" aria-label="${ph}">`;
+  const sel = (k, opts, label) => `<label class="f">${label}${selectHTML(opts, F[k] ?? '', `A.scoutF('${k}', this.value)`)}</label>`;
+  const chk = (k, label) => `<label class="row small"><input type="checkbox" ${F[k] ? 'checked' : ''} onchange="A.scoutF('${k}', this.checked)"> ${label}</label>`;
+  const attrOpts = [['', '—'], ...Object.keys(ATTRS).map(k => [k, attrName(k)]).sort((a, b) => a[1].localeCompare(b[1]))];
+  const roleOpts = [['', L('— nenhum —', '— none —')], ...ROLES.filter(r => r.phase === 'IP').map(r => [r.id, `${roleName(r)} (${r.ab})`]).sort((a, b) => a[1].localeCompare(b[1]))];
+  return `<div class="panel scout-filters">
+    <div class="row" style="justify-content:space-between"><h3 style="margin:0">${L('Filtros', 'Filters')}</h3><button class="btn sm" onclick="A.scoutReset()">${L('Limpar', 'Clear')}</button></div>
+    ${inp('q', L('Nome', 'Name'), L('procurar…', 'search…'), 'text')}
+    <details open><summary>${L('Jogador', 'Player')}</summary>
+      ${pair(mini('ageMin', L('mín', 'min')), mini('ageMax', L('máx', 'max')), L('Idade', 'Age'))}
+      ${pair(mini('caMin', L('mín', 'min')), mini('caMax', L('máx', 'max')), L('Habilidade actual (CA)', 'Current ability (CA)'))}
+      ${pair(mini('paMin', L('mín', 'min')), mini('paMax', L('máx', 'max')), L('Potencial (PA)', 'Potential (PA)'))}
+      ${sel('pos', GROUP_OPTS(), L('Posição', 'Position'))}
+      ${sel('posLevel', [['acc', L('competente ou natural (≥ 15)', 'accomplished or natural (≥ 15)')], ['nat', L('só natural (≥ 18)', 'natural only (≥ 18)')]], L('Nível na posição', 'Position level'))}
+      ${sel('foot', [['', L('qualquer', 'any')], ['L', L('esquerdo forte', 'strong left')], ['R', L('direito forte', 'strong right')], ['B', L('ambos os pés', 'both feet')]], L('Pé', 'Foot'))}
+      ${inp('heightMin', L('Altura mínima (cm)', 'Minimum height (cm)'), '185')}
+    </details>
+    <details open><summary>${L('Clube, contrato e valor', 'Club, contract and value')}</summary>
+      ${inp('club', L('Clube', 'Club'), L('nome do clube', 'club name'), 'text')}
+      ${nat.length ? sel('league', [['', L('qualquer', 'any')], ...nat.map(([k, v]) => [k, v])], L('País da liga do clube', 'Club’s league country')) + sel('nation', [['', L('qualquer', 'any')], ...nat.map(([k, v]) => [k, v])], L('Nacionalidade', 'Nationality')) : ''}
+      ${inp('valueMax', L('Valor máximo (moeda do save)', 'Maximum value (save currency)'), '5000000')}
+      ${inp('wageMax', L('Salário semanal máximo', 'Maximum weekly wage'), '20000')}
+      ${inp('endMonths', L('Contrato acaba em até (meses)', 'Contract ends within (months)'), '6')}
+      ${inp('clubRepMax', L('Reputação máxima do clube (1–10000)', 'Maximum club reputation (1–10000)'), '4000')}
+      ${chk('free', L('Só jogadores livres', 'Free agents only'))}
+      ${chk('excludeMine', L('Excluir o meu clube', 'Exclude my club'))}
+      ${sel('loan', [['any', L('incluir emprestados', 'include loaned players')], ['exclude', L('excluir emprestados', 'exclude loaned players')], ['only', L('só emprestados', 'loaned players only')]], L('Empréstimos', 'Loans'))}
+    </details>
+    <details><summary>${L('Personalidade e atributos ocultos', 'Personality and hidden attributes')}</summary>
+      ${inp('profMin', L('Profissionalismo mínimo', 'Minimum professionalism'), '15')}
+      ${inp('ambMin', L('Ambição mínima', 'Minimum ambition'), '14')}
+      ${inp('detMin', L('Determinação mínima', 'Minimum determination'), '15')}
+      ${inp('consMin', L('Consistência mínima', 'Minimum consistency'), '14')}
+      ${inp('impMin', L('Jogos importantes mínimo', 'Minimum big-match temperament'), '14')}
+      ${inp('injMax', L('Propensão a lesões máxima', 'Maximum injury proneness'), '8')}
+      ${inp('likelyMin', L('Probabilidade de atingir o potencial (0–100)', 'Chance of reaching potential (0–100)'), '70')}
+    </details>
+    <details ${F.attrs.length ? 'open' : ''}><summary>${L('Atributos mínimos', 'Minimum attributes')} ${F.attrs.length ? `(${F.attrs.length})` : ''}</summary>
+      ${F.attrs.map((x, i) => `<div class="pair attr-row">${selectHTML(attrOpts, x.k, `A.scoutAttr(${i}, 'k', this.value)`)}<input type="number" min="1" max="20" value="${esc(x.min ?? '')}" onchange="A.scoutAttr(${i}, 'min', this.value)" aria-label="${L('mínimo', 'minimum')}"><button class="btn sm" onclick="A.scoutAttrDel(${i})" aria-label="${L('Remover', 'Remove')}">×</button></div>`).join('')}
+      <button class="btn sm" onclick="A.scoutAttrAdd()">+ ${L('Atributo', 'Attribute')}</button>
+    </details>
+    <details ${F.role ? 'open' : ''}><summary>${L('Papel', 'Role')}</summary>
+      ${sel('role', roleOpts, L('Adequação ao papel', 'Role fit'))}
+      ${F.role ? inp('roleMin', L('Adequação mínima (0–100)', 'Minimum fit (0–100)'), '65') : ''}
+    </details>
+  </div>`;
+}
+function scoutTable(list, extra) {
+  const S = scoutState(), F = S.F, stars = new Set((ST.shortlist || []).map(x => x.id));
+  const th = (k, label) => `<th><button class="th-sort ${F.sort === k ? 'on' : ''}" onclick="A.scoutSort('${k}')">${label}${F.sort === k ? (F.dir === 'asc' ? ' ▲' : ' ▼') : ''}</button></th>`;
+  const ext = extra === 'likely' ? [L('Prob.', 'Chance'), p => p._lk ?? reachLikelihood(p)] : extra === 'role' ? [L('Papel', 'Role'), p => p._rs] : extra === 'gain' ? [L('Ganho no XI', 'XI gain'), p => p._gain != null ? `${p._gain > 0 ? '+' : ''}${p._gain} <span class="muted small">${esc(p._gainSlot || '')}</span>` : '—'] : null;
+  return `<div class="table-wrap" style="max-height:none"><table class="scout-table"><thead><tr><th aria-label="${L('Lista de observação', 'Shortlist')}">☆</th>${th('name', L('Nome', 'Name'))}${th('age', L('Idade', 'Age'))}<th>${L('Pos', 'Pos')}</th><th>${L('Clube', 'Club')}</th>${th('ca', 'CA')}${th('pa', 'PA')}${th('value', L('Valor', 'Value'))}${th('wage', L('Salário', 'Wage'))}${th('end', L('Contrato', 'Contract'))}${ext ? `<th>${ext[0]}</th>` : ''}</tr></thead><tbody>
+    ${list.map(p => `<tr class="click" onclick="A.scoutOpen('${esc(p.id)}')"><td><button class="star ${stars.has(p.id) ? 'on' : ''}" onclick="event.stopPropagation();A.scoutStar('${esc(p.id)}')" aria-label="${stars.has(p.id) ? L('Tirar da lista', 'Remove from shortlist') : L('Pôr na lista', 'Add to shortlist')}">${stars.has(p.id) ? '★' : '☆'}</button></td>
+      <td><b>${esc(p.name)}</b>${p.loan ? ` <span class="chip">${L('emprest.', 'loan')}</span>` : ''}</td><td>${p.age ?? '—'}</td><td class="small">${esc(p.posRaw || '')}</td><td class="small">${p.club ? esc(p.club) : `<span class="chip ok">${L('livre', 'free')}</span>`}</td>
+      <td><b>${p.ca ?? '—'}</b></td><td>${p.pa ?? '—'}${p.paRange ? '*' : ''}</td><td>${fmtMoney(p.value)}</td><td>${fmtMoney(p.wage)}</td><td class="small">${fmtDate(p.end)}</td>${ext ? `<td>${ext[1](p) ?? '—'}</td>` : ''}</tr>`).join('')}
+  </tbody></table></div>`;
+}
+function scoutCard(p) {
+  const ctx = scoutCtx(), g = ctx.squad.length ? bestGain(p, ST.tactic, ctx.squad) : null, roles = bestRolesAny(p, 5), lk = p.age != null && p.age <= 23 ? reachLikelihood(p) : null;
+  const grp = (c) => Object.keys(ATTRS).filter(k => ATTRS[k].c === c && p.a[k] != null);
+  const cell = (k) => { const v = Math.round(p.a[k]); return `<div class="attr"><span>${esc(attrName(k))}</span><b class="v v${v >= 16 ? 4 : v >= 13 ? 3 : v >= 10 ? 2 : 1}">${v}</b></div>`; };
+  const gkR = p.posR ? (p.posR.gk ?? 0) : 0, isGK = gkR >= 15 && gkR >= Math.max(0, ...Object.entries(p.posR || {}).filter(([k]) => k !== 'gk').map(([, v]) => v));   // só se a melhor posição for GR
+  const pers = [['professionalism', L('Profissionalismo', 'Professionalism')], ['ambition', L('Ambição', 'Ambition')], ['pressure', L('Pressão', 'Pressure')], ['loyalty', L('Lealdade', 'Loyalty')], ['temperament', L('Temperamento', 'Temperament')], ['adaptability', L('Adaptabilidade', 'Adaptability')]];
+  const hid = [['cons', L('Consistência', 'Consistency')], ['imp', L('Jogos importantes', 'Important matches')], ['inj', L('Propensão a lesões', 'Injury proneness')], ['vers', L('Versatilidade', 'Versatility')]];
+  return `<div class="modal-back" onclick="if(event.target===this)A.scoutClose()"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(p.name)}">
+    <div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">${esc(p.name)}</h2>
+      <p class="small muted" style="margin:.2em 0 0">${p.age ?? '—'} ${L('anos', 'years')} · ${p.club ? esc(p.club) : L('sem clube', 'no club')}${SCOUT.nations[p.nat] ? ' · ' + esc(SCOUT.nations[p.nat]) : ''} · ${esc(p.posRaw || '')}${p.height ? ' · ' + p.height + ' cm' : ''}${p.foot ? ' · ' + (p.foot === 'L' ? L('esquerdino', 'left-footed') : p.foot === 'R' ? L('destro', 'right-footed') : L('ambos os pés', 'two-footed')) : ''}</p></div>
+      <div class="row"><button class="btn ${ (ST.shortlist || []).some(x => x.id === p.id) ? 'primary' : ''}" onclick="A.scoutStar('${esc(p.id)}')">${(ST.shortlist || []).some(x => x.id === p.id) ? '★ ' + L('Na lista', 'On shortlist') : '☆ ' + L('Pôr na lista', 'Add to shortlist')}</button><button class="btn" onclick="A.scoutClose()" aria-label="${L('Fechar', 'Close')}">✕</button></div></div>
+    <div class="kpis" style="margin-top:12px"><div><span>CA</span><b>${p.ca ?? '—'}</b></div><div><span>PA</span><b>${p.pa ?? '—'}${p.paRange ? ` <span class="small muted">(${p.paRange[0]}–${p.paRange[1]})</span>` : ''}</b></div><div><span>${L('Valor', 'Value')}</span><b>${fmtMoney(p.value)}</b></div><div><span>${L('Salário/semana', 'Wage/week')}</span><b>${fmtMoney(p.wage)}</b></div><div><span>${L('Contrato até', 'Contract until')}</span><b>${fmtDate(p.end)}</b></div>${lk != null ? `<div><span>${L('Prob. de atingir o PA', 'Chance to reach PA')}</span><b>${lk}</b></div>` : ''}</div>
+    ${g ? `<div class="notice small" style="margin-top:10px">${g.gain > 0 ? L(`No teu XI entraria em <b>${esc(g.code)}</b>: adequação ${g.his} contra ${g.cur} de ${esc(g.starter || 'ninguém')} (<b>+${g.gain}</b>).`, `In your XI he would play at <b>${esc(g.code)}</b>: fit ${g.his} vs ${g.cur} for ${esc(g.starter || 'nobody')} (<b>+${g.gain}</b>).`) : L(`Não melhoraria o teu XI (melhor casa: ${esc(g.code)}, ${g.his} contra ${g.cur}).`, `He would not improve your XI (best slot: ${esc(g.code)}, ${g.his} vs ${g.cur}).`)}</div>` : ''}
+    <div class="grid g3 attrs-grid" style="margin-top:12px">${(isGK ? ['G', 'M', 'F'] : ['T', 'M', 'F']).map(c => `<div><h4>${{ T: L('Técnicos', 'Technical'), M: L('Mentais', 'Mental'), F: L('Físicos', 'Physical'), G: L('Guarda-redes', 'Goalkeeping') }[c]}</h4>${grp(c).map(cell).join('')}</div>`).join('')}</div>
+    <div class="grid g2" style="margin-top:12px;align-items:start">
+      <div><h4>${L('Melhores papéis', 'Best roles')}</h4>${roles.map(x => `<div class="row small" style="justify-content:space-between"><span>${esc(roleName(x.r))} <span class="muted">(<span>${esc(GROUPS[x.g] || x.g)}</span>)</span></span>${fitBadge(x.s)}</div>`).join('')}</div>
+      <div><h4>${L('Personalidade e ocultos', 'Personality and hidden')}</h4>${pers.filter(([k]) => p.pers[k] != null).map(([k, n]) => `<div class="row small" style="justify-content:space-between"><span>${n}</span><b>${p.pers[k]}</b></div>`).join('')}${hid.filter(([k]) => p.hid[k] != null).map(([k, n]) => `<div class="row small" style="justify-content:space-between"><span>${n}</span><b>${p.hid[k]}</b></div>`).join('')}</div>
+    </div>
+    <p class="small muted" style="margin-bottom:0">${L('Dados lidos do save pelo fmsave. Alguns campos (personalidade, valor, salário) estão marcados pelo fmsave como ainda não confirmados no jogo.', 'Data read from the save by fmsave. Some fields (personality, value, wage) are flagged by fmsave as not yet confirmed against the game.')}</p>
+  </div></div>`;
+}
+function vScout() {
+  const S = scoutState();
+  if (!SCOUT.db) {
+    return `<div class="top"><div><h2>${L('Prospeção', 'Scouting')}</h2><p class="muted small" style="margin:0">${L('Todos os jogadores do teu save, com atributos, CA/PA, personalidade, contrato e valor.', 'Every player in your save, with attributes, CA/PA, personality, contract and value.')}</p></div></div>
+      <div class="panel empty"><h3>${L('Carregar a base de dados do save', 'Load the save’s database')}</h3>
+      ${DESKTOP ? `<p>${L('A app corre o fmsave sobre uma cópia do último save e lê todos os jogadores. A primeira leitura pode demorar 1–3 minutos; depois fica guardada até o save mudar.', 'The app runs fmsave on a copy of your latest save and reads every player. The first read can take 1–3 minutes; after that it is kept until the save changes.')}</p>
+        <button class="btn primary" data-busy="scout" onclick="A.scoutLoad()">${L('Ler todos os jogadores do save', 'Read every player in the save')}</button>
+        ${SCOUT.err ? `<div class="notice warn small" style="margin-top:10px">${esc(saveErrText(SCOUT.err))}</div>` : ''}`
+      : `<p>${L('No browser: abra o', 'In the browser: open')} <a href="https://rhiever.github.io/fmsave/app/" target="_blank" rel="noopener">fmsave online</a>${L(', largue o save, descarregue o CSV com todos os jogadores e arraste-o para esta janela.', ', drop your save in, download the CSV with every player and drag it into this window.')}</p>`}
+      ${(ST.shortlist || []).length ? `<p class="small">${L(`Tens ${ST.shortlist.length} jogador(es) na lista de observação.`, `You have ${ST.shortlist.length} player(s) on your shortlist.`)}</p>` : ''}</div>`;
+  }
+  const ctx = scoutCtx(), presets = scoutPresets(ctx);
+  const res = scoutResults(), pages = Math.max(1, Math.ceil(res.length / PAGE)), page = Math.min(S.page || 0, pages - 1);
+  const extra = S.F.sort === 'likely' || S.F.likelyMin ? 'likely' : S.F.role ? 'role' : S.F.sort === 'gain' ? 'gain' : null;
+  const open = S.open ? SCOUT.db.players.find(p => p.id === S.open) : null;
+  const list = (ST.shortlist || []).map(x => SCOUT.db.players.find(p => p.id === x.id) || x);
+  return `<div class="top"><div><h2>${L('Prospeção', 'Scouting')}</h2><p class="muted small" style="margin:0">${L(`${SCOUT.db.players.length.toLocaleString(LOCALE())} jogadores · ${esc(SCOUT.save)} · data do jogo ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimada)' : ''} · ${SCOUT.cached ? 'da cache' : 'lido em ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`, `${SCOUT.db.players.length.toLocaleString(LOCALE())} players · ${esc(SCOUT.save)} · game date ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimated)' : ''} · ${SCOUT.cached ? 'from cache' : 'read in ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`)}</p></div>
+    <div class="row">${DESKTOP ? `<button class="btn" data-busy="scout" onclick="A.scoutLoad(true)">${L('Actualizar do save', 'Refresh from save')}</button>` : ''}<button class="btn" onclick="A.scoutExport()">${L('Exportar CSV', 'Export CSV')}</button></div></div>
+  <div class="plan-tabs" role="tablist" aria-label="${L('Pesquisas pré-definidas', 'Preset searches')}">${presets.map(p => `<button class="${S.preset === p.k ? 'on' : ''}" onclick="A.scoutPreset('${p.k}')" title="${esc(p.d)}" ${p.needSquad && !ctx.squad.length ? 'disabled' : ''}><span aria-hidden="true">${p.ic}</span> ${esc(p.n)}</button>`).join('')}</div>
+  ${S.preset ? `<p class="small muted" style="margin:8px 0 0">${esc((presets.find(p => p.k === S.preset) || {}).d || '')}${S.weak ? ' ' + L(`Posição: ${S.weak}.`, `Position: ${S.weak}.`) : ''} ${L('Pode afinar com os filtros.', 'You can refine it with the filters.')}</p>` : ''}
+  <div class="grid scout-grid" style="margin-top:12px">
+    ${scoutFilters()}
+    <div class="panel" style="min-width:0">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap"><div class="seg" role="tablist"><button class="${S.tab !== 'list' ? 'on' : ''}" onclick="A.scoutTab('results')">${L('Resultados', 'Results')} (${res.length.toLocaleString(LOCALE())})</button><button class="${S.tab === 'list' ? 'on' : ''}" onclick="A.scoutTab('list')">★ ${L('Lista de observação', 'Shortlist')} (${list.length})</button></div>
+        ${S.tab !== 'list' && pages > 1 ? `<div class="row small"><button class="btn sm" ${page <= 0 ? 'disabled' : ''} onclick="A.scoutPage(${page - 1})" aria-label="${L('Anterior', 'Previous')}">‹</button><span>${page + 1} / ${pages}</span><button class="btn sm" ${page >= pages - 1 ? 'disabled' : ''} onclick="A.scoutPage(${page + 1})" aria-label="${L('Seguinte', 'Next')}">›</button></div>` : ''}</div>
+      ${S.tab === 'list' ? (list.length ? scoutTable(list, null) : `<p class="small muted">${L('Ainda não há ninguém na lista: use ☆ nos resultados.', 'Nobody on the list yet: use ☆ in the results.')}</p>`)
+        : res.length ? scoutTable(res.slice(page * PAGE, page * PAGE + PAGE), extra) : `<p class="small muted">${L('Nenhum jogador com estes filtros. Alargue a pesquisa.', 'No players match these filters. Widen the search.')}</p>`}
+    </div>
+  </div>
+  ${open ? scoutCard(open) : ''}`;
+}
+
+;
 // ---- ui/views_tactic.js
 // ============================================================
 // Vistas da Tática: analisar, importar, ficha FM27
@@ -5204,6 +5610,12 @@ function vBTraining() {
 // ============================================================
 // Definições + cartões de integrações (dependências externas explícitas)
 // ============================================================
+// erros do fmsave traduzidos para o que o utilizador precisa de saber
+function saveErrText(err) {
+  const e = String(err || '');
+  if (/UnsupportedGameError|unsupported|unverified/i.test(e)) return L('O fmsave ainda não lê o plantel nesta versão do FM27 (o jogo foi actualizado). A app usa sempre o fmsave mais recente: assim que sair uma versão que a suporte, volta a funcionar sozinha. Entretanto use o F9 ou o fmsave online.', 'fmsave cannot read the squad in this FM27 build yet (the game was updated). The app always uses the latest fmsave: as soon as a version supporting it is released, it works again on its own. Meanwhile, use F9 or fmsave online.') + ' (' + T(e).slice(0, 160) + ')';
+  return e;
+}
 const LINKS = {
   fmve: 'https://github.com/ElectroHugin/FM-View-Exporter/releases',
   fmsave: 'https://github.com/rhiever/fmsave',
@@ -5222,7 +5634,8 @@ function integrationsHTML(compact) {
      ${!DESKTOP ? `<p class="small">No browser: use o <a href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">fmsave online</a> e arraste o CSV para aqui.</p>` : ''}
      ${DESKTOP && !compact ? `<label class="f">Pasta dos saves (opcional)<input type="text" value="${esc(ST.auto.saveDir)}" placeholder="Documentos\\Sports Interactive\\Football Manager 27\\games" onchange="A.saveDir(this.value)"></label>
        <div class="small">${ST.lastSave ? `<span>Último save:</span> <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br><span>Lido:</span> ${esc(ST.auto.saveLast)}` : ''}</div>` : ''}
-     ${err && DESKTOP ? `<div class="notice warn small">${esc(err)}</div>` : ''}`,
+     ${err && DESKTOP ? `<div class="notice warn small">${esc(saveErrText(err))}</div>` : ''}
+     <p class="small muted">${L('A app usa sempre a versão mais recente do fmsave (verifica o PyPI a cada leitura; sem internet, usa a que já tem). Se instalou o fmsave com pip, actualize com', 'The app always uses the latest fmsave (it checks PyPI on every read; offline, it uses the one you already have). If you installed fmsave with pip, update it with')} <code>python -m pip install --upgrade fmsave</code>.</p>`,
     DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn sm" data-busy="save" onclick="A.saveNow()">Ler o save agora</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
   const f9Card = card('F9 no jogo — FM View Exporter',
     DESKTOP ? pill(f9, 'plugin encontrado', 'plugin não encontrado') + (f9 ? pill(ST.auto.on, 'automático', 'manual') : '') : '',
@@ -5474,6 +5887,59 @@ const A = {
     save(); render();
   },
   sheetNames(v) { ST.sheetNames = v; save(); render(); },
+  // ---------- prospeção ----------
+  async scoutLoad() {
+    if (BUSY.scout) return; SCOUT.err = '';
+    try {
+      const info = await window.__TAURI__.core.invoke('latest_save', { customDir: ST.auto.saveDir || null });
+      if (!info) throw new Error(L('Não encontrei nenhum save do FM27 — defina a pasta dos saves nas Definições.', 'No FM27 save found — set the saves folder in Settings.'));
+      const t0 = performance.now();
+      await withBusy('scout', L('A ler todos os jogadores de ', 'Reading every player in ') + info.name, async (prog) => {
+        prog(null, L('o fmsave está a ler o save (sobre uma cópia)', 'fmsave is reading the save (from a copy)'));
+        const r = await window.__TAURI__.core.invoke('export_save_db', { path: info.path });
+        await A.scoutIngest(r.players, { nations: r.nations, info: r.info, save: r.save, cached: r.cached, prog, t0 });
+      }, { slow: L('a primeira leitura da base de dados inteira pode demorar 1–3 minutos', 'the first read of the whole database can take 1–3 minutes'), slowAfter: 15 });
+    } catch (e) { SCOUT.err = String((e && e.message) || e); toast(L('Não consegui ler a base de dados', 'Could not read the database')); }
+    render();
+  },
+  async scoutIngest(text, o = {}) {
+    const t0 = o.t0 || performance.now();
+    const db = await parseScoutDB(text, { onProgress: (f, n) => o.prog && o.prog(f, L(`a interpretar ${n.toLocaleString(LOCALE())} jogadores`, `parsing ${n.toLocaleString(LOCALE())} players`)) });
+    SCOUT.db = db; SCOUT.nations = parseNations(o.nations || ''); SCOUT._val = null; SCOUT.cache = null; SCOUT.cacheKey = '';
+    const d = o.info ? gameDateFromInfo(o.info) : null; SCOUT.date = d || inferGameDate(db.players); SCOUT.dateGuess = !d;
+    SCOUT.save = o.save || L('ficheiro', 'file'); SCOUT.cached = !!o.cached; SCOUT.ms = performance.now() - t0;
+    const S = scoutState(); S.open = null; ST.view = 'scout'; save(); render();
+    toast(L(`${db.players.length.toLocaleString(LOCALE())} jogadores carregados`, `${db.players.length.toLocaleString(LOCALE())} players loaded`));
+  },
+  scoutPreset(k) {
+    const S = scoutState(), pr = scoutPresets(scoutCtx()).find(x => x.k === k); if (!pr) return;
+    S.F = JSON.parse(JSON.stringify(pr.F)); S.preset = k; S.page = 0; S.weak = ''; S.tab = 'results';
+    if (pr.weakSpot) { const w = weakestSlot(); if (w) { S.F.pos = w.group; S.F.posLevel = 'nat'; S.weak = w.s.ipCode; } }
+    save(); render();
+  },
+  scoutF(k, v) { const S = scoutState(); S.F[k] = v; S.preset = ''; S.page = 0; save(); render(); },
+  scoutAttrAdd() { const S = scoutState(); S.F.attrs.push({ k: '', min: '' }); save(); render(); },
+  scoutAttr(i, f, v) { const S = scoutState(); if (S.F.attrs[i]) S.F.attrs[i][f] = v; S.preset = ''; S.page = 0; save(); render(); },
+  scoutAttrDel(i) { const S = scoutState(); S.F.attrs.splice(i, 1); S.page = 0; save(); render(); },
+  scoutReset() { const S = scoutState(); S.F = SCOUT_DEFAULT(); S.preset = ''; S.page = 0; S.weak = ''; save(); render(); },
+  scoutSort(k) { const S = scoutState(); if (S.F.sort === k) S.F.dir = S.F.dir === 'asc' ? 'desc' : 'asc'; else { S.F.sort = k; S.F.dir = ['name', 'age', 'value', 'wage', 'end'].includes(k) ? 'asc' : 'desc'; } S.page = 0; save(); render(); },
+  scoutPage(n) { scoutState().page = Math.max(0, n); save(); render(); document.getElementById('main').scrollTop = 0; },
+  scoutTab(t) { scoutState().tab = t; save(); render(); },
+  scoutOpen(id) { scoutState().open = id; render(); },
+  scoutClose() { scoutState().open = null; render(); },
+  scoutStar(id) {
+    ST.shortlist = ST.shortlist || []; const i = ST.shortlist.findIndex(x => x.id === id);
+    if (i >= 0) ST.shortlist.splice(i, 1);
+    else { const p = SCOUT.db && SCOUT.db.players.find(x => x.id === id); if (p) ST.shortlist.push({ id: p.id, name: p.name, age: p.age, club: p.club, posRaw: p.posRaw, ca: p.ca, pa: p.pa, value: p.value, wage: p.wage, end: p.end, pos: p.pos, natPos: p.natPos, a: {}, pers: {}, hid: {} }); }
+    save(); render();
+  },
+  scoutExport() {
+    const S = scoutState(), list = S.tab === 'list' ? (ST.shortlist || []) : (SCOUT.db ? scoutResults() : []);
+    const head = ['name', 'age', 'club', 'positions', 'ca', 'pa', 'value', 'wage', 'contract_end'];
+    const q = (v) => { const s = v == null ? '' : String(v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const csv = [head.join(','), ...list.map(p => [p.name, p.age, p.club, p.posRaw, p.ca, p.pa, p.value, p.wage, p.end].map(q).join(','))].join('\n');
+    download(S.tab === 'list' ? 'shortlist.csv' : 'scouting.csv', csv, 'text/csv'); toast(L(`${list.length} jogadores exportados`, `${list.length} players exported`));
+  },
   planK(k) { ST.planK = k; save(); render(); },
   planTactic() { const r = ST._plan || gamePlan(ST.tactic, players(), ST.planK || 'chase', { opp: oppPlayers() }); return JSON.parse(JSON.stringify(r.t)); },
   planSave() { const t = A.planTactic(); ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(t); save(); render(); toast(L('Plano guardado: ', 'Plan saved: ') + t.name); },
@@ -5553,6 +6019,7 @@ const A = {
 const NAV = [
   ['home', 'Início', '⌂'],
   ['team', 'A minha equipa', '☰'],
+  ['scout', 'Prospeção', '🔭'],
   ['tactic', 'Tática', '◎'],
   ['lab', 'Laboratório', '⚗'],
   ['training', 'Treino', '◷'],
@@ -5597,6 +6064,7 @@ function render(scrollTop) {
   else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
   else if (v === 'lab') body = vLab();
+  else if (v === 'scout') body = vScout();
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
@@ -5683,6 +6151,8 @@ async function ingestFile(f) {
   try { return ingestParsed(txt, f, n); } finally { busyEnd('file'); }
 }
 function ingestParsed(txt, f, n) {
+  // exportação do fmsave com todos os jogadores (milhares de linhas): vai para a prospeção, não para o plantel
+  if (!n.endsWith('.json') && txt.length > 100000 && /ability_current/.test(txt.slice(0, 5000)) && (txt.match(/\n/g) || []).length > 400) return A.scoutIngest(txt, { save: f.name });
   if (n.endsWith('.json')) { try { return ingestJSON(JSON.parse(txt), f.name); } catch (e) { return toast('JSON inválido'); } }
   const where = ingestSquadText(txt, f.name);
   if (where) { ST.view = 'team'; ST.tabs.team = where === 'opp' ? 'opp' : 'squad'; }
@@ -5742,7 +6212,8 @@ document.addEventListener('click', (e) => {
   if (!a || !DESKTOP) return;
   e.preventDefault(); window.__TAURI__.core.invoke('open_url', { url: a.href }).catch(() => toast(a.href));
 });
-window.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();
   if (DESKTOP) {

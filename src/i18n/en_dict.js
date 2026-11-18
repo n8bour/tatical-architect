@@ -1,5 +1,6 @@
 // Dicionário PT → EN (texto fixo da interface e da Bíblia). Chaves com '#' = números (repostos na tradução).
 addEN({
+  "Prospeção": "Scouting",
   "Situações de jogo": "Game states",
   "Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.": "Press F9 in FM27 and then “Load the latest F9” — or turn on automatic loading in Squad.",
   "Exportar catálogo do motor (diagnóstico)": "Export the engine catalogue (diagnostics)",

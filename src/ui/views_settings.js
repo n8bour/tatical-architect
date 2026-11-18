@@ -1,6 +1,12 @@
 // ============================================================
 // Definições + cartões de integrações (dependências externas explícitas)
 // ============================================================
+// erros do fmsave traduzidos para o que o utilizador precisa de saber
+function saveErrText(err) {
+  const e = String(err || '');
+  if (/UnsupportedGameError|unsupported|unverified/i.test(e)) return L('O fmsave ainda não lê o plantel nesta versão do FM27 (o jogo foi actualizado). A app usa sempre o fmsave mais recente: assim que sair uma versão que a suporte, volta a funcionar sozinha. Entretanto use o F9 ou o fmsave online.', 'fmsave cannot read the squad in this FM27 build yet (the game was updated). The app always uses the latest fmsave: as soon as a version supporting it is released, it works again on its own. Meanwhile, use F9 or fmsave online.') + ' (' + T(e).slice(0, 160) + ')';
+  return e;
+}
 const LINKS = {
   fmve: 'https://github.com/ElectroHugin/FM-View-Exporter/releases',
   fmsave: 'https://github.com/rhiever/fmsave',
@@ -19,7 +25,8 @@ function integrationsHTML(compact) {
      ${!DESKTOP ? `<p class="small">No browser: use o <a href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">fmsave online</a> e arraste o CSV para aqui.</p>` : ''}
      ${DESKTOP && !compact ? `<label class="f">Pasta dos saves (opcional)<input type="text" value="${esc(ST.auto.saveDir)}" placeholder="Documentos\\Sports Interactive\\Football Manager 27\\games" onchange="A.saveDir(this.value)"></label>
        <div class="small">${ST.lastSave ? `<span>Último save:</span> <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br><span>Lido:</span> ${esc(ST.auto.saveLast)}` : ''}</div>` : ''}
-     ${err && DESKTOP ? `<div class="notice warn small">${esc(err)}</div>` : ''}`,
+     ${err && DESKTOP ? `<div class="notice warn small">${esc(saveErrText(err))}</div>` : ''}
+     <p class="small muted">${L('A app usa sempre a versão mais recente do fmsave (verifica o PyPI a cada leitura; sem internet, usa a que já tem). Se instalou o fmsave com pip, actualize com', 'The app always uses the latest fmsave (it checks PyPI on every read; offline, it uses the one you already have). If you installed fmsave with pip, update it with')} <code>python -m pip install --upgrade fmsave</code>.</p>`,
     DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn sm" data-busy="save" onclick="A.saveNow()">Ler o save agora</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
   const f9Card = card('F9 no jogo — FM View Exporter',
     DESKTOP ? pill(f9, 'plugin encontrado', 'plugin não encontrado') + (f9 ? pill(ST.auto.on, 'automático', 'manual') : '') : '',

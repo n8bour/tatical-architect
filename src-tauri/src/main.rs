@@ -6,12 +6,14 @@
 //!  • última exportação do FM View Exporter (F9) e as pastas onde pode estar;
 //!  • último save do FM27 (.fm) e a exportação do plantel desse save com o fmsave
 //!    (MIT, github.com/rhiever/fmsave), corrido sobre uma CÓPIA do save.
+//!  • base de dados inteira do save (todos os jogadores) para a prospeção, com cache até o save mudar;
 //!  • ponte HTTP local para o FM Tactics Lab (127.0.0.1), que corre o motor original do FM27.
 //! Nada escreve no jogo nem no save, e nada lê a memória do FM.
 
 use serde::Serialize;
 use std::fs;
-use std::path::PathBuf;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::UNIX_EPOCH;
 
@@ -244,7 +246,10 @@ fn run_fmsave(path: String) -> Result<SaveExport, String> {
     let copy = tmp.join("save_copia.fm");
     fs::copy(&src, &copy).map_err(|e| format!("Não consegui copiar o save: {}", e))?;
     let out = tmp.join("plantel.csv");
-    let runners: [(&str, &[&str]); 4] = [
+    // 1.º: a versão mais recente do fmsave (o uvx verifica o PyPI e actualiza a cache) — o FM27 recebe patches
+    //     e o fmsave acompanha-os; 2.º: a versão já em cache (sem internet); depois instalações feitas com pip.
+    let runners: [(&str, &[&str]); 5] = [
+        ("uvx", &["fmsave@latest"]),
         ("uvx", &["fmsave"]),
         ("fmsave", &[]),
         ("py", &["-m", "fmsave"]),
@@ -274,7 +279,7 @@ fn run_fmsave(path: String) -> Result<SaveExport, String> {
                         .unwrap_or_default(),
                     modified: modified_secs(&src),
                     content: String::from_utf8_lossy(&bytes).into_owned(),
-                    runner: exe.to_string(),
+                    runner: format!("{} {}", exe, prefix.join(" ")).trim().to_string(),
                 });
             }
             Ok(o) => {
@@ -293,6 +298,155 @@ fn run_fmsave(path: String) -> Result<SaveExport, String> {
 async fn export_save(path: String) -> Result<SaveExport, String> {
     // corre fora da thread da interface (a primeira vez o uvx pode demorar a descarregar o fmsave)
     tauri::async_runtime::spawn_blocking(move || run_fmsave(path))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+
+// ---------------------------------------------------------------------------
+// Prospeção: TODOS os jogadores do save (fmsave export players --all), mais as nações
+// (nomes dos países) e a data do jogo (fmsave info --json). Corre sobre uma cópia do save
+// e guarda o resultado na pasta temporária até o save mudar (não volta a ler à toa).
+// ---------------------------------------------------------------------------
+
+const FMSAVE_RUNNERS: [(&str, &[&str]); 5] = [
+    ("uvx", &["fmsave@latest"]),
+    ("uvx", &["fmsave"]),
+    ("fmsave", &[]),
+    ("py", &["-m", "fmsave"]),
+    ("python", &["-m", "fmsave"]),
+];
+
+// Iguais a SCOUT_COLUMNS em src/core/scouting.js. Se o fmsave recusar algum nome, exporta-se tudo.
+const DB_COLUMNS: &str = "uid,unique_id,name,age,nation_id,height_cm,ability_current,ability_potential,ability_potential_range_code,reputation_current,reputation_world,club_uid,club_name,club_nation_id,club_reputation,on_loan,loan_parent_club_name,transfer_value,contract_wage,contract_end,contract_squad_status,left_foot,right_foot,positions_gk,positions_dl,positions_dc,positions_dr,positions_dm,positions_ml,positions_mc,positions_mr,positions_aml,positions_amc,positions_amr,positions_stc,positions_wbl,positions_wbr,personality_ambition,personality_professionalism,personality_pressure,personality_loyalty,personality_temperament,personality_adaptability,personality_sportsmanship,personality_controversy,attributes_crossing,attributes_dribbling,attributes_finishing,attributes_heading,attributes_long_shots,attributes_marking,attributes_off_the_ball,attributes_passing,attributes_penalty_taking,attributes_tackling,attributes_vision,attributes_handling,attributes_aerial_reach,attributes_command_of_area,attributes_communication,attributes_kicking,attributes_throwing,attributes_anticipation,attributes_decisions,attributes_one_on_ones,attributes_positioning,attributes_reflexes,attributes_first_touch,attributes_technique,attributes_flair,attributes_corners,attributes_teamwork,attributes_work_rate,attributes_long_throws,attributes_eccentricity,attributes_rushing_out,attributes_punching,attributes_acceleration,attributes_free_kick_taking,attributes_strength,attributes_stamina,attributes_pace,attributes_jumping_reach,attributes_leadership,attributes_dirtiness,attributes_balance,attributes_bravery,attributes_consistency,attributes_aggression,attributes_agility,attributes_important_matches,attributes_injury_proneness,attributes_versatility,attributes_natural_fitness,attributes_determination,attributes_composure,attributes_concentration";
+
+/// Corre o fmsave com os argumentos dados, experimentando cada forma de o chamar (começando por `prefer`).
+/// Com `out`, o sucesso exige o ficheiro escrito e devolve o seu conteúdo; sem `out`, devolve o stdout.
+fn fmsave_exec(args: &[OsString], out: Option<&Path>, prefer: Option<usize>) -> Result<(usize, Vec<u8>), String> {
+    let mut order: Vec<usize> = Vec::new();
+    if let Some(i) = prefer {
+        order.push(i);
+    }
+    for j in 0..FMSAVE_RUNNERS.len() {
+        if Some(j) != prefer {
+            order.push(j);
+        }
+    }
+    let mut errors: Vec<String> = Vec::new();
+    for i in order {
+        let (exe, prefix) = FMSAVE_RUNNERS[i];
+        if let Some(o) = out {
+            let _ = fs::remove_file(o);
+        }
+        let mut cmd = Command::new(exe);
+        cmd.args(prefix.iter()).args(args.iter());
+        #[cfg(windows)]
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        match cmd.output() {
+            Ok(o) if o.status.success() && out.map(|p| p.is_file()).unwrap_or(true) => {
+                let data = match out {
+                    Some(p) => fs::read(p).map_err(|e| e.to_string())?,
+                    None => o.stdout,
+                };
+                return Ok((i, data));
+            }
+            Ok(o) => {
+                let err = String::from_utf8_lossy(&o.stderr).into_owned();
+                let last = err.lines().filter(|l| !l.trim().is_empty()).last().unwrap_or("falhou").to_string();
+                errors.push(format!("{} {}: {}", exe, prefix.join(" "), last));
+            }
+            Err(e) => errors.push(format!("{} {}: {}", exe, prefix.join(" "), e)),
+        }
+    }
+    Err(errors.join(" | "))
+}
+
+fn read_lossy(p: &Path) -> String {
+    fs::read(p).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default()
+}
+
+#[derive(Serialize)]
+struct SaveDb {
+    save: String,
+    modified: u64,
+    players: String,
+    nations: String,
+    info: String,
+    runner: String,
+    cached: bool,
+}
+
+fn run_fmsave_db(path: String) -> Result<SaveDb, String> {
+    let src = PathBuf::from(&path);
+    if !src.is_file() {
+        return Err(format!("Save não encontrado: {}", path));
+    }
+    let save_name = src.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let modified = modified_secs(&src);
+    let tmp = std::env::temp_dir().join("fm27-tactical-bible");
+    fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
+    let meta = tmp.join("db.meta");
+    let dbf = tmp.join("db_players.csv");
+    let natf = tmp.join("db_nations.csv");
+    let infof = tmp.join("db_info.json");
+    let key = format!("{}|{}", path, modified);
+    // cache: o mesmo save, sem alterações desde a última leitura
+    if fs::read_to_string(&meta).map(|m| m == key).unwrap_or(false) && dbf.is_file() {
+        return Ok(SaveDb {
+            save: save_name,
+            modified,
+            players: read_lossy(&dbf),
+            nations: read_lossy(&natf),
+            info: read_lossy(&infof),
+            runner: "cache".to_string(),
+            cached: true,
+        });
+    }
+    let copy = tmp.join("save_db_copia.fm");
+    fs::copy(&src, &copy).map_err(|e| format!("Não consegui copiar o save: {}", e))?;
+    let base: Vec<OsString> = vec!["export".into(), copy.clone().into_os_string(), "players".into(), "--all".into()];
+    let mut with_cols = base.clone();
+    with_cols.push("--columns".into());
+    with_cols.push(DB_COLUMNS.into());
+    with_cols.push("-o".into());
+    with_cols.push(dbf.clone().into_os_string());
+    let res = fmsave_exec(&with_cols, Some(dbf.as_path()), None).or_else(|_| {
+        // um nome de coluna recusado (versão diferente do fmsave): exporta todas as colunas
+        let mut all = base.clone();
+        all.push("-o".into());
+        all.push(dbf.clone().into_os_string());
+        fmsave_exec(&all, Some(dbf.as_path()), None)
+    });
+    let (ri, data) = match res {
+        Ok(x) => x,
+        Err(e) => {
+            let _ = fs::remove_file(&copy);
+            return Err(format!("Não consegui correr o fmsave. {}", e));
+        }
+    };
+    let players = String::from_utf8_lossy(&data).into_owned();
+    let nat_args: Vec<OsString> = vec!["export".into(), copy.clone().into_os_string(), "nations".into(), "--all".into(), "-o".into(), natf.clone().into_os_string()];
+    let nations = fmsave_exec(&nat_args, Some(natf.as_path()), Some(ri)).map(|(_, d)| String::from_utf8_lossy(&d).into_owned()).unwrap_or_default();
+    let info_args: Vec<OsString> = vec!["info".into(), copy.clone().into_os_string(), "--json".into()];
+    let info = fmsave_exec(&info_args, None, Some(ri)).map(|(_, d)| String::from_utf8_lossy(&d).into_owned()).unwrap_or_default();
+    let _ = fs::write(&infof, &info);
+    let _ = fs::write(&meta, &key);
+    let _ = fs::remove_file(&copy);
+    let (exe, prefix) = FMSAVE_RUNNERS[ri];
+    Ok(SaveDb {
+        save: save_name,
+        modified,
+        players,
+        nations,
+        info,
+        runner: format!("{} {}", exe, prefix.join(" ")).trim().to_string(),
+        cached: false,
+    })
+}
+
+#[tauri::command]
+async fn export_save_db(path: String) -> Result<SaveDb, String> {
+    tauri::async_runtime::spawn_blocking(move || run_fmsave_db(path))
         .await
         .map_err(|e| e.to_string())?
 }
@@ -384,7 +538,7 @@ fn open_url(url: String) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, lab_request, open_url])
+        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, export_save_db, lab_request, open_url])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o FM27 Tactical Bible");
 }

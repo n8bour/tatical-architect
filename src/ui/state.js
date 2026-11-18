@@ -1,7 +1,7 @@
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.9.0';
+const VERSION = '4.10.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -21,7 +21,7 @@ const ST = {
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [] })); } catch (e) {}
 }
 
 function load() {
@@ -45,6 +45,8 @@ function load() {
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
     if (d.sheetNames) ST.sheetNames = d.sheetNames;
     if (d.planK) ST.planK = d.planK;
+    if (d.scout) ST.scout = { F: Object.assign(SCOUT_DEFAULT(), d.scout.F || {}), preset: d.scout.preset || '', page: 0, tab: d.scout.tab || 'results', open: null, weak: d.scout.weak || '' };
+    if (Array.isArray(d.shortlist)) ST.shortlist = d.shortlist;
     // v4.4: a tática de exemplo “Cenas v2” deixou de vir com a app — sai das guardadas e, se for a activa, dá lugar a uma nova
     const isCenas = (t) => t && typeof t.name === 'string' && /^Cenas v2\b/.test(t.name);
     ST.saved = ST.saved.filter(t => !isCenas(t));

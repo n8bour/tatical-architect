@@ -4,6 +4,7 @@
 const NAV = [
   ['home', 'Início', '⌂'],
   ['team', 'A minha equipa', '☰'],
+  ['scout', 'Prospeção', '🔭'],
   ['tactic', 'Tática', '◎'],
   ['lab', 'Laboratório', '⚗'],
   ['training', 'Treino', '◷'],
@@ -48,6 +49,7 @@ function render(scrollTop) {
   else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
   else if (v === 'lab') body = vLab();
+  else if (v === 'scout') body = vScout();
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
@@ -134,6 +136,8 @@ async function ingestFile(f) {
   try { return ingestParsed(txt, f, n); } finally { busyEnd('file'); }
 }
 function ingestParsed(txt, f, n) {
+  // exportação do fmsave com todos os jogadores (milhares de linhas): vai para a prospeção, não para o plantel
+  if (!n.endsWith('.json') && txt.length > 100000 && /ability_current/.test(txt.slice(0, 5000)) && (txt.match(/\n/g) || []).length > 400) return A.scoutIngest(txt, { save: f.name });
   if (n.endsWith('.json')) { try { return ingestJSON(JSON.parse(txt), f.name); } catch (e) { return toast('JSON inválido'); } }
   const where = ingestSquadText(txt, f.name);
   if (where) { ST.view = 'team'; ST.tabs.team = where === 'opp' ? 'opp' : 'squad'; }
@@ -193,7 +197,8 @@ document.addEventListener('click', (e) => {
   if (!a || !DESKTOP) return;
   e.preventDefault(); window.__TAURI__.core.invoke('open_url', { url: a.href }).catch(() => toast(a.href));
 });
-window.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();
   if (DESKTOP) {
