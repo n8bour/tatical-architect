@@ -21,7 +21,7 @@ function spPitch(rows, layout, title, gk) {
 }
 function vSetPieces() {
   const ps = players();
-  if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div>`;
+  if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><div class="row" style="justify-content:center">${dataButtons()} <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div></div>`;
   const r = setPiecePlan(ST.tactic, ps, oppPlayers()); ST._sp = r;
   if (!r) return '<div class="panel empty">Não consegui montar o XI.</div>';
   const row = (label, x, extra) => `<tr><td>${esc(label)}</td><td>${x ? `<b>${esc(x.p.name)}</b> <span class="muted small">${esc(x.code)}</span>` : '—'}</td><td class="small muted">${extra || ''}</td></tr>`;

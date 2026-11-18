@@ -15,7 +15,10 @@ function scoutCtx() {
   const db = SCOUT.db;
   if (db && !SCOUT._val) SCOUT._val = { cheapValue: pctile(db.players.filter(p => p.age <= 19 && p.pa >= 150).map(p => p.value), 0.35) || 3000000 };
   const bargainValue = db ? pctile(db.players.filter(p => p.age >= 21 && p.age <= 29 && p.ca >= xiCA - 5).map(p => p.value), 0.3) : null;
-  return { date: SCOUT.date, myClub: ST.myClub || '', tactic: ST.tactic, squad, xiCA, cheapValue: SCOUT._val ? SCOUT._val.cheapValue : null, bargainValue };
+  // reputação do meu clube: lida na própria base de dados, nos jogadores do meu clube
+  let myRep = null;
+  if (db && ST.myClub) { if (SCOUT._myRepFor !== ST.myClub) { const mc = ST.myClub.toLowerCase(); const r = db.players.filter(p => p.club && p.club.toLowerCase() === mc && p.clubRep != null).map(p => p.clubRep); SCOUT._myRep = r.length ? r.sort((a, b) => a - b)[Math.floor(r.length / 2)] : null; SCOUT._myRepFor = ST.myClub; } myRep = SCOUT._myRep; }
+  return { date: SCOUT.date, myClub: ST.myClub || '', tactic: ST.tactic, squad, xiCA, cheapValue: SCOUT._val ? SCOUT._val.cheapValue : null, bargainValue, myRep };
 }
 // casa mais fraca do meu XI (para a pesquisa "A minha posição mais fraca")
 function weakestSlot() {
@@ -57,6 +60,7 @@ function scoutFilters() {
       ${inp('wageMax', L('Salário semanal máximo', 'Maximum weekly wage'), '20000')}
       ${inp('endMonths', L('Contrato acaba em até (meses)', 'Contract ends within (months)'), '6')}
       ${inp('clubRepMax', L('Reputação máxima do clube (1–10000)', 'Maximum club reputation (1–10000)'), '4000')}
+      ${scoutCtx().myRep != null ? inp('joinMin', L('Probabilidade de querer vir (estimativa, 0–100)', 'Chance he would join you (estimate, 0–100)'), '70') : `<p class="small muted">${L('Para estimar quem quer vir, carregue o seu plantel (a app usa a reputação do seu clube).', 'To estimate who would join, load your squad (the app uses your club’s reputation).')}</p>`}
       ${chk('free', L('Só jogadores livres', 'Free agents only'))}
       ${chk('excludeMine', L('Excluir o meu clube', 'Exclude my club'))}
       ${sel('loan', [['any', L('incluir emprestados', 'include loaned players')], ['exclude', L('excluir emprestados', 'exclude loaned players')], ['only', L('só emprestados', 'loaned players only')]], L('Empréstimos', 'Loans'))}
@@ -83,15 +87,15 @@ function scoutFilters() {
 function scoutTable(list, extra) {
   const S = scoutState(), F = S.F, stars = new Set((ST.shortlist || []).map(x => x.id));
   const th = (k, label) => `<th><button class="th-sort ${F.sort === k ? 'on' : ''}" onclick="A.scoutSort('${k}')">${label}${F.sort === k ? (F.dir === 'asc' ? ' ▲' : ' ▼') : ''}</button></th>`;
-  const ext = extra === 'likely' ? [L('Prob.', 'Chance'), p => p._lk ?? reachLikelihood(p)] : extra === 'role' ? [L('Papel', 'Role'), p => p._rs] : extra === 'gain' ? [L('Ganho no XI', 'XI gain'), p => p._gain != null ? `${p._gain > 0 ? '+' : ''}${p._gain} <span class="muted small">${esc(p._gainSlot || '')}</span>` : '—'] : null;
+  const ext = extra === 'join' ? [L('Vir?', 'Join?'), p => p._jn ?? '—'] : extra === 'likely' ? [L('Prob.', 'Chance'), p => p._lk ?? reachLikelihood(p)] : extra === 'role' ? [L('Papel', 'Role'), p => p._rs] : extra === 'gain' ? [L('Ganho no XI', 'XI gain'), p => p._gain != null ? `${p._gain > 0 ? '+' : ''}${p._gain} <span class="muted small">${esc(p._gainSlot || '')}</span>` : '—'] : null;
   return `<div class="table-wrap" style="max-height:none"><table class="scout-table"><thead><tr><th aria-label="${L('Lista de observação', 'Shortlist')}">☆</th>${th('name', L('Nome', 'Name'))}${th('age', L('Idade', 'Age'))}<th>${L('Pos', 'Pos')}</th><th>${L('Clube', 'Club')}</th>${th('ca', 'CA')}${th('pa', 'PA')}${th('value', L('Valor', 'Value'))}${th('wage', L('Salário', 'Wage'))}${th('end', L('Contrato', 'Contract'))}${ext ? `<th>${ext[0]}</th>` : ''}</tr></thead><tbody>
     ${list.map(p => `<tr class="click" onclick="A.scoutOpen('${esc(p.id)}')"><td><button class="star ${stars.has(p.id) ? 'on' : ''}" onclick="event.stopPropagation();A.scoutStar('${esc(p.id)}')" aria-label="${stars.has(p.id) ? L('Tirar da lista', 'Remove from shortlist') : L('Pôr na lista', 'Add to shortlist')}">${stars.has(p.id) ? '★' : '☆'}</button></td>
       <td><b>${esc(p.name)}</b>${p.loan ? ` <span class="chip">${L('emprest.', 'loan')}</span>` : ''}</td><td>${p.age ?? '—'}</td><td class="small">${esc(p.posRaw || '')}</td><td class="small">${p.club ? esc(p.club) : `<span class="chip ok">${L('livre', 'free')}</span>`}</td>
-      <td><b>${p.ca ?? '—'}</b></td><td>${p.pa ?? '—'}${p.paRange ? '*' : ''}</td><td>${fmtMoney(p.value)}</td><td>${fmtMoney(p.wage)}</td><td class="small">${fmtDate(p.end)}</td>${ext ? `<td>${ext[1](p) ?? '—'}</td>` : ''}</tr>`).join('')}
+      <td><b>${p.ca ?? '—'}</b></td><td>${p.pa ?? '—'}${p.paRange ? '*' : ''}</td><td>${p.value == null && p.club ? `<span class="muted" title="${esc(L('Valor desconhecido: o fmsave não o conseguiu ler deste jogador.', 'Unknown value: fmsave could not read it for this player.'))}">?</span>` : fmtMoney(p.value)}</td><td>${fmtMoney(p.wage)}</td><td class="small">${fmtDate(p.end)}</td>${ext ? `<td>${ext[1](p) ?? '—'}</td>` : ''}</tr>`).join('')}
   </tbody></table></div>`;
 }
 function scoutCard(p) {
-  const ctx = scoutCtx(), g = ctx.squad.length ? bestGain(p, ST.tactic, ctx.squad) : null, roles = bestRolesAny(p, 5), lk = p.age != null && p.age <= 23 ? reachLikelihood(p) : null;
+  const ctx = scoutCtx(), jn = joinLikelihood(p, ctx), g = ctx.squad.length ? bestGain(p, ST.tactic, ctx.squad) : null, roles = bestRolesAny(p, 5), lk = p.age != null && p.age <= 23 ? reachLikelihood(p) : null;
   const grp = (c) => Object.keys(ATTRS).filter(k => ATTRS[k].c === c && p.a[k] != null);
   const cell = (k) => { const v = Math.round(p.a[k]); return `<div class="attr"><span>${esc(attrName(k))}</span><b class="v v${v >= 16 ? 4 : v >= 13 ? 3 : v >= 10 ? 2 : 1}">${v}</b></div>`; };
   const gkR = p.posR ? (p.posR.gk ?? 0) : 0, isGK = gkR >= 15 && gkR >= Math.max(0, ...Object.entries(p.posR || {}).filter(([k]) => k !== 'gk').map(([, v]) => v));   // só se a melhor posição for GR
@@ -101,7 +105,8 @@ function scoutCard(p) {
     <div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">${esc(p.name)}</h2>
       <p class="small muted" style="margin:.2em 0 0">${p.age ?? '—'} ${L('anos', 'years')} · ${p.club ? esc(p.club) : L('sem clube', 'no club')}${SCOUT.nations[p.nat] ? ' · ' + esc(SCOUT.nations[p.nat]) : ''} · ${esc(p.posRaw || '')}${p.height ? ' · ' + p.height + ' cm' : ''}${p.foot ? ' · ' + (p.foot === 'L' ? L('esquerdino', 'left-footed') : p.foot === 'R' ? L('destro', 'right-footed') : L('ambos os pés', 'two-footed')) : ''}</p></div>
       <div class="row"><button class="btn ${ (ST.shortlist || []).some(x => x.id === p.id) ? 'primary' : ''}" onclick="A.scoutStar('${esc(p.id)}')">${(ST.shortlist || []).some(x => x.id === p.id) ? '★ ' + L('Na lista', 'On shortlist') : '☆ ' + L('Pôr na lista', 'Add to shortlist')}</button><button class="btn" onclick="A.scoutClose()" aria-label="${L('Fechar', 'Close')}">✕</button></div></div>
-    <div class="kpis" style="margin-top:12px"><div><span>CA</span><b>${p.ca ?? '—'}</b></div><div><span>PA</span><b>${p.pa ?? '—'}${p.paRange ? ` <span class="small muted">(${p.paRange[0]}–${p.paRange[1]})</span>` : ''}</b></div><div><span>${L('Valor', 'Value')}</span><b>${fmtMoney(p.value)}</b></div><div><span>${L('Salário/semana', 'Wage/week')}</span><b>${fmtMoney(p.wage)}</b></div><div><span>${L('Contrato até', 'Contract until')}</span><b>${fmtDate(p.end)}</b></div>${lk != null ? `<div><span>${L('Prob. de atingir o PA', 'Chance to reach PA')}</span><b>${lk}</b></div>` : ''}</div>
+    <div class="kpis" style="margin-top:12px"><div><span>CA</span><b>${p.ca ?? '—'}</b></div><div><span>PA</span><b>${p.pa ?? '—'}${p.paRange ? ` <span class="small muted">(${p.paRange[0]}–${p.paRange[1]})</span>` : ''}</b></div><div><span>${L('Valor', 'Value')}</span><b>${p.value == null && p.club ? L('desconhecido', 'unknown') : fmtMoney(p.value)}</b></div><div><span>${L('Salário/semana', 'Wage/week')}</span><b>${fmtMoney(p.wage)}</b></div><div><span>${L('Contrato até', 'Contract until')}</span><b>${fmtDate(p.end)}</b></div>${lk != null ? `<div><span>${L('Prob. de atingir o PA', 'Chance to reach PA')}</span><b>${lk}</b></div>` : ''}</div>
+    ${jn && !(ctx.myClub && p.club && p.club.toLowerCase() === ctx.myClub.toLowerCase()) ? `<div class="notice small" style="margin-top:10px"><b>${L('Probabilidade de querer vir', 'Chance he would join you')}: ${jn.score}/100</b> <span class="muted">(${L('estimativa', 'estimate')})</span> — ${esc(jn.why.join(' · '))}</div>` : ''}
     ${g ? `<div class="notice small" style="margin-top:10px">${g.gain > 0 ? L(`No teu XI entraria em <b>${esc(g.code)}</b>: adequação ${g.his} contra ${g.cur} de ${esc(g.starter || 'ninguém')} (<b>+${g.gain}</b>).`, `In your XI he would play at <b>${esc(g.code)}</b>: fit ${g.his} vs ${g.cur} for ${esc(g.starter || 'nobody')} (<b>+${g.gain}</b>).`) : L(`Não melhoraria o teu XI (melhor casa: ${esc(g.code)}, ${g.his} contra ${g.cur}).`, `He would not improve your XI (best slot: ${esc(g.code)}, ${g.his} vs ${g.cur}).`)}</div>` : ''}
     <div class="grid g3 attrs-grid" style="margin-top:12px">${(isGK ? ['G', 'M', 'F'] : ['T', 'M', 'F']).map(c => `<div><h4>${{ T: L('Técnicos', 'Technical'), M: L('Mentais', 'Mental'), F: L('Físicos', 'Physical'), G: L('Guarda-redes', 'Goalkeeping') }[c]}</h4>${grp(c).map(cell).join('')}</div>`).join('')}</div>
     <div class="grid g2" style="margin-top:12px;align-items:start">
@@ -124,12 +129,12 @@ function vScout() {
   }
   const ctx = scoutCtx(), presets = scoutPresets(ctx);
   const res = scoutResults(), pages = Math.max(1, Math.ceil(res.length / PAGE)), page = Math.min(S.page || 0, pages - 1);
-  const extra = S.F.sort === 'likely' || S.F.likelyMin ? 'likely' : S.F.role ? 'role' : S.F.sort === 'gain' ? 'gain' : null;
+  const extra = S.F.sort === 'join' || S.F.joinMin ? 'join' : S.F.sort === 'likely' || S.F.likelyMin ? 'likely' : S.F.role ? 'role' : S.F.sort === 'gain' ? 'gain' : null;
   const open = S.open ? SCOUT.db.players.find(p => p.id === S.open) : null;
   const list = (ST.shortlist || []).map(x => SCOUT.db.players.find(p => p.id === x.id) || x);
   return `<div class="top"><div><h2>${L('Prospeção', 'Scouting')}</h2><p class="muted small" style="margin:0">${L(`${SCOUT.db.players.length.toLocaleString(LOCALE())} jogadores · ${esc(SCOUT.save)} · data do jogo ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimada)' : ''} · ${SCOUT.cached ? 'da cache' : 'lido em ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`, `${SCOUT.db.players.length.toLocaleString(LOCALE())} players · ${esc(SCOUT.save)} · game date ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimated)' : ''} · ${SCOUT.cached ? 'from cache' : 'read in ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`)}</p></div>
     <div class="row">${DESKTOP ? `<button class="btn" data-busy="scout" onclick="A.scoutLoad(true)">${L('Actualizar do save', 'Refresh from save')}</button>` : ''}<button class="btn" onclick="A.scoutExport()">${L('Exportar CSV', 'Export CSV')}</button></div></div>
-  <div class="plan-tabs" role="tablist" aria-label="${L('Pesquisas pré-definidas', 'Preset searches')}">${presets.map(p => `<button class="${S.preset === p.k ? 'on' : ''}" onclick="A.scoutPreset('${p.k}')" title="${esc(p.d)}" ${p.needSquad && !ctx.squad.length ? 'disabled' : ''}><span aria-hidden="true">${p.ic}</span> ${esc(p.n)}</button>`).join('')}</div>
+  <div class="plan-tabs" role="tablist" aria-label="${L('Pesquisas pré-definidas', 'Preset searches')}">${presets.map(p => `<button class="${S.preset === p.k ? 'on' : ''}" onclick="A.scoutPreset('${p.k}')" title="${esc(p.d)}" ${(p.needSquad && !ctx.squad.length) || (p.needMyClub && ctx.myRep == null) ? `disabled title="${esc(L('Carregue primeiro o seu plantel.', 'Load your squad first.'))}"` : ''}><span aria-hidden="true">${p.ic}</span> ${esc(p.n)}</button>`).join('')}</div>
   ${S.preset ? `<p class="small muted" style="margin:8px 0 0">${esc((presets.find(p => p.k === S.preset) || {}).d || '')}${S.weak ? ' ' + L(`Posição: ${S.weak}.`, `Position: ${S.weak}.`) : ''} ${L('Pode afinar com os filtros.', 'You can refine it with the filters.')}</p>` : ''}
   <div class="grid scout-grid" style="margin-top:12px">
     ${scoutFilters()}

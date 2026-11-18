@@ -191,6 +191,7 @@ const A = {
   autoDir(v) { ST.auto.dir = v.trim(); ST.auto.mtime = 0; save(); desktopPoll(true); },
   autoNow() { ST.auto.mtime = 0; desktopPoll(true); },
   saveNow() { savePoll(true); },
+  pickFile() { const i = document.createElement('input'); i.type = 'file'; i.accept = '.csv,.tsv,.txt,.html,.htm,.json,.fmf'; i.onchange = () => { if (i.files[0]) ingestFile(i.files[0]); }; i.click(); },
   saveToggle() { ST.auto.save = !ST.auto.save; save(); render(); if (ST.auto.save) savePoll(); },
   saveDir(v) { ST.auto.saveDir = v.trim(); ST.auto.saveMtime = 0; save(); savePoll(true); },
   // campo animado

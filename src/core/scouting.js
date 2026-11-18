@@ -119,12 +119,36 @@ function reachLikelihood(p) {
   const s = P('professionalism') / 20 * 0.30 + A('det') / 20 * 0.18 + P('ambition') / 20 * 0.10 + (21 - H('inj')) / 20 * 0.10 + H('cons') / 20 * 0.04 + ageF * 0.16 + gapF * 0.06 + env * 0.06;
   return Math.round(Math.min(100, s * 100));
 }
+// Probabilidade de querer vir para o meu clube — ESTIMATIVA. O fmsave não lê o "interessado em vir" do jogo,
+// por isso usa-se o que pesa nessa decisão no FM: reputação do meu clube vs a do clube dele, reputação dele,
+// situação contratual (livre, a terminar, estatuto no plantel), ambição e lealdade.
+const FRINGE_STATUS = /backup|not needed|surplus|rotation|youngster|emergency|reserve|prospect/i;
+function joinLikelihood(p, ctx) {
+  const myRep = ctx && ctx.myRep; if (myRep == null) return null;
+  let s = 50; const why = [];
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  if (!p.club) { s += 18; why.push(L('sem clube', 'no club')); }
+  else if (p.clubRep != null) {
+    const d = (myRep - p.clubRep) / 1000; s += clamp(d * 9, -30, 22);
+    why.push(d >= 0.5 ? L('o teu clube é maior que o dele', 'your club is bigger than his') : d <= -0.5 ? L('o clube dele é maior que o teu', 'his club is bigger than yours') : L('clubes de dimensão parecida', 'clubs of similar size'));
+  }
+  if (p.rep != null && p.rep > myRep) { s -= Math.min(30, (p.rep - myRep) / 1000 * 10); why.push(L('a reputação dele está acima da do teu clube', 'his reputation is above your club’s')); }
+  const m = monthsUntil(p.end, ctx.date);
+  if (m != null && m <= 6) { s += 10; why.push(L('contrato a acabar em 6 meses', 'contract ending within 6 months')); }
+  else if (m != null && m <= 12) { s += 6; why.push(L('contrato a acabar em 12 meses', 'contract ending within 12 months')); }
+  if (p.status && FRINGE_STATUS.test(p.status)) { s += 10; why.push(L('não é titular no clube dele', 'not a regular at his club')); }
+  const up = !p.club || p.clubRep == null || myRep >= p.clubRep;
+  const amb = p.pers && p.pers.ambition, loy = p.pers && p.pers.loyalty;
+  if (amb != null) { s += (up ? 1 : -1) * (amb - 10) * 1.2; if (amb >= 15) why.push(up ? L('ambicioso: quer subir', 'ambitious: wants to step up') : L('ambicioso: não quer descer', 'ambitious: does not want a step down')); }
+  if (loy != null && p.club) { s -= (loy - 10) * 1.0; if (loy >= 15) why.push(L('muito leal ao clube actual', 'very loyal to his current club')); }
+  return { score: Math.round(clamp(s, 0, 100)), why };
+}
 function monthsUntil(dateISO, fromISO) { if (!dateISO || !fromISO) return null; const a = new Date(fromISO), b = new Date(dateISO); return (b - a) / (1000 * 60 * 60 * 24 * 30.44); }
 
 // ---------- filtros ----------
 const SCOUT_DEFAULT = () => ({ q: '', ageMin: '', ageMax: '', caMin: '', caMax: '', paMin: '', paMax: '', pos: '', posLevel: 'acc', foot: '', nation: '', club: '', league: '',
   valueMax: '', wageMax: '', endMonths: '', free: false, excludeMine: true, loan: 'any', profMin: '', ambMin: '', detMin: '', consMin: '', impMin: '', injMax: '', heightMin: '',
-  attrs: [], role: '', roleMin: '', likelyMin: '', clubRepMax: '', sort: 'ca', dir: 'desc' });
+  attrs: [], role: '', roleMin: '', likelyMin: '', clubRepMax: '', joinMin: '', sort: 'ca', dir: 'desc' });
 
 function scoutFilter(db, F, ctx = {}) {
   const n = (v) => (v === '' || v == null ? null : +v);
@@ -148,8 +172,10 @@ function scoutFilter(db, F, ctx = {}) {
     if (clubRepMax != null && p.clubRep != null && p.clubRep > clubRepMax) continue;
     if (F.excludeMine && mine && p.club.toLowerCase() === mine) continue;
     if (F.loan === 'exclude' && p.loan) continue; if (F.loan === 'only' && !p.loan) continue;
-    if (valueMax != null && p.value != null && p.value > valueMax) continue;
-    if (wageMax != null && p.wage != null && p.wage > wageMax) continue;
+    // valor/salário desconhecido (o fmsave só os preenche quando os lê com segurança): com um máximo definido,
+    // fica de fora — excepto os jogadores livres, que não têm custo de transferência
+    if (valueMax != null) { if (p.value == null) { if (p.club) continue; } else if (p.value > valueMax) continue; }
+    if (wageMax != null) { if (p.wage == null) { if (p.club) continue; } else if (p.wage > wageMax) continue; }
     if (endM != null) { const m = monthsUntil(p.end, ctx.date); if (m == null || m > endM || m < -1) continue; }
     if (profMin != null && !((p.pers.professionalism ?? 0) >= profMin)) continue;
     if (ambMin != null && !((p.pers.ambition ?? 0) >= ambMin)) continue;
@@ -164,6 +190,8 @@ function scoutFilter(db, F, ctx = {}) {
   // métricas caras só no resultado já filtrado
   if (likelyMin != null || F.sort === 'likely') out.forEach(p => { p._lk = reachLikelihood(p); });
   let res = likelyMin != null ? out.filter(p => (p._lk ?? 0) >= likelyMin) : out;
+  const joinMin = n(F.joinMin);
+  if ((joinMin != null || F.sort === 'join') && ctx.myRep != null) { res.forEach(p => { const j = joinLikelihood(p, ctx); p._jn = j ? j.score : null; }); if (joinMin != null) res = res.filter(p => (p._jn ?? 0) >= joinMin); }
   if (F.role) {
     const r = ROLE_BY_ID[F.role], rm = n(F.roleMin);
     const pool = res.length > 30000 ? res.sort((x, y) => (y.ca ?? 0) - (x.ca ?? 0)).slice(0, 30000) : res;
@@ -175,7 +203,7 @@ function scoutFilter(db, F, ctx = {}) {
     pool.forEach(p => { const g = bestGain(p, ctx.tactic, ctx.squad); p._gain = g ? g.gain : -99; p._gainSlot = g ? g.code : ''; });
     res = pool;
   }
-  const key = { ca: 'ca', pa: 'pa', age: 'age', value: 'value', wage: 'wage', likely: '_lk', role: '_rs', gain: '_gain', name: 'name', end: 'end' }[F.sort] || 'ca';
+  const key = { ca: 'ca', pa: 'pa', age: 'age', value: 'value', wage: 'wage', likely: '_lk', role: '_rs', gain: '_gain', join: '_jn', name: 'name', end: 'end' }[F.sort] || 'ca';
   const dir = F.dir === 'asc' ? 1 : -1;
   res.sort((x, y) => { const a = x[key], b = y[key]; if (a == null && b == null) return 0; if (a == null) return 1; if (b == null) return -1; return (a > b ? 1 : a < b ? -1 : 0) * dir; });
   return res;
@@ -213,6 +241,8 @@ function scoutPresets(ctx) {
       F: { ...d, ageMax: 20, paMin: 145, likelyMin: 70, sort: 'likely' } },
     { k: 'expiring', ic: '⏳', n: L('Contrato a terminar', 'Contract expiring'), d: L(`Contrato acaba nos próximos 6 meses e CA perto do teu XI (≥ ${Math.max(60, xiCA - 15)}).`, `Contract ends within 6 months and CA close to your XI (≥ ${Math.max(60, xiCA - 15)}).`),
       F: { ...d, endMonths: 6, caMin: Math.max(60, xiCA - 15), ageMax: 32, sort: 'ca' } },
+    { k: 'interested', ic: '🤝', n: L('Interessados em vir (estimativa)', 'Likely to join (estimate)'), d: L('Alta probabilidade de aceitar vir para o teu clube, ao nível do teu XI. Estimativa: o fmsave não lê o “interessado” do jogo.', 'High chance of agreeing to join your club, at your XI’s level. An estimate: fmsave does not read the game’s “interested” flag.'),
+      F: { ...d, joinMin: 70, caMin: Math.max(60, xiCA - 10), sort: 'join' }, needMyClub: true },
     { k: 'free', ic: '🆓', n: L('Jogadores livres', 'Free agents'), d: L('Sem clube: sem custo de transferência.', 'Without a club: no transfer fee.'), F: { ...d, free: true, caMin: Math.max(50, xiCA - 30), sort: 'ca' } },
     { k: 'bargain', ic: '🏷', n: L('Pechinchas', 'Bargains'), d: L(`Entre 21 e 29 anos, CA ao nível do teu XI e valor baixo.`, `Between 21 and 29, CA at your XI’s level and a low value.`),
       F: { ...d, ageMin: 21, ageMax: 29, caMin: Math.max(60, xiCA - 5), valueMax: ctx.bargainValue || 5000000, sort: 'ca' } },

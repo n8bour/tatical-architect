@@ -14,6 +14,7 @@ alternativa adequação equilíbrio diagnóstico marcadores cantos livres penál
 semana dia prioridades mentoria foco chave preferidos comportamento""".split())
 NAMES = "Adam Clark|Ben Carter|Chris Doyle|Dan Evans|Ed Fox|Frank Hall|George King|Harry Lane|Ian Moss|Jack Nash"
 def is_pt(s):
+    if s.strip() in {'o', 'os', 'as', 'do', 'da', 'dos', 'das', 'e', 'ou', 'no', 'na'} and s.strip() != 'no': return True   # artigos soltos entre links
     if re.search(r"[ãõçâêôàÃÕÇÂÊÔÀ]|ção|ões", s): return True
     w = re.findall(r"[a-zà-ú]+", s.lower())
     return sum(x in PTW for x in w) >= (1 if len(w) <= 3 else 2)

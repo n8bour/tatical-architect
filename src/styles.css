@@ -328,3 +328,16 @@ tr.cliprow td{background:var(--panel2)}
 .pair>*{min-width:0;width:100%;box-sizing:border-box}
 .pair.attr-row>button{width:auto}
 .scout-filters input,.scout-filters select{min-width:0;width:100%;box-sizing:border-box}
+
+/* ---------- dados do jogo (barra lateral) ---------- */
+.data-card{margin:14px 0 4px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);display:grid;gap:6px}
+.data-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.data-btn{display:flex;align-items:center;gap:8px;justify-content:flex-start;width:100%}
+.data-btn .ic{width:18px;text-align:center}
+.app.mini .data-card{padding:6px;border:0;background:none;justify-items:center;margin-top:10px}
+.app.mini .data-btn{width:44px;justify-content:center;padding:9px 0}
+@media (max-width:1150px) and (min-width:761px){.data-card{padding:6px;border:0;background:none;justify-items:center}.data-btn{width:44px;justify-content:center;padding:9px 0}.data-card .lbl{display:none}}
+.app.mini .data-card .lbl{display:none}
+.app.mini .data-btn .ic{width:auto;font-size:16px}
+.app.mini .data-card{padding:0}
+@media (max-width:1150px) and (min-width:761px){.data-card{padding:0}}

@@ -23,6 +23,7 @@ function renderNav() {
       <button class="nav-mini" onclick="A.navMini()" title="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'} (Ctrl+B)" aria-label="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'}">${ST.ui.navMini ? '»' : '«'}</button></div>` +
     NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join('') +
     `<div id="busy" aria-live="polite"></div>
+    ${dataCard()}
     <div class="aside-status">
       <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${L(`${sq} jogadores`, `${sq} players`)}${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
       <div><span class="dot ${op ? 'ok' : ''}"></span>${op ? 'Adversário carregado' : 'Sem adversário'}</div>
@@ -95,6 +96,28 @@ function paintBusy() {
   document.querySelectorAll('[data-busy]').forEach(el => { const on = keys.includes(el.dataset.busy); el.disabled = on; el.classList.toggle('is-busy', on); el.setAttribute('aria-busy', String(on)); });
   translateDOM(box);
   clearInterval(BUSY_TICK); if (keys.length) BUSY_TICK = setInterval(paintBusy, 500);
+}
+
+// ---------- dados do jogo: ler o save / F9 / abrir ficheiro — sempre à mão ----------
+function relTime(ts) {
+  const t0 = typeof ts === 'number' ? ts : Date.parse(ts); if (!t0) return ''; const s = (Date.now() - t0) / 1000;
+  if (s < 90) return L('agora mesmo', 'just now'); const m = s / 60; if (m < 60) return L(`há ${Math.round(m)} min`, `${Math.round(m)} min ago`);
+  const h = m / 60; if (h < 24) return L(`há ${Math.round(h)} h`, `${Math.round(h)} h ago`); const d = Math.round(h / 24); return L(`há ${d} dia(s)`, `${d} day(s) ago`);
+}
+function dataButtons(size = '') {
+  if (DESKTOP) return `<button class="btn primary ${size}" data-busy="save" onclick="A.saveNow()" title="${L('Ler o plantel do último save (Ctrl+Shift+L)', 'Read the squad from your latest save (Ctrl+Shift+L)')}">📥 ${L('Ler o save agora', 'Read the save now')}</button>
+    <button class="btn ${size}" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar a última exportação F9 do FM View Exporter', 'Load the latest F9 export from FM View Exporter')}">⌨ ${L('Carregar último F9', 'Load latest F9')}</button>`;
+  return `<button class="btn primary ${size}" onclick="A.pickFile()" title="${L('CSV/HTML/JSON do plantel (Ctrl+Shift+L)', 'Squad CSV/HTML/JSON (Ctrl+Shift+L)')}">📂 ${L('Abrir ficheiro do plantel', 'Open squad file')}</button>`;
+}
+function dataCard() {
+  const at = ST.squad && ST.squad.at, sq = (ST.squad && ST.squad.players || []).length;
+  return `<div class="data-card" aria-label="${L('Dados do jogo', 'Game data')}">
+    <div class="data-h lbl">${L('Dados do jogo', 'Game data')}</div>
+    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)')}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
+      <button class="btn sm data-btn" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar último F9', 'Load latest F9')}" aria-label="${L('Carregar último F9', 'Load latest F9')}"><span class="ic" aria-hidden="true">⌨</span><span class="lbl">${L('Último F9', 'Latest F9')}</span></button>`
+    : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)')}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
+    <div class="small muted lbl">${sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet')}</div>
+  </div>`;
 }
 
 // ---------- painéis que fecham e abrem (estado guardado por ecrã e título) ----------
@@ -198,7 +221,8 @@ document.addEventListener('click', (e) => {
   e.preventDefault(); window.__TAURI__.core.invoke('open_url', { url: a.href }).catch(() => toast(a.href));
 });
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
+  if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') { e.preventDefault(); if (DESKTOP) A.saveNow(); else A.pickFile(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();
   if (DESKTOP) {

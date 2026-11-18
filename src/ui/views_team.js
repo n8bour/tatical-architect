@@ -4,7 +4,7 @@
 function vSquad() {
   const ps = players();
   return `<div class="top"><div><h2><span>Plantel</span>${ST.myClub ? ' — ' + esc(ST.myClub) : ''}</h2><p class="muted small" style="margin:0">${ps.length ? `${L(`${ps.length} jogadores`, `${ps.length} players`)} · ${esc(ST.squad.source)}${ST.squad.at ? ' · ' + new Date(ST.squad.at).toLocaleString('pt-PT') : ''}` : 'Ainda sem plantel carregado.'}</p></div>
-    <div class="row"><button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>${ps.length ? '<button class="btn" onclick="A.clearSquad()">Limpar</button>' : ''}</div></div>
+    <div class="row">${dataButtons()}<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>${ps.length ? '<button class="btn" onclick="A.clearSquad()">Limpar</button>' : ''}</div></div>
   <div class="grid g2">
     <div class="panel"><h3>Como trazer o plantel do FM27</h3>
       <p class="small muted" style="margin:.2em 0 8px">Escolha uma via. Ambas são opcionais e precisam de uma ferramenta externa gratuita:</p>
@@ -57,7 +57,7 @@ function vSuggest() {
 function vXI() {
   const ps = players(), t = ST.tactic;
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>Com o plantel, a app escolhe o melhor XI para a tua tática, recomenda instruções individuais pelos atributos e mostra suplentes e sucessores para cada posição.</p>
-    <button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('team','xi')">Usar exemplo</button></div>`;
+    <div class="row" style="justify-content:center">${dataButtons()}<button class="btn" onclick="A.sampleSquad();A.tab('team','xi')">Usar exemplo</button></div></div>`;
   const pm = Object.fromEntries(ps.map(p => [p.id, p]));
   const bs = benchAndSuccessors(t, ps);
   const rows = t.slots.map((s, i) => {

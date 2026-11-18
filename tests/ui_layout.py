@@ -46,7 +46,9 @@ CHECK = r"""() => {
     const r = R(e), q = R(p);
     if (r.right > q.right + 2 || r.left < q.left - 2) out.push(`sai do contentor: ${label(e)} em ${label(p)} (+${Math.round(Math.max(r.right - q.right, q.left - r.left))}px)`);
   });
-  // 3. scroll horizontal da área principal
+  // 3. botões espremidos (texto partido em várias linhas dentro do botão)
+  main.querySelectorAll('.btn').forEach(b => { if (visible(b) && R(b).height > 64) out.push('botão espremido: ' + (b.textContent || '').trim().slice(0, 30) + ' (' + Math.round(R(b).height) + 'px de altura)'); });
+  // 4. scroll horizontal da área principal
   if (main.scrollWidth - main.clientWidth > 1) out.push('scroll horizontal na área principal: ' + (main.scrollWidth - main.clientWidth) + 'px');
   return [...new Set(out)].slice(0, 5);
 }"""
@@ -90,6 +92,9 @@ def main():
                         r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('.modal')"))
                         if r: problems[(w, mode, 'scout-card', None)] = r
                         pg.evaluate("A.scoutClose()")
+                # barra lateral (painel de dados do jogo incluído), nesta largura e neste modo
+                r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('aside')"))
+                if r: problems[(w, mode, 'aside', None)] = r
                 if mode == 'painéis fechados': pg.evaluate("() => { ST.ui.collapsed = {}; save(); }")
                 pg.close()
         b.close()

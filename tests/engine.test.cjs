@@ -310,3 +310,61 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
     if(bad) process.exitCode=1;
   })();
 }
+
+// 22. prospeção: estimativa de interesse em vir para o meu clube
+{
+  const c13={console,Math,performance,setTimeout}; vm.createContext(c13);
+  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','scouting.js'),'utf8')+';this.J={joinLikelihood,parseScoutDB,scoutFilter,scoutPresets,SCOUT_DEFAULT};',c13);
+  const J=c13.J; let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  const base={club:'Other',clubRep:5000,rep:4000,end:'2027-06-30',status:'Rotation',pers:{ambition:12,loyalty:10}};
+  const ctx=(myRep)=>({myRep,date:'2027-01-15'});
+  chk(J.joinLikelihood(base,{date:'x'})===null,'sem o meu clube: sem estimativa');
+  chk(J.joinLikelihood(base,ctx(8000)).score > J.joinLikelihood(base,ctx(3000)).score,'clube maior atrai mais');
+  chk(J.joinLikelihood({...base,club:'',clubRep:null},ctx(4000)).score > J.joinLikelihood(base,ctx(4000)).score,'livre é mais fácil');
+  chk(J.joinLikelihood({...base,rep:9000},ctx(5000)).score < J.joinLikelihood(base,ctx(5000)).score,'reputação acima do clube afasta');
+  chk(J.joinLikelihood({...base,pers:{ambition:10,loyalty:19}},ctx(5000)).score < J.joinLikelihood({...base,pers:{ambition:10,loyalty:5}},ctx(5000)).score,'lealdade prende');
+  const r=J.joinLikelihood(base,ctx(7000)); chk(r.score>=0 && r.score<=100 && r.why.length>0,'0–100 com razões');
+  (async()=>{
+    const {gen}=require('./gen_scout_db.cjs'); const db=await J.parseScoutDB(gen(3000));
+    const c={date:'2027-01-15',myRep:6000,myClub:'',xiCA:110,squad:[]};
+    const pr=J.scoutPresets(c).find(x=>x.k==='interested'); const res=J.scoutFilter(db,pr.F,c);
+    chk(res.length>0 && res.every(p=>p._jn>=70),'pesquisa "interessados" só com ≥ 70');
+    chk(res.every((p,i)=>i===0||res[i-1]._jn>=p._jn),'ordenada pela estimativa');
+    console.log('interesse em vir: estimativa verificada ('+res.length+' interessados prováveis em 3000)');
+    if(bad) process.exitCode=1;
+  })();
+}
+
+// 23. plantel com poucos atributos (CSV parcial): o diagnóstico não pode falhar
+{
+  const c14={console,Math}; vm.createContext(c14);
+  vm.runInContext(code+';this.Q={parseSquad,auditTactic,tacticFromTemplate,TEMPLATES,autoPickXI,suggestTactics:typeof suggestTactics!=="undefined"?suggestTactics:null};',c14);
+  const Q=c14.Q; let bad=0;
+  const csv='Name,Club,Position,Age,Finishing,Passing,Tackling,Pace\n'+Array.from({length:16},(_,i)=>`P${i},Club 5,${['GK','DC','DC','D (L)','D (R)','DM','M (C)','M (C)','AM (L)','AM (R)','ST','ST','DC','M (C)','ST','GK'][i]},24,${10+i%8},12,11,13`).join('\n');
+  const ps=Q.parseSquad(csv).players;
+  try { Q.TEMPLATES.forEach(tp=>{ const t=Q.tacticFromTemplate(tp); Q.autoPickXI(t,ps); Q.auditTactic(t,ps); }); if (Q.suggestTactics) Q.suggestTactics(ps); console.log('plantel parcial (4 atributos): diagnóstico e sugestões sem erros'); }
+  catch(e){ bad++; console.log('FAIL plantel parcial:', e.message); }
+  if(bad) process.exitCode=1;
+}
+
+// 24. prospeção: valor desconhecido não pode passar por "barato"
+{
+  const c15={console,Math,performance,setTimeout}; vm.createContext(c15);
+  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','scouting.js'),'utf8')+';this.V={parseScoutDB,scoutFilter,scoutPresets};',c15);
+  const V=c15.V; let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
+  (async()=>{
+    const {gen}=require('./gen_scout_db.cjs'); const db=await V.parseScoutDB(gen(4000));
+    // estrelas com valor ilegível (como alguns jogadores no save real): muito boas, em clubes grandes, sem valor
+    db.players.slice(0,60).forEach(p=>{ p.value=null; p.ca=185; p.pa=195; p.age=22; p.clubRep=9500; if(!p.club) p.club='Big Club'; });
+    const stars=new Set(db.players.slice(0,60).map(p=>p.id));
+    const ctx={date:'2027-01-15',myRep:6000,myClub:'',xiCA:120,squad:[]};
+    for (const k of ['bargain','cheap_wonder','hidden']) {
+      const pr=V.scoutPresets(ctx).find(x=>x.k===k); const res=V.scoutFilter(db,pr.F,ctx);
+      chk(!res.some(p=>stars.has(p.id)),k+': jogadores com valor desconhecido não podem aparecer');
+      chk(res.every(p=>!p.club || (p.value!=null && p.value<=pr.F.valueMax)),k+': todos com valor conhecido abaixo do máximo (ou livres)');
+    }
+    const free=V.scoutFilter(db,{...V.scoutPresets(ctx).find(x=>x.k==='bargain').F},ctx).filter(p=>!p.club);
+    console.log('valor desconhecido: excluído das pesquisas de baratos ('+free.length+' livres continuam a contar)');
+    if(bad) process.exitCode=1;
+  })();
+}

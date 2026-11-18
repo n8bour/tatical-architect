@@ -337,6 +337,19 @@ tr.cliprow td{background:var(--panel2)}
 .pair.attr-row>button{width:auto}
 .scout-filters input,.scout-filters select{min-width:0;width:100%;box-sizing:border-box}
 
+/* ---------- dados do jogo (barra lateral) ---------- */
+.data-card{margin:14px 0 4px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);display:grid;gap:6px}
+.data-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.data-btn{display:flex;align-items:center;gap:8px;justify-content:flex-start;width:100%}
+.data-btn .ic{width:18px;text-align:center}
+.app.mini .data-card{padding:6px;border:0;background:none;justify-items:center;margin-top:10px}
+.app.mini .data-btn{width:44px;justify-content:center;padding:9px 0}
+@media (max-width:1150px) and (min-width:761px){.data-card{padding:6px;border:0;background:none;justify-items:center}.data-btn{width:44px;justify-content:center;padding:9px 0}.data-card .lbl{display:none}}
+.app.mini .data-card .lbl{display:none}
+.app.mini .data-btn .ic{width:auto;font-size:16px}
+.app.mini .data-card{padding:0}
+@media (max-width:1150px) and (min-width:761px){.data-card{padding:0}}
+
 </style>
 </head>
 <body>
@@ -1462,7 +1475,7 @@ function auditTactic(t, squad) {
   if (xiPlayers.length >= 8) {
     const iq = avgAttr(xiPlayers, ['dec','ant','tea','pos','otb','cnt']);
     cap = iq < 10 ? 6 : iq < 12 ? 9 : iq < 14 ? 12 : 16;
-    if (C.cx > cap) add('Complexidade','warn',L(`Tática complexa para este plantel (${C.cx} > ${cap})`, `Tactic too complex for this squad (${C.cx} > ${cap})`),L(`Média tática do XI (Decisões/Antecipação/Trabalho de Equipa/…) ≈ ${iq.toFixed(1)}. No FM27 isto alonga a adaptação.`, `The XI’s tactical average (Decisions/Anticipation/Teamwork/…) ≈ ${iq.toFixed(1)}. In FM27 this lengthens adaptation.`),L('Remova instruções que não resolvem um problema concreto.', 'Remove instructions that do not solve a specific problem.'));
+    if (iq != null && C.cx > cap) add('Complexidade','warn',L(`Tática complexa para este plantel (${C.cx} > ${cap})`, `Tactic too complex for this squad (${C.cx} > ${cap})`),L(`Média tática do XI (Decisões/Antecipação/Trabalho de Equipa/…) ≈ ${iq.toFixed(1)}. No FM27 isto alonga a adaptação.`, `The XI’s tactical average (Decisions/Anticipation/Teamwork/…) ≈ ${iq.toFixed(1)}. In FM27 this lengthens adaptation.`),L('Remova instruções que não resolvem um problema concreto.', 'Remove instructions that do not solve a specific problem.'));
     else add('Complexidade','good',L(`Complexidade adequada (${C.cx} ≤ ${cap})`, `Suitable complexity (${C.cx} ≤ ${cap})`),L('O plantel deve conseguir absorver a tática.', 'The squad should be able to absorb the tactic.'));
   } else if (C.cx > 12) add('Complexidade','warn',L(`Complexidade alta (${C.cx})`, `High complexity (${C.cx})`),L('Muitas instruções fora do default: mais tempo de treino e jogadores mais capazes.', 'Many non-default instructions: more training time and more capable players needed.'),L('Comece simples; adicione instruções quando resolverem um problema identificado.', 'Start simple; add instructions when they solve an identified problem.'));
   else add('Complexidade','good',`Complexidade ${C.level.toLowerCase()} (${C.cx})`,L('Fácil de assimilar.', 'Easy to learn.'));
@@ -2796,12 +2809,36 @@ function reachLikelihood(p) {
   const s = P('professionalism') / 20 * 0.30 + A('det') / 20 * 0.18 + P('ambition') / 20 * 0.10 + (21 - H('inj')) / 20 * 0.10 + H('cons') / 20 * 0.04 + ageF * 0.16 + gapF * 0.06 + env * 0.06;
   return Math.round(Math.min(100, s * 100));
 }
+// Probabilidade de querer vir para o meu clube — ESTIMATIVA. O fmsave não lê o "interessado em vir" do jogo,
+// por isso usa-se o que pesa nessa decisão no FM: reputação do meu clube vs a do clube dele, reputação dele,
+// situação contratual (livre, a terminar, estatuto no plantel), ambição e lealdade.
+const FRINGE_STATUS = /backup|not needed|surplus|rotation|youngster|emergency|reserve|prospect/i;
+function joinLikelihood(p, ctx) {
+  const myRep = ctx && ctx.myRep; if (myRep == null) return null;
+  let s = 50; const why = [];
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  if (!p.club) { s += 18; why.push(L('sem clube', 'no club')); }
+  else if (p.clubRep != null) {
+    const d = (myRep - p.clubRep) / 1000; s += clamp(d * 9, -30, 22);
+    why.push(d >= 0.5 ? L('o teu clube é maior que o dele', 'your club is bigger than his') : d <= -0.5 ? L('o clube dele é maior que o teu', 'his club is bigger than yours') : L('clubes de dimensão parecida', 'clubs of similar size'));
+  }
+  if (p.rep != null && p.rep > myRep) { s -= Math.min(30, (p.rep - myRep) / 1000 * 10); why.push(L('a reputação dele está acima da do teu clube', 'his reputation is above your club’s')); }
+  const m = monthsUntil(p.end, ctx.date);
+  if (m != null && m <= 6) { s += 10; why.push(L('contrato a acabar em 6 meses', 'contract ending within 6 months')); }
+  else if (m != null && m <= 12) { s += 6; why.push(L('contrato a acabar em 12 meses', 'contract ending within 12 months')); }
+  if (p.status && FRINGE_STATUS.test(p.status)) { s += 10; why.push(L('não é titular no clube dele', 'not a regular at his club')); }
+  const up = !p.club || p.clubRep == null || myRep >= p.clubRep;
+  const amb = p.pers && p.pers.ambition, loy = p.pers && p.pers.loyalty;
+  if (amb != null) { s += (up ? 1 : -1) * (amb - 10) * 1.2; if (amb >= 15) why.push(up ? L('ambicioso: quer subir', 'ambitious: wants to step up') : L('ambicioso: não quer descer', 'ambitious: does not want a step down')); }
+  if (loy != null && p.club) { s -= (loy - 10) * 1.0; if (loy >= 15) why.push(L('muito leal ao clube actual', 'very loyal to his current club')); }
+  return { score: Math.round(clamp(s, 0, 100)), why };
+}
 function monthsUntil(dateISO, fromISO) { if (!dateISO || !fromISO) return null; const a = new Date(fromISO), b = new Date(dateISO); return (b - a) / (1000 * 60 * 60 * 24 * 30.44); }
 
 // ---------- filtros ----------
 const SCOUT_DEFAULT = () => ({ q: '', ageMin: '', ageMax: '', caMin: '', caMax: '', paMin: '', paMax: '', pos: '', posLevel: 'acc', foot: '', nation: '', club: '', league: '',
   valueMax: '', wageMax: '', endMonths: '', free: false, excludeMine: true, loan: 'any', profMin: '', ambMin: '', detMin: '', consMin: '', impMin: '', injMax: '', heightMin: '',
-  attrs: [], role: '', roleMin: '', likelyMin: '', clubRepMax: '', sort: 'ca', dir: 'desc' });
+  attrs: [], role: '', roleMin: '', likelyMin: '', clubRepMax: '', joinMin: '', sort: 'ca', dir: 'desc' });
 
 function scoutFilter(db, F, ctx = {}) {
   const n = (v) => (v === '' || v == null ? null : +v);
@@ -2825,8 +2862,10 @@ function scoutFilter(db, F, ctx = {}) {
     if (clubRepMax != null && p.clubRep != null && p.clubRep > clubRepMax) continue;
     if (F.excludeMine && mine && p.club.toLowerCase() === mine) continue;
     if (F.loan === 'exclude' && p.loan) continue; if (F.loan === 'only' && !p.loan) continue;
-    if (valueMax != null && p.value != null && p.value > valueMax) continue;
-    if (wageMax != null && p.wage != null && p.wage > wageMax) continue;
+    // valor/salário desconhecido (o fmsave só os preenche quando os lê com segurança): com um máximo definido,
+    // fica de fora — excepto os jogadores livres, que não têm custo de transferência
+    if (valueMax != null) { if (p.value == null) { if (p.club) continue; } else if (p.value > valueMax) continue; }
+    if (wageMax != null) { if (p.wage == null) { if (p.club) continue; } else if (p.wage > wageMax) continue; }
     if (endM != null) { const m = monthsUntil(p.end, ctx.date); if (m == null || m > endM || m < -1) continue; }
     if (profMin != null && !((p.pers.professionalism ?? 0) >= profMin)) continue;
     if (ambMin != null && !((p.pers.ambition ?? 0) >= ambMin)) continue;
@@ -2841,6 +2880,8 @@ function scoutFilter(db, F, ctx = {}) {
   // métricas caras só no resultado já filtrado
   if (likelyMin != null || F.sort === 'likely') out.forEach(p => { p._lk = reachLikelihood(p); });
   let res = likelyMin != null ? out.filter(p => (p._lk ?? 0) >= likelyMin) : out;
+  const joinMin = n(F.joinMin);
+  if ((joinMin != null || F.sort === 'join') && ctx.myRep != null) { res.forEach(p => { const j = joinLikelihood(p, ctx); p._jn = j ? j.score : null; }); if (joinMin != null) res = res.filter(p => (p._jn ?? 0) >= joinMin); }
   if (F.role) {
     const r = ROLE_BY_ID[F.role], rm = n(F.roleMin);
     const pool = res.length > 30000 ? res.sort((x, y) => (y.ca ?? 0) - (x.ca ?? 0)).slice(0, 30000) : res;
@@ -2852,7 +2893,7 @@ function scoutFilter(db, F, ctx = {}) {
     pool.forEach(p => { const g = bestGain(p, ctx.tactic, ctx.squad); p._gain = g ? g.gain : -99; p._gainSlot = g ? g.code : ''; });
     res = pool;
   }
-  const key = { ca: 'ca', pa: 'pa', age: 'age', value: 'value', wage: 'wage', likely: '_lk', role: '_rs', gain: '_gain', name: 'name', end: 'end' }[F.sort] || 'ca';
+  const key = { ca: 'ca', pa: 'pa', age: 'age', value: 'value', wage: 'wage', likely: '_lk', role: '_rs', gain: '_gain', join: '_jn', name: 'name', end: 'end' }[F.sort] || 'ca';
   const dir = F.dir === 'asc' ? 1 : -1;
   res.sort((x, y) => { const a = x[key], b = y[key]; if (a == null && b == null) return 0; if (a == null) return 1; if (b == null) return -1; return (a > b ? 1 : a < b ? -1 : 0) * dir; });
   return res;
@@ -2890,6 +2931,8 @@ function scoutPresets(ctx) {
       F: { ...d, ageMax: 20, paMin: 145, likelyMin: 70, sort: 'likely' } },
     { k: 'expiring', ic: '⏳', n: L('Contrato a terminar', 'Contract expiring'), d: L(`Contrato acaba nos próximos 6 meses e CA perto do teu XI (≥ ${Math.max(60, xiCA - 15)}).`, `Contract ends within 6 months and CA close to your XI (≥ ${Math.max(60, xiCA - 15)}).`),
       F: { ...d, endMonths: 6, caMin: Math.max(60, xiCA - 15), ageMax: 32, sort: 'ca' } },
+    { k: 'interested', ic: '🤝', n: L('Interessados em vir (estimativa)', 'Likely to join (estimate)'), d: L('Alta probabilidade de aceitar vir para o teu clube, ao nível do teu XI. Estimativa: o fmsave não lê o “interessado” do jogo.', 'High chance of agreeing to join your club, at your XI’s level. An estimate: fmsave does not read the game’s “interested” flag.'),
+      F: { ...d, joinMin: 70, caMin: Math.max(60, xiCA - 10), sort: 'join' }, needMyClub: true },
     { k: 'free', ic: '🆓', n: L('Jogadores livres', 'Free agents'), d: L('Sem clube: sem custo de transferência.', 'Without a club: no transfer fee.'), F: { ...d, free: true, caMin: Math.max(50, xiCA - 30), sort: 'ca' } },
     { k: 'bargain', ic: '🏷', n: L('Pechinchas', 'Bargains'), d: L(`Entre 21 e 29 anos, CA ao nível do teu XI e valor baixo.`, `Between 21 and 29, CA at your XI’s level and a low value.`),
       F: { ...d, ageMin: 21, ageMax: 29, caMin: Math.max(60, xiCA - 5), valueMax: ctx.bargainValue || 5000000, sort: 'ca' } },
@@ -4414,7 +4457,7 @@ function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_I
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.10.0';
+const VERSION = '4.11.1';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -4854,7 +4897,7 @@ function vHome() {
   return `<div class="top"><div><h1>Olá! Vamos preparar o próximo jogo.</h1><p class="muted">Três passos. Tudo corre neste computador${DESKTOP ? ' e o plantel actualiza sozinho quando carrega F9 no FM' : ''}.</p></div></div>
   <div class="grid g3">
     ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${L(`${ps.length} jogadores`, `${ps.length} players`)}</b>${ST.myClub ? ' · ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.save ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Plantel.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : ST.f9Found ? (ST.auto.on ? 'Carregue F9 no ecrã do plantel no FM27.' : 'Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.') : 'Ligue a leitura do save ou instale o plugin do F9 — veja Plantel.') : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
-      ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : `<button class="btn primary" onclick="A.tab('team','squad')">Como carregar</button>` + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
+      ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : dataButtons() + `<button class="btn" onclick="A.tab('team','squad')">Como carregar</button>` + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
     ${step(2, true, 'Tática', `<div class="score-ring" style="gap:12px">${ring(au.overall, 64)}<div><b>${esc(t.name)}</b><br><span class="muted">${esc(t.ipForm)} → ${esc(t.oopForm)} · ${esc(t.ment)}</span></div></div>`,
       (ps.length >= 11 ? `<button class="btn primary" onclick="A.tab('team','gen')">Gerar tática para o plantel</button>` : '') + `<button class="btn ${ps.length >= 11 ? '' : 'primary'}" onclick="A.tab('tactic','analyze')">Analisar</button><button class="btn" onclick="A.simOpen()">▶ Ver em campo</button>`)}
     ${step(3, op.length > 0, 'Adversário', op.length ? `<b>${esc(ST._oppRep && ST._oppRep.club || ST.opp.source)}</b> carregado` : 'No FM27, abra o plantel do adversário e carregue <b>F9</b>. A app reconhece que é outro clube.',
@@ -4876,7 +4919,7 @@ function vHome() {
 function vSquad() {
   const ps = players();
   return `<div class="top"><div><h2><span>Plantel</span>${ST.myClub ? ' — ' + esc(ST.myClub) : ''}</h2><p class="muted small" style="margin:0">${ps.length ? `${L(`${ps.length} jogadores`, `${ps.length} players`)} · ${esc(ST.squad.source)}${ST.squad.at ? ' · ' + new Date(ST.squad.at).toLocaleString('pt-PT') : ''}` : 'Ainda sem plantel carregado.'}</p></div>
-    <div class="row"><button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>${ps.length ? '<button class="btn" onclick="A.clearSquad()">Limpar</button>' : ''}</div></div>
+    <div class="row">${dataButtons()}<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>${ps.length ? '<button class="btn" onclick="A.clearSquad()">Limpar</button>' : ''}</div></div>
   <div class="grid g2">
     <div class="panel"><h3>Como trazer o plantel do FM27</h3>
       <p class="small muted" style="margin:.2em 0 8px">Escolha uma via. Ambas são opcionais e precisam de uma ferramenta externa gratuita:</p>
@@ -4929,7 +4972,7 @@ function vSuggest() {
 function vXI() {
   const ps = players(), t = ST.tactic;
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>Com o plantel, a app escolhe o melhor XI para a tua tática, recomenda instruções individuais pelos atributos e mostra suplentes e sucessores para cada posição.</p>
-    <button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('team','xi')">Usar exemplo</button></div>`;
+    <div class="row" style="justify-content:center">${dataButtons()}<button class="btn" onclick="A.sampleSquad();A.tab('team','xi')">Usar exemplo</button></div></div>`;
   const pm = Object.fromEntries(ps.map(p => [p.id, p]));
   const bs = benchAndSuccessors(t, ps);
   const rows = t.slots.map((s, i) => {
@@ -4991,7 +5034,7 @@ function genOpts() { if (!ST.gen) ST.gen = { expect: 'mid', must: [], star: '', 
 function vGen() {
   const ps = players(), g = genOpts();
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>O gerador monta uma tática completa à volta do teu plantel: formas com e sem bola, XI com papel para cada fase, as instruções todas com o porquê, bolas paradas, profundidade, reforços e alternativas.</p>
-    <button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('team','gen')">Usar exemplo</button></div>`;
+    <div class="row" style="justify-content:center">${dataButtons()}<button class="btn" onclick="A.sampleSquad();A.tab('team','gen')">Usar exemplo</button></div></div>`;
   const byName = [...ps].sort((a, b) => a.name.localeCompare(b.name));
   const young = byName.filter(p => p.age != null && p.age <= 21);
   const opts = `<div class="panel grid"><h3>O teu contexto</h3>
@@ -5147,7 +5190,10 @@ function scoutCtx() {
   const db = SCOUT.db;
   if (db && !SCOUT._val) SCOUT._val = { cheapValue: pctile(db.players.filter(p => p.age <= 19 && p.pa >= 150).map(p => p.value), 0.35) || 3000000 };
   const bargainValue = db ? pctile(db.players.filter(p => p.age >= 21 && p.age <= 29 && p.ca >= xiCA - 5).map(p => p.value), 0.3) : null;
-  return { date: SCOUT.date, myClub: ST.myClub || '', tactic: ST.tactic, squad, xiCA, cheapValue: SCOUT._val ? SCOUT._val.cheapValue : null, bargainValue };
+  // reputação do meu clube: lida na própria base de dados, nos jogadores do meu clube
+  let myRep = null;
+  if (db && ST.myClub) { if (SCOUT._myRepFor !== ST.myClub) { const mc = ST.myClub.toLowerCase(); const r = db.players.filter(p => p.club && p.club.toLowerCase() === mc && p.clubRep != null).map(p => p.clubRep); SCOUT._myRep = r.length ? r.sort((a, b) => a - b)[Math.floor(r.length / 2)] : null; SCOUT._myRepFor = ST.myClub; } myRep = SCOUT._myRep; }
+  return { date: SCOUT.date, myClub: ST.myClub || '', tactic: ST.tactic, squad, xiCA, cheapValue: SCOUT._val ? SCOUT._val.cheapValue : null, bargainValue, myRep };
 }
 // casa mais fraca do meu XI (para a pesquisa "A minha posição mais fraca")
 function weakestSlot() {
@@ -5189,6 +5235,7 @@ function scoutFilters() {
       ${inp('wageMax', L('Salário semanal máximo', 'Maximum weekly wage'), '20000')}
       ${inp('endMonths', L('Contrato acaba em até (meses)', 'Contract ends within (months)'), '6')}
       ${inp('clubRepMax', L('Reputação máxima do clube (1–10000)', 'Maximum club reputation (1–10000)'), '4000')}
+      ${scoutCtx().myRep != null ? inp('joinMin', L('Probabilidade de querer vir (estimativa, 0–100)', 'Chance he would join you (estimate, 0–100)'), '70') : `<p class="small muted">${L('Para estimar quem quer vir, carregue o seu plantel (a app usa a reputação do seu clube).', 'To estimate who would join, load your squad (the app uses your club’s reputation).')}</p>`}
       ${chk('free', L('Só jogadores livres', 'Free agents only'))}
       ${chk('excludeMine', L('Excluir o meu clube', 'Exclude my club'))}
       ${sel('loan', [['any', L('incluir emprestados', 'include loaned players')], ['exclude', L('excluir emprestados', 'exclude loaned players')], ['only', L('só emprestados', 'loaned players only')]], L('Empréstimos', 'Loans'))}
@@ -5215,15 +5262,15 @@ function scoutFilters() {
 function scoutTable(list, extra) {
   const S = scoutState(), F = S.F, stars = new Set((ST.shortlist || []).map(x => x.id));
   const th = (k, label) => `<th><button class="th-sort ${F.sort === k ? 'on' : ''}" onclick="A.scoutSort('${k}')">${label}${F.sort === k ? (F.dir === 'asc' ? ' ▲' : ' ▼') : ''}</button></th>`;
-  const ext = extra === 'likely' ? [L('Prob.', 'Chance'), p => p._lk ?? reachLikelihood(p)] : extra === 'role' ? [L('Papel', 'Role'), p => p._rs] : extra === 'gain' ? [L('Ganho no XI', 'XI gain'), p => p._gain != null ? `${p._gain > 0 ? '+' : ''}${p._gain} <span class="muted small">${esc(p._gainSlot || '')}</span>` : '—'] : null;
+  const ext = extra === 'join' ? [L('Vir?', 'Join?'), p => p._jn ?? '—'] : extra === 'likely' ? [L('Prob.', 'Chance'), p => p._lk ?? reachLikelihood(p)] : extra === 'role' ? [L('Papel', 'Role'), p => p._rs] : extra === 'gain' ? [L('Ganho no XI', 'XI gain'), p => p._gain != null ? `${p._gain > 0 ? '+' : ''}${p._gain} <span class="muted small">${esc(p._gainSlot || '')}</span>` : '—'] : null;
   return `<div class="table-wrap" style="max-height:none"><table class="scout-table"><thead><tr><th aria-label="${L('Lista de observação', 'Shortlist')}">☆</th>${th('name', L('Nome', 'Name'))}${th('age', L('Idade', 'Age'))}<th>${L('Pos', 'Pos')}</th><th>${L('Clube', 'Club')}</th>${th('ca', 'CA')}${th('pa', 'PA')}${th('value', L('Valor', 'Value'))}${th('wage', L('Salário', 'Wage'))}${th('end', L('Contrato', 'Contract'))}${ext ? `<th>${ext[0]}</th>` : ''}</tr></thead><tbody>
     ${list.map(p => `<tr class="click" onclick="A.scoutOpen('${esc(p.id)}')"><td><button class="star ${stars.has(p.id) ? 'on' : ''}" onclick="event.stopPropagation();A.scoutStar('${esc(p.id)}')" aria-label="${stars.has(p.id) ? L('Tirar da lista', 'Remove from shortlist') : L('Pôr na lista', 'Add to shortlist')}">${stars.has(p.id) ? '★' : '☆'}</button></td>
       <td><b>${esc(p.name)}</b>${p.loan ? ` <span class="chip">${L('emprest.', 'loan')}</span>` : ''}</td><td>${p.age ?? '—'}</td><td class="small">${esc(p.posRaw || '')}</td><td class="small">${p.club ? esc(p.club) : `<span class="chip ok">${L('livre', 'free')}</span>`}</td>
-      <td><b>${p.ca ?? '—'}</b></td><td>${p.pa ?? '—'}${p.paRange ? '*' : ''}</td><td>${fmtMoney(p.value)}</td><td>${fmtMoney(p.wage)}</td><td class="small">${fmtDate(p.end)}</td>${ext ? `<td>${ext[1](p) ?? '—'}</td>` : ''}</tr>`).join('')}
+      <td><b>${p.ca ?? '—'}</b></td><td>${p.pa ?? '—'}${p.paRange ? '*' : ''}</td><td>${p.value == null && p.club ? `<span class="muted" title="${esc(L('Valor desconhecido: o fmsave não o conseguiu ler deste jogador.', 'Unknown value: fmsave could not read it for this player.'))}">?</span>` : fmtMoney(p.value)}</td><td>${fmtMoney(p.wage)}</td><td class="small">${fmtDate(p.end)}</td>${ext ? `<td>${ext[1](p) ?? '—'}</td>` : ''}</tr>`).join('')}
   </tbody></table></div>`;
 }
 function scoutCard(p) {
-  const ctx = scoutCtx(), g = ctx.squad.length ? bestGain(p, ST.tactic, ctx.squad) : null, roles = bestRolesAny(p, 5), lk = p.age != null && p.age <= 23 ? reachLikelihood(p) : null;
+  const ctx = scoutCtx(), jn = joinLikelihood(p, ctx), g = ctx.squad.length ? bestGain(p, ST.tactic, ctx.squad) : null, roles = bestRolesAny(p, 5), lk = p.age != null && p.age <= 23 ? reachLikelihood(p) : null;
   const grp = (c) => Object.keys(ATTRS).filter(k => ATTRS[k].c === c && p.a[k] != null);
   const cell = (k) => { const v = Math.round(p.a[k]); return `<div class="attr"><span>${esc(attrName(k))}</span><b class="v v${v >= 16 ? 4 : v >= 13 ? 3 : v >= 10 ? 2 : 1}">${v}</b></div>`; };
   const gkR = p.posR ? (p.posR.gk ?? 0) : 0, isGK = gkR >= 15 && gkR >= Math.max(0, ...Object.entries(p.posR || {}).filter(([k]) => k !== 'gk').map(([, v]) => v));   // só se a melhor posição for GR
@@ -5233,7 +5280,8 @@ function scoutCard(p) {
     <div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">${esc(p.name)}</h2>
       <p class="small muted" style="margin:.2em 0 0">${p.age ?? '—'} ${L('anos', 'years')} · ${p.club ? esc(p.club) : L('sem clube', 'no club')}${SCOUT.nations[p.nat] ? ' · ' + esc(SCOUT.nations[p.nat]) : ''} · ${esc(p.posRaw || '')}${p.height ? ' · ' + p.height + ' cm' : ''}${p.foot ? ' · ' + (p.foot === 'L' ? L('esquerdino', 'left-footed') : p.foot === 'R' ? L('destro', 'right-footed') : L('ambos os pés', 'two-footed')) : ''}</p></div>
       <div class="row"><button class="btn ${ (ST.shortlist || []).some(x => x.id === p.id) ? 'primary' : ''}" onclick="A.scoutStar('${esc(p.id)}')">${(ST.shortlist || []).some(x => x.id === p.id) ? '★ ' + L('Na lista', 'On shortlist') : '☆ ' + L('Pôr na lista', 'Add to shortlist')}</button><button class="btn" onclick="A.scoutClose()" aria-label="${L('Fechar', 'Close')}">✕</button></div></div>
-    <div class="kpis" style="margin-top:12px"><div><span>CA</span><b>${p.ca ?? '—'}</b></div><div><span>PA</span><b>${p.pa ?? '—'}${p.paRange ? ` <span class="small muted">(${p.paRange[0]}–${p.paRange[1]})</span>` : ''}</b></div><div><span>${L('Valor', 'Value')}</span><b>${fmtMoney(p.value)}</b></div><div><span>${L('Salário/semana', 'Wage/week')}</span><b>${fmtMoney(p.wage)}</b></div><div><span>${L('Contrato até', 'Contract until')}</span><b>${fmtDate(p.end)}</b></div>${lk != null ? `<div><span>${L('Prob. de atingir o PA', 'Chance to reach PA')}</span><b>${lk}</b></div>` : ''}</div>
+    <div class="kpis" style="margin-top:12px"><div><span>CA</span><b>${p.ca ?? '—'}</b></div><div><span>PA</span><b>${p.pa ?? '—'}${p.paRange ? ` <span class="small muted">(${p.paRange[0]}–${p.paRange[1]})</span>` : ''}</b></div><div><span>${L('Valor', 'Value')}</span><b>${p.value == null && p.club ? L('desconhecido', 'unknown') : fmtMoney(p.value)}</b></div><div><span>${L('Salário/semana', 'Wage/week')}</span><b>${fmtMoney(p.wage)}</b></div><div><span>${L('Contrato até', 'Contract until')}</span><b>${fmtDate(p.end)}</b></div>${lk != null ? `<div><span>${L('Prob. de atingir o PA', 'Chance to reach PA')}</span><b>${lk}</b></div>` : ''}</div>
+    ${jn && !(ctx.myClub && p.club && p.club.toLowerCase() === ctx.myClub.toLowerCase()) ? `<div class="notice small" style="margin-top:10px"><b>${L('Probabilidade de querer vir', 'Chance he would join you')}: ${jn.score}/100</b> <span class="muted">(${L('estimativa', 'estimate')})</span> — ${esc(jn.why.join(' · '))}</div>` : ''}
     ${g ? `<div class="notice small" style="margin-top:10px">${g.gain > 0 ? L(`No teu XI entraria em <b>${esc(g.code)}</b>: adequação ${g.his} contra ${g.cur} de ${esc(g.starter || 'ninguém')} (<b>+${g.gain}</b>).`, `In your XI he would play at <b>${esc(g.code)}</b>: fit ${g.his} vs ${g.cur} for ${esc(g.starter || 'nobody')} (<b>+${g.gain}</b>).`) : L(`Não melhoraria o teu XI (melhor casa: ${esc(g.code)}, ${g.his} contra ${g.cur}).`, `He would not improve your XI (best slot: ${esc(g.code)}, ${g.his} vs ${g.cur}).`)}</div>` : ''}
     <div class="grid g3 attrs-grid" style="margin-top:12px">${(isGK ? ['G', 'M', 'F'] : ['T', 'M', 'F']).map(c => `<div><h4>${{ T: L('Técnicos', 'Technical'), M: L('Mentais', 'Mental'), F: L('Físicos', 'Physical'), G: L('Guarda-redes', 'Goalkeeping') }[c]}</h4>${grp(c).map(cell).join('')}</div>`).join('')}</div>
     <div class="grid g2" style="margin-top:12px;align-items:start">
@@ -5256,12 +5304,12 @@ function vScout() {
   }
   const ctx = scoutCtx(), presets = scoutPresets(ctx);
   const res = scoutResults(), pages = Math.max(1, Math.ceil(res.length / PAGE)), page = Math.min(S.page || 0, pages - 1);
-  const extra = S.F.sort === 'likely' || S.F.likelyMin ? 'likely' : S.F.role ? 'role' : S.F.sort === 'gain' ? 'gain' : null;
+  const extra = S.F.sort === 'join' || S.F.joinMin ? 'join' : S.F.sort === 'likely' || S.F.likelyMin ? 'likely' : S.F.role ? 'role' : S.F.sort === 'gain' ? 'gain' : null;
   const open = S.open ? SCOUT.db.players.find(p => p.id === S.open) : null;
   const list = (ST.shortlist || []).map(x => SCOUT.db.players.find(p => p.id === x.id) || x);
   return `<div class="top"><div><h2>${L('Prospeção', 'Scouting')}</h2><p class="muted small" style="margin:0">${L(`${SCOUT.db.players.length.toLocaleString(LOCALE())} jogadores · ${esc(SCOUT.save)} · data do jogo ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimada)' : ''} · ${SCOUT.cached ? 'da cache' : 'lido em ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`, `${SCOUT.db.players.length.toLocaleString(LOCALE())} players · ${esc(SCOUT.save)} · game date ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimated)' : ''} · ${SCOUT.cached ? 'from cache' : 'read in ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`)}</p></div>
     <div class="row">${DESKTOP ? `<button class="btn" data-busy="scout" onclick="A.scoutLoad(true)">${L('Actualizar do save', 'Refresh from save')}</button>` : ''}<button class="btn" onclick="A.scoutExport()">${L('Exportar CSV', 'Export CSV')}</button></div></div>
-  <div class="plan-tabs" role="tablist" aria-label="${L('Pesquisas pré-definidas', 'Preset searches')}">${presets.map(p => `<button class="${S.preset === p.k ? 'on' : ''}" onclick="A.scoutPreset('${p.k}')" title="${esc(p.d)}" ${p.needSquad && !ctx.squad.length ? 'disabled' : ''}><span aria-hidden="true">${p.ic}</span> ${esc(p.n)}</button>`).join('')}</div>
+  <div class="plan-tabs" role="tablist" aria-label="${L('Pesquisas pré-definidas', 'Preset searches')}">${presets.map(p => `<button class="${S.preset === p.k ? 'on' : ''}" onclick="A.scoutPreset('${p.k}')" title="${esc(p.d)}" ${(p.needSquad && !ctx.squad.length) || (p.needMyClub && ctx.myRep == null) ? `disabled title="${esc(L('Carregue primeiro o seu plantel.', 'Load your squad first.'))}"` : ''}><span aria-hidden="true">${p.ic}</span> ${esc(p.n)}</button>`).join('')}</div>
   ${S.preset ? `<p class="small muted" style="margin:8px 0 0">${esc((presets.find(p => p.k === S.preset) || {}).d || '')}${S.weak ? ' ' + L(`Posição: ${S.weak}.`, `Position: ${S.weak}.`) : ''} ${L('Pode afinar com os filtros.', 'You can refine it with the filters.')}</p>` : ''}
   <div class="grid scout-grid" style="margin-top:12px">
     ${scoutFilters()}
@@ -5481,7 +5529,7 @@ function spPitch(rows, layout, title, gk) {
 }
 function vSetPieces() {
   const ps = players();
-  if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div>`;
+  if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><div class="row" style="justify-content:center">${dataButtons()} <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div></div>`;
   const r = setPiecePlan(ST.tactic, ps, oppPlayers()); ST._sp = r;
   if (!r) return '<div class="panel empty">Não consegui montar o XI.</div>';
   const row = (label, x, extra) => `<tr><td>${esc(label)}</td><td>${x ? `<b>${esc(x.p.name)}</b> <span class="muted small">${esc(x.code)}</span>` : '—'}</td><td class="small muted">${extra || ''}</td></tr>`;
@@ -5630,13 +5678,13 @@ function integrationsHTML(compact) {
   const card = (title, pills, body, actions) => `<div class="integ"><div class="integ-h"><b>${title}</b><span class="row" style="gap:6px">${pills}</span></div>${body}<div class="row" style="margin-top:8px">${actions}</div></div>`;
   const fmsaveCard = card('Ler o save (.fm) — fmsave',
     DESKTOP ? pill(save, 'ligado', 'desligado') + (err ? pill(false, '', 'falta instalar') : '') : pill(false, '', 'só na app instalada'),
-    `<p class="small">Lê o plantel directamente do save, sempre sobre uma cópia, sem alterar nada. <b>Requer</b> o <a href="${LINKS.uv}" target="_blank" rel="noopener">uv</a> (instala-se uma vez com <code>winget install --id=astral-sh.uv -e</code>); o <a href="${LINKS.fmsave}" target="_blank" rel="noopener">fmsave</a> (MIT) é descarregado sozinho na primeira leitura.</p>
+    `<p class="small">Lê o plantel directamente do save, sempre sobre uma cópia, sem alterar nada. ${L(`<b>Requer</b> o <a href="${LINKS.uv}" target="_blank" rel="noopener">uv</a> (instala-se uma vez com <code>winget install --id=astral-sh.uv -e</code>); o <a href="${LINKS.fmsave}" target="_blank" rel="noopener">fmsave</a> (MIT) é descarregado sozinho na primeira leitura.`, `<b>Requires</b> <a href="${LINKS.uv}" target="_blank" rel="noopener">uv</a> (install it once with <code>winget install --id=astral-sh.uv -e</code>); <a href="${LINKS.fmsave}" target="_blank" rel="noopener">fmsave</a> (MIT) downloads itself on the first read.`)}</p>
      ${!DESKTOP ? `<p class="small">No browser: use o <a href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">fmsave online</a> e arraste o CSV para aqui.</p>` : ''}
      ${DESKTOP && !compact ? `<label class="f">Pasta dos saves (opcional)<input type="text" value="${esc(ST.auto.saveDir)}" placeholder="Documentos\\Sports Interactive\\Football Manager 27\\games" onchange="A.saveDir(this.value)"></label>
        <div class="small">${ST.lastSave ? `<span>Último save:</span> <b>${esc(ST.lastSave.name)}</b> (${(ST.lastSave.size / 1048576).toFixed(0)} MB)` : 'Nenhum save encontrado ainda.'}${ST.auto.saveLast ? `<br><span>Lido:</span> ${esc(ST.auto.saveLast)}` : ''}</div>` : ''}
      ${err && DESKTOP ? `<div class="notice warn small">${esc(saveErrText(err))}</div>` : ''}
      <p class="small muted">${L('A app usa sempre a versão mais recente do fmsave (verifica o PyPI a cada leitura; sem internet, usa a que já tem). Se instalou o fmsave com pip, actualize com', 'The app always uses the latest fmsave (it checks PyPI on every read; offline, it uses the one you already have). If you installed fmsave with pip, update it with')} <code>python -m pip install --upgrade fmsave</code>.</p>`,
-    DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn sm" data-busy="save" onclick="A.saveNow()">Ler o save agora</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
+    DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">📥 Ler o save agora</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
   const f9Card = card('F9 no jogo — FM View Exporter',
     DESKTOP ? pill(f9, 'plugin encontrado', 'plugin não encontrado') + (f9 ? pill(ST.auto.on, 'automático', 'manual') : '') : '',
     `<p class="small"><b>Requer</b> o plugin gratuito <a href="${LINKS.fmve}" target="_blank" rel="noopener">FM View Exporter</a> (Windows + Steam): descarregue o <code>setup.exe</code>, clique Install, e no FM importe a vista <code>FM27-PlayerAnalyzer-Squad-Standard.fmf</code>. Depois, F9 no ecrã do plantel exporta-o${DESKTOP ? ' e a app carrega-o sozinha' : ''}. F9 no plantel de outro clube entra como adversário.</p>
@@ -5645,7 +5693,7 @@ function integrationsHTML(compact) {
     `<a class="btn sm" href="${LINKS.fmve}" target="_blank" rel="noopener">Descarregar o plugin</a>${DESKTOP ? `<label class="row small"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar cada F9 automaticamente</label><button class="btn sm" data-busy="f9" onclick="A.autoNow()">Carregar o último F9</button>` : ''}`);
   const labCard = compact ? '' : card('Testar no motor do FM27 — FM Tactics Lab',
     DESKTOP ? pill(!!(ST.lab && ST.lab.status), 'ligado', 'não ligado') : pill(false, '', 'só na app instalada'),
-    `<p class="small"><b>Requer</b> o <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> aberto, com o Steam aberto na conta que tem o FM27. Corre jogos com o motor original e exporta .fmf verificados pelo jogo.</p>`,
+    `<p class="small">${L(`<b>Requer</b> o <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> aberto, com o Steam aberto na conta que tem o FM27. Corre jogos com o motor original e exporta .fmf verificados pelo jogo.`, `<b>Requires</b> <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> open, with Steam open on the account that owns FM27. It runs matches on the original engine and exports .fmf files verified by the game.`)}</p>`,
     `<a class="btn sm" href="${LINKS.lab}" target="_blank" rel="noopener">Descarregar o Tactics Lab</a><button class="btn sm" onclick="A.go('lab')">Abrir Laboratório</button>`);
   return fmsaveCard + f9Card + labCard;
 }
@@ -5957,6 +6005,7 @@ const A = {
   autoDir(v) { ST.auto.dir = v.trim(); ST.auto.mtime = 0; save(); desktopPoll(true); },
   autoNow() { ST.auto.mtime = 0; desktopPoll(true); },
   saveNow() { savePoll(true); },
+  pickFile() { const i = document.createElement('input'); i.type = 'file'; i.accept = '.csv,.tsv,.txt,.html,.htm,.json,.fmf'; i.onchange = () => { if (i.files[0]) ingestFile(i.files[0]); }; i.click(); },
   saveToggle() { ST.auto.save = !ST.auto.save; save(); render(); if (ST.auto.save) savePoll(); },
   saveDir(v) { ST.auto.saveDir = v.trim(); ST.auto.saveMtime = 0; save(); savePoll(true); },
   // campo animado
@@ -6038,6 +6087,7 @@ function renderNav() {
       <button class="nav-mini" onclick="A.navMini()" title="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'} (Ctrl+B)" aria-label="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'}">${ST.ui.navMini ? '»' : '«'}</button></div>` +
     NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join('') +
     `<div id="busy" aria-live="polite"></div>
+    ${dataCard()}
     <div class="aside-status">
       <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${L(`${sq} jogadores`, `${sq} players`)}${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
       <div><span class="dot ${op ? 'ok' : ''}"></span>${op ? 'Adversário carregado' : 'Sem adversário'}</div>
@@ -6110,6 +6160,28 @@ function paintBusy() {
   document.querySelectorAll('[data-busy]').forEach(el => { const on = keys.includes(el.dataset.busy); el.disabled = on; el.classList.toggle('is-busy', on); el.setAttribute('aria-busy', String(on)); });
   translateDOM(box);
   clearInterval(BUSY_TICK); if (keys.length) BUSY_TICK = setInterval(paintBusy, 500);
+}
+
+// ---------- dados do jogo: ler o save / F9 / abrir ficheiro — sempre à mão ----------
+function relTime(ts) {
+  const t0 = typeof ts === 'number' ? ts : Date.parse(ts); if (!t0) return ''; const s = (Date.now() - t0) / 1000;
+  if (s < 90) return L('agora mesmo', 'just now'); const m = s / 60; if (m < 60) return L(`há ${Math.round(m)} min`, `${Math.round(m)} min ago`);
+  const h = m / 60; if (h < 24) return L(`há ${Math.round(h)} h`, `${Math.round(h)} h ago`); const d = Math.round(h / 24); return L(`há ${d} dia(s)`, `${d} day(s) ago`);
+}
+function dataButtons(size = '') {
+  if (DESKTOP) return `<button class="btn primary ${size}" data-busy="save" onclick="A.saveNow()" title="${L('Ler o plantel do último save (Ctrl+Shift+L)', 'Read the squad from your latest save (Ctrl+Shift+L)')}">📥 ${L('Ler o save agora', 'Read the save now')}</button>
+    <button class="btn ${size}" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar a última exportação F9 do FM View Exporter', 'Load the latest F9 export from FM View Exporter')}">⌨ ${L('Carregar último F9', 'Load latest F9')}</button>`;
+  return `<button class="btn primary ${size}" onclick="A.pickFile()" title="${L('CSV/HTML/JSON do plantel (Ctrl+Shift+L)', 'Squad CSV/HTML/JSON (Ctrl+Shift+L)')}">📂 ${L('Abrir ficheiro do plantel', 'Open squad file')}</button>`;
+}
+function dataCard() {
+  const at = ST.squad && ST.squad.at, sq = (ST.squad && ST.squad.players || []).length;
+  return `<div class="data-card" aria-label="${L('Dados do jogo', 'Game data')}">
+    <div class="data-h lbl">${L('Dados do jogo', 'Game data')}</div>
+    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)')}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
+      <button class="btn sm data-btn" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar último F9', 'Load latest F9')}" aria-label="${L('Carregar último F9', 'Load latest F9')}"><span class="ic" aria-hidden="true">⌨</span><span class="lbl">${L('Último F9', 'Latest F9')}</span></button>`
+    : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)')}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
+    <div class="small muted lbl">${sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet')}</div>
+  </div>`;
 }
 
 // ---------- painéis que fecham e abrem (estado guardado por ecrã e título) ----------
@@ -6213,7 +6285,8 @@ document.addEventListener('click', (e) => {
   e.preventDefault(); window.__TAURI__.core.invoke('open_url', { url: a.href }).catch(() => toast(a.href));
 });
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
+  if (e.key === 'Escape' && ST.scout && ST.scout.open) { A.scoutClose(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') { e.preventDefault(); if (DESKTOP) A.saveNow(); else A.pickFile(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); A.navMini(); } });
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();
   if (DESKTOP) {

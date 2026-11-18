@@ -5,7 +5,7 @@ function genOpts() { if (!ST.gen) ST.gen = { expect: 'mid', must: [], star: '', 
 function vGen() {
   const ps = players(), g = genOpts();
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>O gerador monta uma tática completa à volta do teu plantel: formas com e sem bola, XI com papel para cada fase, as instruções todas com o porquê, bolas paradas, profundidade, reforços e alternativas.</p>
-    <button class="btn primary" onclick="A.tab('team','squad')">Ir para Plantel</button> <button class="btn" onclick="A.sampleSquad();A.tab('team','gen')">Usar exemplo</button></div>`;
+    <div class="row" style="justify-content:center">${dataButtons()}<button class="btn" onclick="A.sampleSquad();A.tab('team','gen')">Usar exemplo</button></div></div>`;
   const byName = [...ps].sort((a, b) => a.name.localeCompare(b.name));
   const young = byName.filter(p => p.age != null && p.age <= 21);
   const opts = `<div class="panel grid"><h3>O teu contexto</h3>
