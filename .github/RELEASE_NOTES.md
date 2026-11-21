@@ -5,4 +5,4 @@
 - Fix: the Settings and Set pieces screens no longer keep re-checking the bridge in a loop.
 
 ### Installation
-Download `…setup.exe` (installer) or `FM27-Tactical-Bible-portatil.exe` (runs without installing). `index.html` is the browser version, which works offline.
+Download `…setup.exe` (installer) or `FM27-Tactical-Bible-portatil.exe` (runs without installing).

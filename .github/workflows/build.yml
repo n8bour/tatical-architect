@@ -59,10 +59,6 @@ jobs:
         run: node tests/engine.test.cjs
       - name: Gerar app/index.html
         run: node build.mjs
-      - uses: actions/upload-artifact@v4
-        with:
-          name: FM27-Tactical-Bible-HTML
-          path: app/index.html
       - id: p
         name: Escolher plataformas
         run: |
