@@ -42,8 +42,9 @@ jobs:
           VER=$(node -p "require('./src-tauri/tauri.conf.json').version")
           PKG=$(node -p "require('./package.json').version")
           CARGO=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)
-          if [ "$VER" != "$PKG" ] || [ "$VER" != "$CARGO" ]; then
-            echo "::error::Versões diferentes: tauri.conf.json=$VER package.json=$PKG Cargo.toml=$CARGO"; exit 1
+          UI=$(sed -n "s/^const VERSION = '\(.*\)';/\1/p" src/ui/state.js)
+          if [ "$VER" != "$PKG" ] || [ "$VER" != "$CARGO" ] || [ "$VER" != "$UI" ]; then
+            echo "::error::Versões diferentes: tauri.conf.json=$VER package.json=$PKG Cargo.toml=$CARGO src/ui/state.js=$UI"; exit 1
           fi
           echo "version=$VER" >> "$GITHUB_OUTPUT"
           if gh release view "v$VER" >/dev/null 2>&1; then

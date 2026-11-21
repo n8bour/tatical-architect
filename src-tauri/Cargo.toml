@@ -1,6 +1,6 @@
 [package]
 name = "fm27-tactical-bible"
-version = "4.12.0"
+version = "4.13.0"
 description = "FM27 Tactical Bible"
 edition = "2021"
 
