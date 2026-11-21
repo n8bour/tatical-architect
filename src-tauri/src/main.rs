@@ -522,11 +522,12 @@ async fn lab_request(
 }
 
 
-// ---------------------------------------------------------------- Tactical Bible Bridge (plugin BepInEx dentro do FM27)
-// Protocolo: uma linha = um comando, uma linha = a resposta. Só 127.0.0.1, porta fixa 27029.
-const BRIDGE_PORT: u16 = 27029;
+// ---------------------------------------------------------------- bridge dentro do FM27 (plugin BepInEx)
+// Protocolo: uma linha = um comando, uma linha = a resposta. Só 127.0.0.1.
+// 27029 = Tactical Bible Bridge (o nosso); 27027 = FM27Bridge do fm27-assistant (mesmo protocolo, serve de alternativa).
+const BRIDGE_PORTS: [u16; 2] = [27029, 27027];
 
-static BRIDGE_CONN: std::sync::Mutex<Option<std::net::TcpStream>> = std::sync::Mutex::new(None);
+static BRIDGE_CONN: std::sync::Mutex<Option<(u16, std::net::TcpStream)>> = std::sync::Mutex::new(None);
 
 fn bridge_roundtrip(stream: &mut std::net::TcpStream, cmd: &str, timeout_ms: u64) -> Result<String, String> {
     use std::io::{Read, Write};
@@ -550,23 +551,38 @@ fn bridge_roundtrip(stream: &mut std::net::TcpStream, cmd: &str, timeout_ms: u64
     Ok(String::from_utf8_lossy(&buf).trim_end_matches(['\r', '\n']).to_string())
 }
 
-fn bridge_call_blocking(cmd: &str, timeout_ms: u64) -> Result<String, String> {
+fn bridge_connect(port: u16) -> Option<std::net::TcpStream> {
     use std::net::{SocketAddr, TcpStream};
     use std::time::Duration;
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let s = TcpStream::connect_timeout(&addr, Duration::from_millis(600)).ok()?;
+    let _ = s.set_nodelay(true);
+    Some(s)
+}
+
+#[derive(Serialize)]
+struct BridgeReply {
+    port: u16,
+    reply: String,
+}
+
+fn bridge_call_blocking(cmd: &str, timeout_ms: u64) -> Result<BridgeReply, String> {
     if cmd.contains('\n') || cmd.contains('\r') || cmd.len() > 2_000_000 {
         return Err("Comando inválido".into());
     }
     let mut guard = BRIDGE_CONN.lock().map_err(|e| e.to_string())?;
     for attempt in 0..2 {
         if guard.is_none() {
-            let addr = SocketAddr::from(([127, 0, 0, 1], BRIDGE_PORT));
-            let s = TcpStream::connect_timeout(&addr, Duration::from_millis(800))
-                .map_err(|_| "O Bridge não responde (FM27 aberto com o plugin instalado?)".to_string())?;
-            let _ = s.set_nodelay(true);
-            *guard = Some(s);
+            // o nosso plugin primeiro; senão o FM27Bridge
+            *guard = BRIDGE_PORTS.iter().find_map(|&p| bridge_connect(p).map(|s| (p, s)));
+            if guard.is_none() {
+                return Err("O Bridge não responde (FM27 aberto com o plugin instalado?)".into());
+            }
         }
-        match bridge_roundtrip(guard.as_mut().unwrap(), cmd, timeout_ms) {
-            Ok(r) => return Ok(r),
+        let (port, stream) = guard.as_mut().unwrap();
+        let port = *port;
+        match bridge_roundtrip(stream, cmd, timeout_ms) {
+            Ok(reply) => return Ok(BridgeReply { port, reply }),
             Err(e) => {
                 *guard = None; // ligação perdida: volta a ligar uma vez
                 if attempt == 1 {
@@ -579,7 +595,7 @@ fn bridge_call_blocking(cmd: &str, timeout_ms: u64) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn bridge_call(cmd: String, timeout_ms: Option<u64>) -> Result<String, String> {
+async fn bridge_call(cmd: String, timeout_ms: Option<u64>) -> Result<BridgeReply, String> {
     tauri::async_runtime::spawn_blocking(move || bridge_call_blocking(&cmd, timeout_ms.unwrap_or(15000)))
         .await
         .map_err(|e| e.to_string())?

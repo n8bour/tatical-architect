@@ -30,3 +30,7 @@ its own, ideally twice with two different values, so the id and the value field 
 Still to capture (set pieces): penalty takers order, long throw takers, crossed free-kick takers, corner positions
 (near post / far post / edge / stays back …), defensive marking (zonal / man-marking / stay up), captain and vice.
 Corner target-zone labels for EN/PT are unconfirmed (FR is confirmed); one recording in each language settles it.
+
+## Using FM27 Assistant's plugin instead
+If FM27 Assistant is installed, its FM27Bridge (port 27027) speaks the same protocol. The app tries 27029 first, then 27027,
+so no extra install is needed. Settings › Integrations shows which one answered.

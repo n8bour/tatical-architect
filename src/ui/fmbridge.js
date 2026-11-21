@@ -36,8 +36,12 @@ const FMB = {
   state: null,   // { ok, ready, version, fm, err }
   async call(cmd, timeoutMs) {
     if (!DESKTOP) throw new Error('Só na app instalada');
-    return window.__TAURI__.core.invoke('bridge_call', { cmd, timeoutMs: timeoutMs || 15000 });
+    const r = await window.__TAURI__.core.invoke('bridge_call', { cmd, timeoutMs: timeoutMs || 15000 });
+    if (r && typeof r === 'object') { FMB.port = r.port; return r.reply; }
+    return r;
   },
+  // which plugin answered: ours (27029) or fm27-assistant's FM27Bridge (27027, same protocol)
+  pluginName() { return FMB.port === 27027 ? 'FM27Bridge (fm27-assistant)' : 'Tactical Bible Bridge'; },
   async ok(cmd, timeoutMs) {
     const r = String(await FMB.call(cmd, timeoutMs) || '');
     if (!r.startsWith('OK')) throw new Error(r || 'no reply');
@@ -55,8 +59,9 @@ const FMB = {
       const p = String(await FMB.call('PING', 2500) || '');
       if (!p.startsWith('PONG')) throw new Error(p || 'no reply');
       let version = '', fm = '';
-      try { [version, fm] = (await FMB.ok('VERSION', 2500)).split(' '); } catch (e) {}
-      return (FMB.state = { ok: true, ready: /ready/.test(p), version, fm });
+      try { [version, fm] = (await FMB.ok('VERSION', 2500)).split(' '); } catch (e) {}   // FM27Bridge has no VERSION
+      // ours answers "PONG ready", FM27Bridge "PONG prêt" (or "PONG (attente …)" while FM loads)
+      return (FMB.state = { ok: true, ready: /ready|prêt/.test(p), version, fm, plugin: FMB.pluginName(), port: FMB.port });
     } catch (e) { return (FMB.state = { ok: false, err: String(e.message || e) }); }
   },
   async read(reqs) {   // reqs: [[type, pairs, prop]] -> [json|null]

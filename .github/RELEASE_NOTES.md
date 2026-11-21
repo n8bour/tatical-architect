@@ -1,11 +1,8 @@
-## FM27 Tactical Bible 4.13.0
+## FM27 Tactical Bible 4.13.1
 
-- **New, optional: Tactical Bible Bridge.** With a small BepInEx plugin inside FM27 (Windows only), the app can apply things straight into the game:
-  - **Place my XI in FM:** puts your XI into FM's active tactic (Settings › Integrations).
-  - **Set pieces › Apply in FM:** corner and direct free-kick takers (per foot), corner swing and corner target zone.
-  - **Recorder** to capture new FM actions and re-check after a game patch.
-- Without the plugin nothing changes: the squad still comes from the save (fmsave) or F9, and the FM27 sheet is still the way in.
-- The plugin is experimental and isn't included in the installer yet. See `bridge/README.md` to build it.
+- **Works with FM27 Assistant's plugin.** If FM27 Assistant is installed, the app now detects its plugin (FM27Bridge, port 27027) and uses it for *Place my XI in FM*, *Set pieces › Apply in FM* and the recorder. Nothing else to install. The app's own plugin (Tactical Bible Bridge, port 27029) is used first when present.
+- Settings › Integrations shows which plugin is connected.
+- Fix: the Settings and Set pieces screens no longer keep re-checking the bridge in a loop.
 
 ### Installation
 Download `…setup.exe` (installer) or `FM27-Tactical-Bible-portatil.exe` (runs without installing). `index.html` is the browser version, which works offline.
