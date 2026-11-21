@@ -4,7 +4,7 @@ const r = (f) => readFileSync(new URL('./src/' + f, import.meta.url), 'utf8');
 export const ORDER = [
   'i18n/i18n.js', 'core/roles.js', 'core/tactics_data.js', 'core/engine.js', 'core/insights.js', 'core/synergy.js', 'core/generator.js', 'core/gameplans.js', 'core/scouting.js', 'core/lab.js', 'core/sim_model.js',
   'i18n/en_dict.js', 'i18n/pt_terms.js', 'ui/state.js', 'ui/components.js', 'ui/sim_view.js', 'ui/clips.js',
-  'ui/views_home.js', 'ui/views_team.js', 'ui/views_gen.js', 'ui/views_synergy.js', 'ui/views_gameplans.js', 'ui/views_scout.js', 'ui/views_squadtable.js', 'ui/views_tactic.js', 'ui/views_setpieces.js', 'ui/views_training.js', 'ui/views_bible.js', 'ui/views_settings.js', 'ui/views_lab.js',
+  'ui/views_home.js', 'ui/views_team.js', 'ui/views_gen.js', 'ui/views_synergy.js', 'ui/views_gameplans.js', 'ui/views_scout.js', 'ui/views_squadtable.js', 'ui/views_tactic.js', 'ui/views_setpieces.js', 'ui/views_training.js', 'ui/views_bible.js', 'ui/views_settings.js', 'ui/views_lab.js', 'ui/fmbridge.js',
   'ui/actions.js', 'ui/main.js',
 ];
 const js = ORDER.map(f => `// ---- ${f}\n` + r(f)).join('\n;\n');

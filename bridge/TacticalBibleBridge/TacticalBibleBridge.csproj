@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Build on Windows with FM27 + BepInEx 6 (IL2CPP) installed and launched once (that generates BepInEx\interop):
+       dotnet build bridge/TacticalBibleBridge -c Release -p:GamePath="C:\...\Football Manager 27" -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>TacticalBibleBridge</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Football Manager 27</GamePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(GamePath)\BepInEx\core\*.dll" Private="false" />
+    <Reference Include="$(GamePath)\BepInEx\interop\*.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="CopyToGame" AfterTargets="Build" Condition="Exists('$(GamePath)\BepInEx')">
+    <MakeDir Directories="$(GamePath)\BepInEx\plugins\TacticalBibleBridge" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GamePath)\BepInEx\plugins\TacticalBibleBridge" />
+  </Target>

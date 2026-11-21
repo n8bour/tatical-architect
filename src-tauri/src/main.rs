@@ -521,6 +521,70 @@ async fn lab_request(
     .map_err(|e| e.to_string())?
 }
 
+
+// ---------------------------------------------------------------- Tactical Bible Bridge (plugin BepInEx dentro do FM27)
+// Protocolo: uma linha = um comando, uma linha = a resposta. Só 127.0.0.1, porta fixa 27029.
+const BRIDGE_PORT: u16 = 27029;
+
+static BRIDGE_CONN: std::sync::Mutex<Option<std::net::TcpStream>> = std::sync::Mutex::new(None);
+
+fn bridge_roundtrip(stream: &mut std::net::TcpStream, cmd: &str, timeout_ms: u64) -> Result<String, String> {
+    use std::io::{Read, Write};
+    use std::time::Duration;
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(timeout_ms)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+    stream.write_all(cmd.as_bytes()).map_err(|e| e.to_string())?;
+    stream.write_all(b"\n").map_err(|e| e.to_string())?;
+    let mut buf: Vec<u8> = Vec::new();
+    let mut one = [0u8; 4096];
+    loop {
+        let n = stream.read(&mut one).map_err(|e| e.to_string())?;
+        if n == 0 {
+            return Err("closed".into());
+        }
+        buf.extend_from_slice(&one[..n]);
+        if buf.ends_with(b"\n") {
+            break;
+        }
+    }
+    Ok(String::from_utf8_lossy(&buf).trim_end_matches(['\r', '\n']).to_string())
+}
+
+fn bridge_call_blocking(cmd: &str, timeout_ms: u64) -> Result<String, String> {
+    use std::net::{SocketAddr, TcpStream};
+    use std::time::Duration;
+    if cmd.contains('\n') || cmd.contains('\r') || cmd.len() > 2_000_000 {
+        return Err("Comando inválido".into());
+    }
+    let mut guard = BRIDGE_CONN.lock().map_err(|e| e.to_string())?;
+    for attempt in 0..2 {
+        if guard.is_none() {
+            let addr = SocketAddr::from(([127, 0, 0, 1], BRIDGE_PORT));
+            let s = TcpStream::connect_timeout(&addr, Duration::from_millis(800))
+                .map_err(|_| "O Bridge não responde (FM27 aberto com o plugin instalado?)".to_string())?;
+            let _ = s.set_nodelay(true);
+            *guard = Some(s);
+        }
+        match bridge_roundtrip(guard.as_mut().unwrap(), cmd, timeout_ms) {
+            Ok(r) => return Ok(r),
+            Err(e) => {
+                *guard = None; // ligação perdida: volta a ligar uma vez
+                if attempt == 1 {
+                    return Err(format!("O Bridge não respondeu: {}", e));
+                }
+            }
+        }
+    }
+    Err("O Bridge não respondeu".into())
+}
+
+#[tauri::command]
+async fn bridge_call(cmd: String, timeout_ms: Option<u64>) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || bridge_call_blocking(&cmd, timeout_ms.unwrap_or(15000)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Abre um link https no browser do sistema (os links da app: plugin, fmsave, uv, Tactics Lab).
 #[tauri::command]
 fn open_url(url: String) -> Result<(), String> {
@@ -538,7 +602,7 @@ fn open_url(url: String) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, export_save_db, lab_request, open_url])
+        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, export_save_db, lab_request, bridge_call, open_url])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o FM27 Tactical Bible");
 }

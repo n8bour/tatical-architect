@@ -13,6 +13,7 @@ const LINKS = {
   fmsaveWeb: 'https://rhiever.github.io/fmsave/app/',
   uv: 'https://docs.astral.sh/uv/getting-started/installation/',
   lab: 'https://github.com/lqf0624/fm-tactics-lab/releases',
+  bridge: 'https://github.com/n8bour/tatical-architect/releases',
 };
 // compact: versão curta (Plantel); completa nas Definições
 function integrationsHTML(compact) {
@@ -38,9 +39,16 @@ function integrationsHTML(compact) {
     DESKTOP ? pill(!!(ST.lab && ST.lab.status), 'ligado', 'não ligado') : pill(false, '', 'só na app instalada'),
     `<p class="small">${L(`<b>Requer</b> o <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> aberto, com o Steam aberto na conta que tem o FM27. Corre jogos com o motor original e exporta .fmf verificados pelo jogo.`, `<b>Requires</b> <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> open, with Steam open on the account that owns FM27. It runs matches on the original engine and exports .fmf files verified by the game.`)}</p>`,
     `<a class="btn sm" href="${LINKS.lab}" target="_blank" rel="noopener">Descarregar o Tactics Lab</a><button class="btn sm" onclick="A.go('lab')">Abrir Laboratório</button>`);
-  return fmsaveCard + f9Card + labCard;
+  const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
+  const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
+    DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
+    `<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, <b>Colocar o meu XI no FM</b> põe os jogadores na tática activa do jogo.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, <b>Place my XI in FM</b> puts the players into the game's active tactic.`)}</p>
+     ${fb.ok ? `<p class="small muted">${esc('v' + (fb.version || '?') + ' · FM ' + (fb.fm || '?'))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
+    DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>${fb.ok && fb.ready ? `<button class="btn primary sm" data-busy="bridge" onclick="A.bridgeXI()">${L('Colocar o meu XI no FM', 'Place my XI in FM')}</button>` : ''}` : '');
+  return fmsaveCard + f9Card + labCard + bridgeCard;
 }
 function vSettings() {
+  if (DESKTOP && typeof FMB !== 'undefined' && !FMB.checking) { FMB.checking = true; FMB.status().then(() => { FMB.checking = false; if (ST.view === 'settings') render(); }); }
   if (DESKTOP) setTimeout(async () => {
     const el = document.getElementById('dirs'); if (!el) return;
     const ds = await desktopDirs(); const uniq = []; ds.forEach(([p, ok]) => { if (!uniq.some(u => u[0] === p)) uniq.push([p, ok]); });
