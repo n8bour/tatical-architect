@@ -124,10 +124,48 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  # Publica o Release v<versão> (só se ainda não existir; testes do motor e build têm de passar).
-  # Os testes de interface (Playwright) estão em ui-checks.yml e correm à parte, sem atrasar o release.
+  # Testes de interface (Playwright), em paralelo com o build (~3 min vs ~4 min: não atrasam o release).
+  # Limite de 10 min: se algo encravar, falha em vez de bloquear.
+  layout:
+    needs: test
+    if: needs.test.outputs.exists == 'false'
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Fixado em ubuntu-24.04: o ubuntu-latest passou a 26.04, que o Playwright 1.56 ainda não suporta.
+      - name: Instalar Chromium (Playwright)
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Gerar app/index.html
+        run: node build.mjs
+      - name: Verificar layout em inglês (sem sobreposições)
+        run: python tests/ui_layout.py
+      - name: Verificar layout em português (passagem rápida)
+        run: python tests/ui_layout.py
+        env:
+          LAYOUT_LANG: pt
+          LAYOUT_QUICK: '1'
+      - name: Verificar indicadores de actividade
+        run: python tests/ui_busy.py
+      - name: Verificar cobertura de idioma (nada em português com a app em inglês)
+        run: python tests/ui_i18n.py
+      - name: Verificar nomes do FM em português (nada em inglês com a app em português)
+        run: python tests/ui_pt_terms.py
+      - name: Auditoria de idioma nos dois sentidos (vocabulário tirado do código)
+        run: python tests/ui_lang_audit.py
+
+
+  # Publica o Release v<versão> (só se ainda não existir; testes, build e layout têm de passar).
   release:
-    needs: [test, build]
+    needs: [test, build, layout]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
