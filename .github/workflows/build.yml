@@ -4,9 +4,9 @@
 #  • cache do Rust entre execuções (2.ª execução em ~2–3 min)
 #  • perfil de release sem LTO e dependências com opt-level 1
 #  • a CLI do Tauri vem pré-compilada via npx (sem npm install)
-# Corre sozinho a cada push para o main, ou em Actions → "Build desktop app" → Run workflow.
-# O .exe fica em Releases → "FM27 Tactical Bible — última build" (página principal do repositório).
-# Uma tag v* (ex.: git tag v3.0.0 && git push --tags) gera todas as plataformas e um Release em rascunho.
+# A cada push para o main: lê a versão de src-tauri/tauri.conf.json e, se o Release v<versão>
+# ainda não existir, compila e publica-o com as notas de .github/RELEASE_NOTES.md.
+# Se a versão já foi publicada, nada é compilado (subir a versão = publicar).
 name: Build desktop app
 
 on:
@@ -18,7 +18,6 @@ on:
         default: false
   push:
     branches: [main]
-    tags: ['v*']
     paths-ignore: ['README.md', 'docs/**']
 
 concurrency:
@@ -30,8 +29,28 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       platforms: ${{ steps.p.outputs.platforms }}
+      version: ${{ steps.v.outputs.version }}
+      exists: ${{ steps.v.outputs.exists }}
     steps:
       - uses: actions/checkout@v4
+      - id: v
+        name: Versão
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VER=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          PKG=$(node -p "require('./package.json').version")
+          CARGO=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)
+          if [ "$VER" != "$PKG" ] || [ "$VER" != "$CARGO" ]; then
+            echo "::error::Versões diferentes: tauri.conf.json=$VER package.json=$PKG Cargo.toml=$CARGO"; exit 1
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"; echo "v$VER já publicada — nada a fazer."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -46,7 +65,7 @@ jobs:
       - id: p
         name: Escolher plataformas
         run: |
-          if [ "${{ github.event.inputs.all_platforms }}" = "true" ] || [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [ "${{ github.event.inputs.all_platforms }}" = "true" ]; then
             echo 'platforms=["windows-latest","macos-latest","ubuntu-22.04"]' >> "$GITHUB_OUTPUT"
           else
             echo 'platforms=["windows-latest"]' >> "$GITHUB_OUTPUT"
@@ -54,6 +73,7 @@ jobs:
 
   build:
     needs: test
+    if: needs.test.outputs.exists == 'false'
     strategy:
       fail-fast: false
       matrix:
@@ -106,6 +126,7 @@ jobs:
   # Se houver uma sobreposição ou um erro de JavaScript, este job falha e o Release não é publicado.
   layout:
     needs: test
+    if: needs.test.outputs.exists == 'false'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -138,34 +159,25 @@ jobs:
       - name: Auditoria de idioma nos dois sentidos (vocabulário tirado do código)
         run: python tests/ui_lang_audit.py
 
-  # Publica os ficheiros em Releases (aparece na página principal do repositório):
-  #  • push/Run workflow → pré-release "ultima" (substituída a cada build)
-  #  • tag v* → release em rascunho com o nome da tag
+  # Publica o Release v<versão> (só se ainda não existir; build e layout têm de passar).
   release:
-    needs: [build, layout]
+    needs: [test, build, layout]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: FM27-Tactical-Bible-*
           path: out
           merge-multiple: true
-      - name: Publicar em Releases
+      - name: Publicar o Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          VER="${{ needs.test.outputs.version }}"
           ls -la out
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            TAG="${{ github.ref_name }}"
-            gh release create "$TAG" --draft --title "FM27 Tactical Bible $TAG" --notes "Instalador, executável portátil e versão HTML." || true
-          else
-            TAG="ultima"
-            gh release delete "$TAG" -y --cleanup-tag || true
-            gh release create "$TAG" --prerelease --target "${{ github.sha }}" \
-              --title "FM27 Tactical Bible — última build" \
-              --notes "Gerada automaticamente (run ${{ github.run_number }}). Descarregue o ficheiro …setup.exe (instalador) ou FM27-Tactical-Bible-portatil.exe (corre sem instalar)."
-          fi
-          gh release upload "$TAG" out/* --clobber
+          gh release create "v$VER" out/* --target "${{ github.sha }}" \
+            --title "FM27 Tactical Bible $VER" --notes-file .github/RELEASE_NOTES.md
