@@ -20,7 +20,7 @@ function spPitch(rows, layout, title, gk) {
     ${dots}</svg><figcaption class="small muted">${esc(title)}</figcaption></figure>`;
 }
 function vSetPieces() {
-  if (DESKTOP && !FMB.state && !FMB.checking) { FMB.checking = true; FMB.status().then(() => { FMB.checking = false; render(); }); }
+  if (DESKTOP) fmbRefresh('tactic');
   const ps = players();
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><div class="row" style="justify-content:center">${dataButtons()} <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div></div>`;
   const r = setPiecePlan(ST.tactic, ps, oppPlayers()); ST._sp = r;

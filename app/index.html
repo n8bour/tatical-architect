@@ -5607,7 +5607,7 @@ function spPitch(rows, layout, title, gk) {
     ${dots}</svg><figcaption class="small muted">${esc(title)}</figcaption></figure>`;
 }
 function vSetPieces() {
-  if (DESKTOP && !FMB.state && !FMB.checking) { FMB.checking = true; FMB.status().then(() => { FMB.checking = false; render(); }); }
+  if (DESKTOP) fmbRefresh('tactic');
   const ps = players();
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><div class="row" style="justify-content:center">${dataButtons()} <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div></div>`;
   const r = setPiecePlan(ST.tactic, ps, oppPlayers()); ST._sp = r;
@@ -5790,7 +5790,7 @@ function integrationsHTML(compact) {
   return fmsaveCard + f9Card + labCard + bridgeCard;
 }
 function vSettings() {
-  if (DESKTOP && typeof FMB !== 'undefined' && !FMB.checking) { FMB.checking = true; FMB.status().then(() => { FMB.checking = false; if (ST.view === 'settings') render(); }); }
+  if (DESKTOP) fmbRefresh('settings');
   if (DESKTOP) setTimeout(async () => {
     const el = document.getElementById('dirs'); if (!el) return;
     const ds = await desktopDirs(); const uniq = []; ds.forEach(([p, ok]) => { if (!uniq.some(u => u[0] === p)) uniq.push([p, ok]); });
@@ -5946,14 +5946,21 @@ const FMB = {
     return window.__TAURI__.core.invoke('bridge_call', { cmd, timeoutMs: timeoutMs || 15000 });
   },
   async ok(cmd, timeoutMs) {
-    const r = await FMB.call(cmd, timeoutMs);
-    if (!r.startsWith('OK')) throw new Error(r);
+    const r = String(await FMB.call(cmd, timeoutMs) || '');
+    if (!r.startsWith('OK')) throw new Error(r || 'no reply');
     return r.length > 3 ? r.slice(3) : '';
   },
-  async status() {
+  // checks at most every 15 s unless forced (views call it on render: without the throttle it would loop render -> check -> render)
+  async status(force) {
     if (!DESKTOP) return (FMB.state = { ok: false, err: 'desktop' });
+    if (FMB.checking || (!force && FMB.checkedAt && Date.now() - FMB.checkedAt < 15000)) return FMB.state;
+    FMB.checking = true;
+    try { return await FMB._status(); } finally { FMB.checking = false; FMB.checkedAt = Date.now(); }
+  },
+  async _status() {
     try {
-      const p = await FMB.call('PING', 2500);
+      const p = String(await FMB.call('PING', 2500) || '');
+      if (!p.startsWith('PONG')) throw new Error(p || 'no reply');
       let version = '', fm = '';
       try { [version, fm] = (await FMB.ok('VERSION', 2500)).split(' '); } catch (e) {}
       return (FMB.state = { ok: true, ready: /ready/.test(p), version, fm });
@@ -6117,6 +6124,12 @@ const FMB = {
   },
 };
 
+// called from views: refresh the bridge status in the background; re-render only if it changed and we're still on that view
+function fmbRefresh(view) {
+  const before = JSON.stringify(FMB.state);
+  FMB.status().then(st => { if (JSON.stringify(st) !== before && ST.view === view) render(); });
+}
+
 ;
 // ---- ui/actions.js
 // ============================================================
@@ -6127,7 +6140,7 @@ const A = {
   tab(v, tab) { ST.view = v; ST.tabs[v] = tab; save(); render(true); },
   theme(v) { ST.theme = v; applyTheme(); save(); render(); },
   // tática
-  async bridgeCheck() { await FMB.status(); render(); },
+  async bridgeCheck() { await FMB.status(true); render(); },
   async bridgeXI() {
     if (players().length < 11) return toast(L('Precisa de pelo menos 11 jogadores no plantel', 'You need at least 11 players in the squad'));
     if (ST.tactic.slots.every(s => !s.pid)) return toast(L('Escolha o XI primeiro (Tática › Analisar).', 'Pick the XI first (Tactic › Analyse).'));
@@ -6135,7 +6148,7 @@ const A = {
       const r = await withBusy('bridge', L('A colocar o XI no FM', 'Placing the XI in FM'), () => FMB.applyXI(ST.tactic, players()));
       toast(L(`XI colocado no FM (${r.placed} trocas)`, `XI placed in FM (${r.placed} swaps)`) + (r.skipped.length ? ' — ' + r.skipped.slice(0, 2).join('; ') : ''));
     } catch (e) { toast(String(e.message || e)); }
-    FMB.status().then(() => render());
+    FMB.status(true).then(() => render());
   },
   bridgeLang(v) { ST.bridge = Object.assign({}, ST.bridge, { fmLang: v }); save(); render(); },
   async bridgeRec() {

@@ -52,7 +52,7 @@ function integrationsHTML(compact) {
   return fmsaveCard + f9Card + labCard + bridgeCard;
 }
 function vSettings() {
-  if (DESKTOP && typeof FMB !== 'undefined' && !FMB.checking) { FMB.checking = true; FMB.status().then(() => { FMB.checking = false; if (ST.view === 'settings') render(); }); }
+  if (DESKTOP) fmbRefresh('settings');
   if (DESKTOP) setTimeout(async () => {
     const el = document.getElementById('dirs'); if (!el) return;
     const ds = await desktopDirs(); const uniq = []; ds.forEach(([p, ok]) => { if (!uniq.some(u => u[0] === p)) uniq.push([p, ok]); });

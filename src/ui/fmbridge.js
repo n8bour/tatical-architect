@@ -39,14 +39,21 @@ const FMB = {
     return window.__TAURI__.core.invoke('bridge_call', { cmd, timeoutMs: timeoutMs || 15000 });
   },
   async ok(cmd, timeoutMs) {
-    const r = await FMB.call(cmd, timeoutMs);
-    if (!r.startsWith('OK')) throw new Error(r);
+    const r = String(await FMB.call(cmd, timeoutMs) || '');
+    if (!r.startsWith('OK')) throw new Error(r || 'no reply');
     return r.length > 3 ? r.slice(3) : '';
   },
-  async status() {
+  // checks at most every 15 s unless forced (views call it on render: without the throttle it would loop render -> check -> render)
+  async status(force) {
     if (!DESKTOP) return (FMB.state = { ok: false, err: 'desktop' });
+    if (FMB.checking || (!force && FMB.checkedAt && Date.now() - FMB.checkedAt < 15000)) return FMB.state;
+    FMB.checking = true;
+    try { return await FMB._status(); } finally { FMB.checking = false; FMB.checkedAt = Date.now(); }
+  },
+  async _status() {
     try {
-      const p = await FMB.call('PING', 2500);
+      const p = String(await FMB.call('PING', 2500) || '');
+      if (!p.startsWith('PONG')) throw new Error(p || 'no reply');
       let version = '', fm = '';
       try { [version, fm] = (await FMB.ok('VERSION', 2500)).split(' '); } catch (e) {}
       return (FMB.state = { ok: true, ready: /ready/.test(p), version, fm });
@@ -209,3 +216,9 @@ const FMB = {
     return { placed, skipped };
   },
 };
+
+// called from views: refresh the bridge status in the background; re-render only if it changed and we're still on that view
+function fmbRefresh(view) {
+  const before = JSON.stringify(FMB.state);
+  FMB.status().then(st => { if (JSON.stringify(st) !== before && ST.view === view) render(); });
+}

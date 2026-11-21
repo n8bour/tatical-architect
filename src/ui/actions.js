@@ -6,7 +6,7 @@ const A = {
   tab(v, tab) { ST.view = v; ST.tabs[v] = tab; save(); render(true); },
   theme(v) { ST.theme = v; applyTheme(); save(); render(); },
   // tática
-  async bridgeCheck() { await FMB.status(); render(); },
+  async bridgeCheck() { await FMB.status(true); render(); },
   async bridgeXI() {
     if (players().length < 11) return toast(L('Precisa de pelo menos 11 jogadores no plantel', 'You need at least 11 players in the squad'));
     if (ST.tactic.slots.every(s => !s.pid)) return toast(L('Escolha o XI primeiro (Tática › Analisar).', 'Pick the XI first (Tactic › Analyse).'));
@@ -14,7 +14,7 @@ const A = {
       const r = await withBusy('bridge', L('A colocar o XI no FM', 'Placing the XI in FM'), () => FMB.applyXI(ST.tactic, players()));
       toast(L(`XI colocado no FM (${r.placed} trocas)`, `XI placed in FM (${r.placed} swaps)`) + (r.skipped.length ? ' — ' + r.skipped.slice(0, 2).join('; ') : ''));
     } catch (e) { toast(String(e.message || e)); }
-    FMB.status().then(() => render());
+    FMB.status(true).then(() => render());
   },
   bridgeLang(v) { ST.bridge = Object.assign({}, ST.bridge, { fmLang: v }); save(); render(); },
   async bridgeRec() {

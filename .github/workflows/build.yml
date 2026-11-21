@@ -74,6 +74,7 @@ jobs:
 
   build:
     needs: test
+    timeout-minutes: 20
     if: needs.test.outputs.exists == 'false'
     strategy:
       fail-fast: false
@@ -123,46 +124,10 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  # Portão de layout: percorre todos os ecrãs (6 larguras × 3 modos) com um plantel de 62 jogadores.
-  # Se houver uma sobreposição ou um erro de JavaScript, este job falha e o Release não é publicado.
-  layout:
-    needs: test
-    if: needs.test.outputs.exists == 'false'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      # Fixado em ubuntu-24.04: o ubuntu-latest passou a 26.04, que o Playwright 1.56 ainda não suporta.
-      - name: Instalar Chromium (Playwright)
-        run: |
-          pip install playwright==1.56.0
-          python -m playwright install --with-deps chromium
-      - name: Gerar app/index.html
-        run: node build.mjs
-      - name: Verificar layout em inglês (sem sobreposições)
-        run: python tests/ui_layout.py
-      - name: Verificar layout em português (passagem rápida)
-        run: python tests/ui_layout.py
-        env:
-          LAYOUT_LANG: pt
-          LAYOUT_QUICK: '1'
-      - name: Verificar indicadores de actividade
-        run: python tests/ui_busy.py
-      - name: Verificar cobertura de idioma (nada em português com a app em inglês)
-        run: python tests/ui_i18n.py
-      - name: Verificar nomes do FM em português (nada em inglês com a app em português)
-        run: python tests/ui_pt_terms.py
-      - name: Auditoria de idioma nos dois sentidos (vocabulário tirado do código)
-        run: python tests/ui_lang_audit.py
-
-  # Publica o Release v<versão> (só se ainda não existir; build e layout têm de passar).
+  # Publica o Release v<versão> (só se ainda não existir; testes do motor e build têm de passar).
+  # Os testes de interface (Playwright) estão em ui-checks.yml e correm à parte, sem atrasar o release.
   release:
-    needs: [test, build, layout]
+    needs: [test, build]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
