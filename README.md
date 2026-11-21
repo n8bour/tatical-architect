@@ -1,111 +1,113 @@
 # FM27 Tactical Bible
 
-Analisador tático, campo animado e bíblia de papéis e instruções para o Football Manager 27. Funciona offline e não precisa de conta.
+Tactical analyser, animated pitch and a bible of roles and instructions for Football Manager 27. Works offline and needs no account.
 
-## Como usar (3 passos)
+## How to use (3 steps)
 
-1. **Plantel.** Há duas vias, ambas opcionais e ambas dependentes de uma ferramenta externa gratuita. Os cartões em **Plantel** e **Definições › Integrações** dizem o que cada uma **requer**, têm o link de download e mostram o estado no seu PC.
-   A leitura automática do save e o carregamento automático do F9 vêm **desligados** por defeito. Ligue-os nos cartões, ou use "Ler o save agora" e "Carregar o último F9".
+1. **Squad.** There are two ways, both optional and both relying on a free external tool. The cards in **Squad** and **Settings › Integrations** say what each one **requires**, have the download link and show the status on your PC.
+   Automatic save reading and automatic F9 loading are **off** by default. Turn them on in the cards, or use "Read the save now" and "Load the latest F9".
 
-   **Plantel, lido do save:**
-   A app corre sempre o **fmsave mais recente** (`uvx fmsave@latest`). Quando o FM27 recebe um patch, basta sair a versão do fmsave que o suporte e a app passa a usá-la sozinha. Sem internet, usa a versão que já está em cache. Quem instalou o fmsave com pip atualiza com `python -m pip install --upgrade fmsave`.
-   - **App instalada:** grave o jogo no FM27 e a app lê o save sozinha (verifica a cada 10 segundos). Na primeira vez é preciso instalar o leitor:
+   **Squad, read from the save:**
+   The app always runs the **latest fmsave** (`uvx fmsave@latest`). When FM27 gets a patch, as soon as an fmsave version that supports it is released, the app uses it automatically. Without internet, it uses the version already cached. If you installed fmsave with pip, update it with `python -m pip install --upgrade fmsave`.
+   - **Installed app:** save the game in FM27 and the app reads the save by itself (it checks every 10 seconds). The first time, you need to install the reader:
      ```
      winget install --id=astral-sh.uv -e
      ```
-     Reinicie a app depois de instalar. Na primeira leitura o `uv` descarrega o [fmsave](https://github.com/rhiever/fmsave) e precisa de internet só nessa vez.
-   - **Browser:** abra o [fmsave online](https://rhiever.github.io/fmsave/app/), largue lá o seu `.fm` (o save é lido no seu PC e nunca é enviado), descarregue o CSV do plantel e arraste-o para a app.
-   - **Alternativa:** carregue em F9 no jogo com o plugin [FM View Exporter](https://github.com/ElectroHugin/FM-View-Exporter). Na app instalada também é automático.
-2. **Tática.** Em **A minha equipa › Gerar tática** a app monta uma tática completa para o plantel. Também pode criar a sua em **Tática › Analisar**. Em **Tática › Analisar** clique num jogador para mudar papéis e instruções. **Campo animado** mostra a tática em movimento.
-3. **Adversário.** Abra o plantel do próximo adversário no FM e carregue **F9**. A app vê que é outro clube e gera o relatório em **A minha equipa › Adversário**. O plano de jogo aplica-se à tática com um clique.
+     Restart the app after installing. On the first read, `uv` downloads [fmsave](https://github.com/rhiever/fmsave) and needs internet only that once.
+   - **Browser:** open [fmsave online](https://rhiever.github.io/fmsave/app/), drop your `.fm` there (the save is read on your PC and never uploaded), download the squad CSV and drag it into the app.
+   - **Alternative:** press F9 in the game with the [FM View Exporter](https://github.com/ElectroHugin/FM-View-Exporter) plugin. In the installed app this is also automatic.
+2. **Tactic.** In **My team › Generate tactic** the app builds a complete tactic for your squad. You can also create your own in **Tactic › Analyse**. In **Tactic › Analyse**, click a player to change roles and instructions. **Animated pitch** shows the tactic in motion.
+3. **Opponent.** Open the next opponent's squad in FM and press **F9**. The app detects that it's another club and generates the report in **My team › Opponent**. The game plan is applied to the tactic with one click.
 
-Para levar a tática para o jogo, use **Tática › Ficha para o FM27**. A ficha segue a ordem do ecrã de táticas e tem caixas para ir marcando.
+To take the tactic into the game, use **Tactic › FM27 sheet**. The sheet follows the order of the tactics screen and has checkboxes to tick as you go.
 
-## O que tem
+## What's inside
 
-| Secção | O que faz |
+| Section | What it does |
 |---|---|
-| Início | Estado dos 3 passos, o que corrigir primeiro, o sistema que mais serve o plantel e o resumo do adversário |
-| A minha equipa › Plantel | Leitura do save (fmsave) ou importação (CSV/HTML/JSON do FM View Exporter, FMPT Chief Analyst ou FMLibreEditor) e os melhores papéis de cada jogador |
-| A minha equipa › **Gerar tática** | Tática completa feita à volta do plantel. Testa todos os pares de formações com e sem bola, escolhe o papel IP/OOP de cada posição com regras de equilíbrio e o XI exato (algoritmo húngaro). Gera as 27 instruções de equipa, cada uma com a razão, comparando cada setor com a média do plantel, e as instruções individuais onde os atributos as pedem. Inclui bolas paradas, capitães, profundidade por posição, onde reforçar, 3 alternativas e treino. Tem em conta o objetivo na liga, titulares obrigatórios, um jogador-estrela, até 3 jovens a desenvolver e o pé fraco nas alas. Botões para usar a tática, ver em campo ou copiar como texto |
-| **Sinergia entre papéis — todas as fases** (Gerador e Analisador) | Mede se os papéis se servem e se cobrem uns aos outros, e não só se cada jogador está no seu melhor papel, com os atributos reais. **Construção:** quem sai a jogar → quem recebe, apoios entre linhas, resistência à pressão, bola longa → referência. **Ataque:** criador → finalizador, cruzamentos → alvos, dupla da frente, presença na área, flancos, carga criativa. **Defesa:** quem pressiona tem cobertura, dupla de centrais (um sai, outro cobre), proteção à frente dos centrais, defesa dos flancos (extremo que fica na frente obriga o lateral a segurar), linha vs. perfis, jogo aéreo. **Transições:** rest-defence à perda, quem lança → quem arranca no contra-ataque, número de saídas. Tem dois mapas (com bola e sem bola) e os problemas por fase, cada um com a correção. O Gerador pesa 55% adequação, 30% sinergia e 15% equilíbrio, e nos testes melhora todas as fases sem sacrificar a defesa |
-| **Prospeção** (Scouting) | Todos os jogadores do save, lidos pelo fmsave (`export players --all`) sobre uma cópia, com cache até o save mudar. Inclui atributos, CA/PA, personalidade, atributos ocultos, contrato, salário e valor. **11 pesquisas pré-definidas:** interessados em vir (estimativa), wonderkids baratos, wonderkids que vão atingir o potencial, contrato a terminar, jogadores livres, pechinchas, reforços para a minha tática, veteranos a custo zero, joias escondidas, personalidade de elite e a minha posição mais fraca. **Filtros:** nome, idade, CA/PA, posição (competente ou natural), pé, altura, clube, país da liga, nacionalidade, valor, salário, fim de contrato, reputação do clube, livres, empréstimos, personalidade, ocultos, probabilidade de atingir o potencial, probabilidade de querer vir para o teu clube (estimativa), atributos mínimos (vários) e papel com adequação mínima. Tabela ordenável e paginada, ficha do jogador (atributos, melhores papéis e onde entraria no teu XI), lista de observação e exportação CSV. No browser, aceita o CSV de todos os jogadores do fmsave online. A **probabilidade de querer vir** é uma estimativa (o fmsave não lê o “interessado” do jogo). Usa a reputação do teu clube contra a do clube dele, a reputação dele, o contrato (livre, a terminar, estatuto no plantel), a ambição e a lealdade, e mostra as razões na ficha |
-| A minha equipa › **Plantel** | A tabela dos jogadores tem três vistas: **Papéis** (melhores papéis com e sem bola), **Habilidade e contrato** (CA, PA, probabilidade de atingir o PA, valor, salário, fim de contrato, estatuto) e **Personalidade e ocultos** (profissionalismo, ambição, pressão, lealdade, temperamento, adaptabilidade, consistência, jogos importantes, propensão a lesões, versatilidade). Todas as colunas se ordenam e cada jogador abre a ficha completa. Estes dados vêm do save lido pelo fmsave; o F9 e outros CSV trazem só o que a vista exportar |
-| A minha equipa › Melhor XI | Adequação por posição, papel alternativo melhor, **instruções individuais recomendadas pelos atributos**, suplente e sucessor (≤ 21 anos), e 9 sistemas ordenados pelo plantel |
-| A minha equipa › Adversário | 9 setores comparados com o teu XI, os 3 jogadores mais perigosos com instruções de adversário e um plano de ajustes aplicável |
-| **Laboratório** | Ligação ao [FM Tactics Lab](https://github.com/lqf0624/fm-tactics-lab) (MIT), que corre o **motor de jogo original do FM27** no seu PC. Lista as experiências e mostra cada uma com estatística a sério: A e B comparados jogo a jogo com a mesma semente, saldo de xG, golos e pontos com intervalo de confiança de 95%, veredicto e quantos jogos faltam quando ainda não dá para concluir. Botões para **correr mais jogos** (continua as sementes) e **exportar `.fmf`** da tática, gerado e verificado pelo próprio jogo e pronto a importar no FM27. No browser, importa o JSON de uma experiência |
-| Tática › Analisar | Formação com e sem bola, papéis, instruções e diagnóstico (rest-defence, largura, área, pressão, transições, complexidade FM27, adequação) |
-| Tática › Campo animado | 6 fases do jogo com o movimento de cada papel, mais o efeito das instruções em tempo real |
-| Tática › **Situações de jogo** | Planos B/C a partir da tática atual e do plantel, em cinco cenários: **Precisamos de golos**, **Segurar o resultado**, **Fora contra mais fortes**, **Fora contra equipa do mesmo nível** e **Em casa contra mais fracos** (bloco baixo). Cada plano diz o que muda e porquê, com os atributos dos jogadores: mentalidade, instruções de equipa, papéis, instruções individuais (as que se acrescentam e as que se retiram), Tactical Tweaks, substituições vindas do banco e instruções de adversário para os três mais perigosos dele. As trocas de papel são testadas contra a sinergia: num plano para atacar só entram se não piorarem o ataque, e num plano para defender só entram se não piorarem a defesa. O impacto mostra o compromisso ofensivo e a segurança defensiva (a intensidade) e a sinergia por fase (a coerência). Pode guardar o plano como tática, usá-lo já ou copiá-lo como texto |
-| Tática › Bolas paradas | Marcadores (cantos com o pé certo, livres diretos e cruzados, penáltis, lançamentos longos), capitão e vice, canto ofensivo e defensivo num diagrama (zonas, marcações aos mais fortes no ar do adversário, quem fica atrás e quem fica na frente) e dicas aplicáveis |
-| Tática › Ficha para o FM27 | Passo-a-passo para recriar a tática no jogo, incluindo a secção *Set Pieces & Captains* |
-| Treino | Prioridades de Tactical Understanding, semana-tipo, Role Training e foco por jogador |
-| Bíblia | 77 papéis e instruções (incluindo as novas do FM27), conceitos e Tactical Effectiveness. Cada papel tem um **clip** com o movimento individual desse jogador. Cada instrução animada tem um **clip duplo** que mostra, lado a lado, o efeito da opção mínima e da máxima |
+| Home | Status of the 3 steps, what to fix first, the system that best suits the squad and the opponent summary |
+| My team › Squad | Save reading (fmsave) or import (CSV/HTML/JSON from FM View Exporter, FMPT Chief Analyst or FMLibreEditor) and each player's best roles |
+| My team › **Generate tactic** | A complete tactic built around the squad. Tests every pair of in-possession and out-of-possession formations, picks the IP/OOP role for each position using balance rules, and the exact XI (Hungarian algorithm). Generates the 27 team instructions, each with its reason, by comparing each unit with the squad average, plus player instructions where the attributes call for them. Includes set pieces, captains, depth per position, where to strengthen, 3 alternatives and training. Takes into account the league objective, mandatory starters, a star player, up to 3 youngsters to develop and the weak foot on the flanks. Buttons to use the tactic, view it on the pitch or copy it as text |
+| **Role synergy — all phases** (Generator and Analyser) | Measures whether roles serve and cover each other, not just whether each player is in his best role, using real attributes. **Build-up:** who plays out → who receives, support between the lines, press resistance, long ball → target. **Attack:** creator → finisher, crosses → targets, front pairing, box presence, flanks, creative load. **Defence:** pressers have cover, centre-back pairing (one steps out, the other covers), protection in front of the centre-backs, flank defence (a winger who stays high forces the full-back to hold), line vs. profiles, aerial game. **Transitions:** rest-defence on losing the ball, who launches → who runs in the counter, number of outlets. Two maps (in and out of possession) and problems per phase, each with its fix. The Generator weights 55% suitability, 30% synergy and 15% balance, and in tests it improves every phase without sacrificing defence |
+| **Scouting** | Every player in the save, read by fmsave (`export players --all`) from a copy, cached until the save changes. Includes attributes, CA/PA, personality, hidden attributes, contract, wage and value. **11 preset searches:** interested in joining (estimate), cheap wonderkids, wonderkids who will reach their potential, expiring contracts, free agents, bargains, signings for my tactic, free veterans, hidden gems, elite personality and my weakest position. **Filters:** name, age, CA/PA, position (competent or natural), foot, height, club, league country, nationality, value, wage, contract end, club reputation, free agents, loans, personality, hidden attributes, chance of reaching potential, chance of wanting to join your club (estimate), minimum attributes (several) and role with minimum suitability. Sortable, paginated table, player profile (attributes, best roles and where he would fit in your XI), shortlist and CSV export. In the browser, it accepts the all-players CSV from fmsave online. The **chance of wanting to join** is an estimate (fmsave doesn't read the game's "interested" flag). It uses your club's reputation against his club's, his reputation, his contract (free, expiring, squad status), ambition and loyalty, and shows the reasons in the profile |
+| My team › **Squad** | The player table has three views: **Roles** (best roles in and out of possession), **Ability and contract** (CA, PA, chance of reaching PA, value, wage, contract end, status) and **Personality and hidden** (professionalism, ambition, pressure, loyalty, temperament, adaptability, consistency, important matches, injury proneness, versatility). Every column is sortable and each player opens the full profile. This data comes from the save read by fmsave; F9 and other CSVs only bring what the view exports |
+| My team › Best XI | Suitability per position, better alternative role, **player instructions recommended by attributes**, backup and successor (≤ 21 years old), and 9 systems ranked for the squad |
+| My team › Opponent | 9 units compared with your XI, the 3 most dangerous players with opposition instructions and an applicable adjustment plan |
+| **Lab** | Connection to [FM Tactics Lab](https://github.com/lqf0624/fm-tactics-lab) (MIT), which runs the **original FM27 match engine** on your PC. Lists the experiments and shows each one with proper statistics: A and B compared match by match with the same seed, xG difference, goals and points with 95% confidence intervals, a verdict and how many more matches are needed when it's not yet conclusive. Buttons to **run more matches** (continues the seeds) and **export the `.fmf`** of the tactic, generated and verified by the game itself and ready to import into FM27. In the browser, it imports an experiment's JSON |
+| Tactic › Analyse | In- and out-of-possession formation, roles, instructions and diagnosis (rest-defence, width, box, pressing, transitions, FM27 complexity, suitability) |
+| Tactic › Animated pitch | 6 phases of play with each role's movement, plus the effect of the instructions in real time |
+| Tactic › **Match situations** | Plan B/C from the current tactic and squad, in five scenarios: **We need goals**, **Hold the result**, **Away against stronger sides**, **Away against an equal side** and **At home against weaker sides** (low block). Each plan says what changes and why, using the players' attributes: mentality, team instructions, roles, player instructions (added and removed), Tactical Tweaks, substitutions from the bench and opposition instructions for their three most dangerous players. Role changes are tested against synergy: in an attacking plan they're only made if they don't weaken the attack, and in a defensive plan only if they don't weaken the defence. The impact shows attacking commitment and defensive security (intensity) and synergy per phase (coherence). You can save the plan as a tactic, use it right away or copy it as text |
+| Tactic › Set pieces | Takers (corners with the right foot, direct and crossed free kicks, penalties, long throws), captain and vice-captain, attacking and defending corners in a diagram (zones, marking the opponent's strongest in the air, who stays back and who stays up) and applicable tips |
+| Tactic › FM27 sheet | Step-by-step guide to recreate the tactic in the game, including the *Set Pieces & Captains* section |
+| Training | Tactical Understanding priorities, typical week, Role Training and focus per player |
+| Bible | 77 roles and instructions (including the new FM27 ones), concepts and Tactical Effectiveness. Each role has a **clip** showing that player's individual movement. Each animated instruction has a **dual clip** showing, side by side, the effect of the minimum and maximum option |
 
-Pode arrastar qualquer ficheiro para qualquer sítio da janela. Plantéis do teu clube vão para o Plantel; plantéis de outro clube vão para o Adversário; ficheiros `.fmf` vão para o inspector; cópias de segurança `.json` são restauradas.
+You can drag any file anywhere onto the window. Your club's squads go to Squad; another club's squads go to Opponent; `.fmf` files go to the inspector; `.json` backups are restored.
 
-## Instalar
+## Install
 
-**Sem instalar nada.** Abra `app/index.html` com duplo clique. Tem tudo, excepto o carregamento automático do F9.
+**Without installing anything.** Double-click `app/index.html`. It has everything except automatic F9 loading.
 
-**App para Windows (GitHub Actions, sem instalar nada no PC):**
-1. Crie um repositório e envie estes ficheiros **para a raiz**. Confirme que vê `.github/`, `app/`, `src/`, `src-tauri/` e `build.mjs`.
-2. O build corre sozinho a cada push para o `main`. Também pode lançá-lo em **Actions › Build desktop app › Run workflow**.
-3. No fim, abra **Releases › "FM27 Tactical Bible — última build"** (coluna da direita da página principal do repositório) e descarregue de *Assets* o `…setup.exe` (instalador) ou o `FM27-Tactical-Bible-portatil.exe` (corre sem instalar).
+**Windows app (GitHub Actions, nothing to install on your PC):**
+1. Create a repository and push these files **to the root**. Make sure you see `.github/`, `app/`, `src/`, `src-tauri/` and `build.mjs`.
+2. The build runs on every push to `main` (or via **Actions › Build desktop app › Run workflow**). It reads the version from `src-tauri/tauri.conf.json` and, if release `v<version>` doesn't exist yet, builds and publishes it with the notes in `.github/RELEASE_NOTES.md`. If that version was already published, nothing is built.
+3. Open **Releases** (right-hand column of the repository's main page) and download from *Assets* the `…setup.exe` (installer) or `FM27-Tactical-Bible-portatil.exe` (runs without installing).
 
-Duração: cerca de 6 a 8 minutos na primeira vez e 2 a 3 minutos nas seguintes, graças à cache. Por defeito só compila para Windows. Para macOS e Linux, marque a opção no *Run workflow* ou crie uma tag `v*`.
+**To publish a new version:** bump the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` (the build fails if they differ), update `.github/RELEASE_NOTES.md` and push to `main`.
 
-**Local** (precisa de Node, Rust e das Build Tools C++ do Visual Studio): corra `npm run app:build`.
+Duration: about 6 to 8 minutes the first time and 2 to 3 minutes afterwards, thanks to the cache. By default it only builds for Windows. For macOS and Linux, tick the option in *Run workflow*.
 
-## Laboratório (motor do FM27)
-1. Instale e abra o **FM27 Tactics Lab**. O Steam tem de estar aberto com a conta que tem o FM27.
-2. Em **Laboratório**, carregue em **Ligar**. A app procura o servidor local sozinha (por defeito na porta 8765).
-3. No Tactics Lab, monte A (referência) e B (alteração) ou carregue o save, e corra a comparação. Na nossa app vê o veredicto, pode **correr mais jogos** e **exportar o `.fmf`** da vencedora.
+**Locally** (requires Node, Rust and the Visual Studio C++ Build Tools): run `npm run app:build`.
 
-A ligação passa pelo lado nativo da app, porque o servidor do Tactics Lab recusa pedidos vindos de outras páginas. Só fala com `127.0.0.1` e só usa caminhos `/api/`.
+## Lab (FM27 engine)
+1. Install and open **FM27 Tactics Lab**. Steam must be open with the account that owns FM27.
+2. In **Lab**, click **Connect**. The app finds the local server by itself (port 8765 by default).
+3. In Tactics Lab, set up A (baseline) and B (change) or load the save, and run the comparison. In our app you see the verdict, can **run more matches** and **export the `.fmf`** of the winner.
 
-## Idioma
-A app abre em **inglês** por defeito. O português escolhe-se no seletor **EN/PT** no fundo do menu, e a escolha fica guardada.
-- **Tradução completa:** cobre a interface, a Bíblia (descrições e dicas dos 77 papéis, instruções, conceitos, treino) e as mensagens do diagnóstico, do gerador, do relatório do adversário, das bolas paradas e do Laboratório.
-- **Gerador:** ao trocar de idioma, as razões do relatório são recalculadas na nova língua.
-- **Nomes do FM em português:** com a app em português, os papéis, as instruções e as respetivas opções, as mentalidades, as instruções individuais e de adversário, os Tactical Tweaks e as áreas de treino aparecem com nomes portugueses, também dentro das frases. Nos papéis, 34 nomes estão **confirmados no FM26 em português**, a partir de táticas publicadas pelo Salão de Jogos, e estão marcados com ✓ em `src/i18n/pt_terms.js`. Os restantes seguem o mesmo padrão de nomes do jogo. O FM27 pode ter acertos pontuais.
-- **Ficha para o FM27 em português:** por defeito mantém os nomes como aparecem no jogo em inglês, para recriar a tática sem enganos. O botão **Português** mostra-a com os nomes traduzidos.
-- **Pesquisa da Bíblia:** encontra os papéis pelo nome nas duas línguas.
-- **Testes automáticos:** `tests/ui_i18n.py` falha o build se algum texto ficar em português com a app em inglês, incluindo erros e mensagens temporárias. `tests/ui_pt_terms.py` falha se algum termo do FM ficar em inglês com a app em português. `tests/i18n_audit.py` é uma auditoria estática de apoio. `tests/ui_lang_audit.py` é a auditoria nos dois sentidos: tira o vocabulário de cada língua do próprio código e procura português com a app em inglês e inglês com a app em português, em todos os ecrãs e vários estados. Antes de correr, verifica que os detetores apanham exemplos conhecidos.
+The connection goes through the app's native side, because the Tactics Lab server rejects requests from other pages. It only talks to `127.0.0.1` and only uses `/api/` paths.
+
+## Language
+The app opens in **English** by default. Portuguese is chosen with the **EN/PT** selector at the bottom of the menu, and the choice is remembered.
+- **Full translation:** covers the interface, the Bible (descriptions and tips for the 77 roles, instructions, concepts, training) and the messages from the diagnosis, generator, opponent report, set pieces and Lab.
+- **Generator:** when switching language, the report's reasons are recalculated in the new language.
+- **FM names in Portuguese:** with the app in Portuguese, roles, instructions and their options, mentalities, player and opposition instructions, Tactical Tweaks and training areas appear with Portuguese names, also inside sentences. For roles, 34 names are **confirmed in the Portuguese FM26**, from tactics published by Salão de Jogos, and are marked with ✓ in `src/i18n/pt_terms.js`. The rest follow the game's same naming pattern. FM27 may have occasional differences.
+- **FM27 sheet in Portuguese:** by default it keeps the names as they appear in the English game, so the tactic can be recreated without mistakes. The **Português** button shows it with translated names.
+- **Bible search:** finds roles by name in both languages.
+- **Automated tests:** `tests/ui_i18n.py` fails the build if any text stays in Portuguese with the app in English, including errors and temporary messages. `tests/ui_pt_terms.py` fails if any FM term stays in English with the app in Portuguese. `tests/i18n_audit.py` is a supporting static audit. `tests/ui_lang_audit.py` is the two-way audit: it extracts each language's vocabulary from the code itself and looks for Portuguese with the app in English and English with the app in Portuguese, across every screen and several states. Before running, it checks that the detectors catch known examples.
 
 ## Interface
-- **Painéis recolhíveis:** clique no ▾ (ou no título) de qualquer painel para o fechar ou abrir. A app lembra-se do estado em cada ecrã.
-- **Menu só com ícones:** botão « no topo do menu ou **Ctrl+B**. Em janelas estreitas (por exemplo, 1366 com escala de 125%) o menu passa a ícones sozinho.
-- **Dados do jogo sempre à mão:** o painel "Dados do jogo" na barra lateral tem os botões **📥 Ler o save agora** e **Último F9**, e diz há quanto tempo o plantel foi lido. Os mesmos botões aparecem no topo do Plantel, no passo 1 do Início e nos ecrãs que pedem o plantel. Atalho: **Ctrl+Shift+L**. No browser, o botão abre o ficheiro do plantel.
-- **Arrastar e largar** qualquer ficheiro para a janela.
-- **Atividade sempre visível:** tudo o que demora mostra que está a trabalhar. Aparece uma barra fina no topo da janela e um cartão na barra lateral com o que está a acontecer, o tempo decorrido e, quando se sabe, a percentagem. O cartão nunca tapa conteúdo. Os botões dessa tarefa mostram um spinner e ficam bloqueados até acabar. Está ligado à leitura do save (com aviso quando a primeira leitura demora), ao F9, a ficheiros grandes, ao Gerador (progresso par a par), à análise de `.fmf` e ao Laboratório (procurar o servidor, abrir experiências, exportar `.fmf` e jogos a correr no motor).
-- **Testes de interface no GitHub:** `ui_layout.py` corre em inglês completo e numa passagem rápida em português. `ui_busy.py` verifica os indicadores de atividade e `ui_i18n.py` a cobertura de idioma.
-- **Portão de layout:** `tests/ui_layout.py` percorre os 17 ecrãs em 6 larguras e 3 modos (normal, menu recolhido, painéis fechados) com um plantel de 62 jogadores de nomes longos. Corre no GitHub em cada build, e o Release não é publicado se encontrar sobreposições ou erros.
+- **Collapsible panels:** click the ▾ (or the title) of any panel to close or open it. The app remembers the state on each screen.
+- **Icon-only menu:** « button at the top of the menu or **Ctrl+B**. In narrow windows (e.g. 1366 at 125% scaling) the menu switches to icons automatically.
+- **Game data always at hand:** the "Game data" panel in the sidebar has the **📥 Read the save now** and **Latest F9** buttons, and shows how long ago the squad was read. The same buttons appear at the top of Squad, in step 1 of Home and on screens that need the squad. Shortcut: **Ctrl+Shift+L**. In the browser, the button opens the squad file.
+- **Drag and drop** any file onto the window.
+- **Activity always visible:** anything that takes time shows it's working. A thin bar appears at the top of the window and a card in the sidebar shows what's happening, the elapsed time and, when known, the percentage. The card never covers content. That task's buttons show a spinner and are locked until it finishes. It's hooked up to save reading (with a notice when the first read takes a while), F9, large files, the Generator (pair-by-pair progress), `.fmf` analysis and the Lab (finding the server, opening experiments, exporting `.fmf` and matches running in the engine).
+- **UI tests on GitHub:** `ui_layout.py` runs fully in English and in a quick pass in Portuguese. `ui_busy.py` checks the activity indicators and `ui_i18n.py` the language coverage.
+- **Layout gate:** `tests/ui_layout.py` goes through the 17 screens at 6 widths and 3 modes (normal, collapsed menu, closed panels) with a 62-player squad with long names. It runs on GitHub on every build, and the Release is not published if it finds overlaps or errors.
 
-## Papéis disponíveis por posição
-- **Casa exata:** no FM26/27 alguns papéis só existem na casa central de uma linha (DM, MC, AMC, ST) ou só nas casas deslocadas (DML/DMR, MCL/MCR…). A app respeita isto no analisador, no campo animado, no Gerador e nos modelos. Um papel que o jogo não permite naquela casa não aparece na lista e é assinalado como inválido.
-- **Confirmado:**
-  - O Box-To-Box Midfielder e o Box-To-Box Playmaker não existem no médio centro, só na linha de DM.
-  - O Box-To-Box Midfielder só existe no DM deslocado (DML/DMR).
-- **Validação completa:** o catálogo do motor do FM27 (Tactics Lab › Laboratório › "Exportar catálogo do motor") traz a lista exata de papéis por posição. A app tem o ponto de ligação preparado (`ROLE_AVAIL_ENGINE`) para aplicar essa lista a todos os 77 papéis.
+## Available roles per position
+- **Exact slot:** in FM26/27 some roles only exist in the central slot of a line (DM, MC, AMC, ST) or only in the offset slots (DML/DMR, MCL/MCR…). The app respects this in the analyser, animated pitch, Generator and templates. A role the game doesn't allow in that slot doesn't appear in the list and is flagged as invalid.
+- **Confirmed:**
+  - The Box-To-Box Midfielder and the Box-To-Box Playmaker don't exist in central midfield, only in the DM line.
+  - The Box-To-Box Midfielder only exists in the offset DM (DML/DMR).
+- **Full validation:** the FM27 engine catalogue (Tactics Lab › Lab › "Export engine catalogue") provides the exact list of roles per position. The app has the hook ready (`ROLE_AVAIL_ENGINE`) to apply that list to all 77 roles.
 
-## Limitações
+## Limitations
 
-- **Leitura do save.** A leitura é feita pelo [fmsave](https://github.com/rhiever/fmsave) (MIT, de Randal S. Olson), sempre sobre uma **cópia** do save. Nunca altera o save, não lê a memória do jogo e não precisa do FM aberto. O fmsave marca como "não confirmados" alguns campos do FM27. A app usa só nome, idade, clube, posições e atributos.
-- **Ler a memória do jogo, como o FMPT Chief Analyst.** Não é necessário: o save tem os mesmos dados e não parte a cada patch.
-- **`.fmf`:** a nossa app não decifra `.fmf` sozinha. Com o Tactics Lab aberto, o Laboratório exporta `.fmf` gerados e verificados pelo jogo. Sem ele, a tática volta ao jogo pela Ficha.
-- **Pesos dos atributos.** Os papéis marcados EST usam pesos estimados. Ajustam-se em `src/core/roles.js`.
-- **Campo animado.** É um modelo da intenção de cada papel e instrução, não o motor de jogo do FM.
+- **Save reading.** Reading is done by [fmsave](https://github.com/rhiever/fmsave) (MIT, by Randal S. Olson), always on a **copy** of the save. It never changes the save, doesn't read the game's memory and doesn't need FM open. fmsave marks some FM27 fields as "unconfirmed". The app only uses name, age, club, positions and attributes.
+- **Reading the game's memory, like FMPT Chief Analyst.** Not needed: the save has the same data and doesn't break with every patch.
+- **`.fmf`:** our app doesn't decode `.fmf` by itself. With Tactics Lab open, the Lab exports `.fmf` files generated and verified by the game. Without it, the tactic goes back into the game via the Sheet.
+- **Attribute weights.** Roles marked EST use estimated weights. They can be adjusted in `src/core/roles.js`.
+- **Animated pitch.** It's a model of each role's and instruction's intent, not the FM match engine.
 
-## Estrutura
+## Structure
 
 ```
-src/i18n/   i18n.js (L/T/translateDOM) · en_dict.js (dicionário PT→EN)
-src/core/   roles.js · tactics_data.js · engine.js · insights.js (PIs, adversário, bolas paradas) · generator.js (gerador) · lab.js (estatística do Tactics Lab) · sim_model.js
+src/i18n/   i18n.js (L/T/translateDOM) · en_dict.js (PT→EN dictionary)
+src/core/   roles.js · tactics_data.js · engine.js · insights.js (PIs, opponent, set pieces) · generator.js (generator) · lab.js (Tactics Lab statistics) · sim_model.js
 src/ui/     state.js · components.js · sim_view.js · views_*.js · actions.js · main.js
-build.mjs   junta tudo em app/index.html (ficheiro único)
-tests/      npm test — motor, simulador (473 cenários), insights, .fmf real e CSV do FM View Exporter
-src-tauri/  janela nativa: último save (.fm) → fmsave → plantel; última exportação F9; ponte HTTP local para o Tactics Lab
+build.mjs   bundles everything into app/index.html (single file)
+tests/      npm test — engine, simulator (473 scenarios), insights, real .fmf and FM View Exporter CSV
+src-tauri/  native window: latest save (.fm) → fmsave → squad; latest F9 export; local HTTP bridge to Tactics Lab
 ```
 
-Não afiliado à Sports Interactive nem à SEGA.
+Not affiliated with Sports Interactive or SEGA.
