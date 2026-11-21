@@ -20,6 +20,7 @@ function spPitch(rows, layout, title, gk) {
     ${dots}</svg><figcaption class="small muted">${esc(title)}</figcaption></figure>`;
 }
 function vSetPieces() {
+  if (DESKTOP && !FMB.state && !FMB.checking) { FMB.checking = true; FMB.status().then(() => { FMB.checking = false; render(); }); }
   const ps = players();
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><div class="row" style="justify-content:center">${dataButtons()} <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div></div>`;
   const r = setPiecePlan(ST.tactic, ps, oppPlayers()); ST._sp = r;
@@ -27,7 +28,8 @@ function vSetPieces() {
   const row = (label, x, extra) => `<tr><td>${esc(label)}</td><td>${x ? `<b>${esc(x.p.name)}</b> <span class="muted small">${esc(x.code)}</span>` : '—'}</td><td class="small muted">${extra || ''}</td></tr>`;
   const a = (x, ks) => ks.map(k => `${attrName(k)} ${Math.round(x.p.a[k] ?? 0)}`).join(' · ');
   return `<div class="top"><div><h2>Bolas paradas & capitães</h2><p class="muted small" style="margin:0"><span>Escolhidos entre o XI de</span> “${esc(tName(ST.tactic))}”. <span>${oppPlayers().length ? 'Marcações individuais contra os mais fortes no ar do adversário carregado.' : 'Carregue o adversário para marcações individuais nominais.'}</span></p></div>
-    <div class="row"><button class="btn" onclick="A.tab('tactic','sheet')">Ver na Ficha para o FM27</button></div></div>
+    <div class="row"><button class="btn" onclick="A.tab('tactic','sheet')">Ver na Ficha para o FM27</button>${DESKTOP && FMB.state && FMB.state.ok && FMB.state.ready ? `<button class="btn primary" data-busy="bridge-sp" onclick="A.bridgeSetPieces()" title="${esc(L('Marcadores de cantos e livres directos (por pé) e curva dos cantos. Precisa do Tactical Bible Bridge.', 'Corner and direct free-kick takers (per foot) and corner swing. Needs the Tactical Bible Bridge.'))}">${L('Aplicar no FM', 'Apply in FM')}</button>` : ''}</div></div>
+  ${ST.spDone ? `<div class="notice small">${ST.spDone.map(esc).join('<br>')}<br><span class="muted">${L('Zonas, marcações e penáltis: siga a ficha (ainda não aplicados automaticamente).', 'Zones, marking and penalties: follow the sheet (not applied automatically yet).')}</span></div>` : ''}
   <div class="grid g2">
     <div class="panel"><h3>Marcadores</h3><table><tbody>
       ${row('Cantos do lado direito', r.corners.right.x, r.corners.right.swing ? 'curva ' + r.corners.right.swing : a(r.corners.right.x, ['cor', 'cro']))}

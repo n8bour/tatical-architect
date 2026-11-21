@@ -13,6 +13,15 @@ const FMB_IDS = {
     teamTrainingKeys: { manager: 1348620377, team: 1416914273 }, calendarKeys: { manager: 1214805357, team: 1415930221 },
   },
   tacticPairs: (c) => `825307168=126;1198877028=1;1651271022=1;1685218662=${c.team}`,
+  // set pieces (captured by fm27-assistant: corner and direct free-kick takers per foot, corner technique)
+  sp: {
+    pairs: (c) => `825307168=93;1198877028=1;1348620377=${c.manager};1685218662=${c.team}`,
+    ev: { remove: 910380099, addLeft: 1213227378, addRight: 1416066355, technique: 927877996 },
+    prop: { type: 1668375608 },
+    key: { kind: 1398883404, list: 961376122 },
+    kind: { corner: 5, freeKick: 6 },
+    technique: { inswing: 0, outswing: 1 },
+  },
   // FM position bits (low 20 bits) -> app slot base
   posBits: [[1, 'GK'], [2, 'SW'], [4, 'DR'], [8, 'DL'], [16, 'DC'], [32, 'WBR'], [64, 'WBL'], [128, 'DM'], [256, 'MR'], [512, 'ML'], [1024, 'MC'], [2048, 'AMR'], [4096, 'AML'], [8192, 'AMC'], [16384, 'ST']],
 };
@@ -96,6 +105,46 @@ const FMB = {
     const map = {};
     persons.forEach((p, i) => { const uid = FMB.num(vals[i], 0); if (uid > 0) map[uid] = p; });
     return map;
+  },
+  /** Replaces FM's two taker lists (left foot, right foot) for one set-piece kind. */
+  async setTakers(c, kind, left, right) {
+    const S = FMB_IDS.sp, K = FMB_IDS.key, pairs = S.pairs(c);
+    const personRef = (x) => ({ type: 'FM.UI.PersonReference', pairs: [[825307168, 28], [1198877028, 1], [K.personId, x]] });
+    const entry = (list, index, person) => ({ type: 'SI.Bindable.DynamicReference', entries: [
+      [S.key.kind, 'SI.Core.DynamicNumber', String(kind)], [S.key.list, 'SI.Core.DynamicNumber', String(list)],
+      [K.sel, 'SI.Core.DynamicNumber', String(index)], [K.person, 'FM.UI.PersonReference', personRef(person)]] });
+    const any = left.concat(right)[0];
+    // FM removes by rank: empty each list by removing the first entry up to 8 times (no effect on an empty list)
+    for (let list = 0; list < 2; list++) for (let i = 0; i < 8; i++) await FMB.send(S.ev.remove, 'SetPieceReference', pairs, entry(list, 0, any));
+    const asList = (ps) => ps.map(x => ['SI.Bindable.DynamicReference', entry(2, x & 0xFFFFFF, x)]);
+    if (left.length) await FMB.send(S.ev.addLeft, 'SetPieceReference', pairs, asList(left));
+    if (right.length) await FMB.send(S.ev.addRight, 'SetPieceReference', pairs, asList(right));
+  },
+  /** Applies the set-piece plan: corner + direct free-kick takers per foot, corner technique. Returns lines describing what was done. */
+  async applySetPieces(plan) {
+    const c = await FMB.context(), S = FMB_IDS.sp;
+    const personOf = await FMB.personsOf(c);
+    const field = plan.xi.filter(x => x.group !== 'GK' && x.p.meta && personOf[x.p.meta.uid]);
+    if (!field.length) throw new Error(L('Nenhum jogador do XI encontrado no FM: o plantel tem de vir do save do clube que treina.', 'No XI player found in FM: the squad must come from the save of the club you manage.'));
+    // best 2 per foot (players with "either" foot count for both); without foot data, the best overall go in both lists
+    const pick = (score, foot) => {
+      const sorted = [...field].sort((a, b) => score(b.p) - score(a.p));
+      const withFoot = sorted.filter(x => footOf(x.p) === foot || footOf(x.p) === 'B');
+      return (withFoot.length ? withFoot : sorted).slice(0, 2);
+    };
+    const done = [];
+    for (const [kind, score, label] of [[S.kind.corner, SP.corner, L('Cantos', 'Corners')], [S.kind.freeKick, SP.fkDirect, L('Livres directos', 'Direct free kicks')]]) {
+      const l = pick(score, 'L'), r = pick(score, 'R');
+      await FMB.setTakers(c, kind, l.map(x => personOf[x.p.meta.uid]), r.map(x => personOf[x.p.meta.uid]));
+      done.push(`${label}: ${l.map(x => shortName(x.p)).join(', ')} (${L('pé esquerdo', 'left foot')}) · ${r.map(x => shortName(x.p)).join(', ')} (${L('pé direito', 'right foot')})`);
+    }
+    // corner technique: inswinging when the targets are strong in the air (same threshold as the Set pieces screen)
+    const air = (plan.airTop || 0) >= 14;
+    await FMB.ok(`WRITE FM.UI.SetPieceReference|${S.pairs(c)}|${S.prop.type} ${JSON.stringify({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.number, 'SI.Core.DynamicNumber', '0'], [FMB_IDS.key.payload, 'System.String', 'Corners']] })}`);
+    await new Promise(r => setTimeout(r, 500));
+    await FMB.send(S.ev.technique, 'SetPieceReference', S.pairs(c), ['SI.Core.DynamicNumber', String(air ? S.technique.inswing : S.technique.outswing)]);
+    done.push(air ? L('Cantos: em curva para dentro', 'Corners: inswinging') : L('Cantos: em curva para fora', 'Corners: outswinging'));
+    return done;
   },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */
   async applyXI(tactic, squad) {

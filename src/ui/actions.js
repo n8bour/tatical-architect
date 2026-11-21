@@ -16,6 +16,15 @@ const A = {
     } catch (e) { toast(String(e.message || e)); }
     FMB.status().then(() => render());
   },
+  async bridgeSetPieces() {
+    const plan = setPiecePlan(ST.tactic, players(), oppPlayers());
+    if (!plan) return toast(L('Escolha o XI primeiro (Tática › Analisar).', 'Pick the XI first (Tactic › Analyse).'));
+    try {
+      const done = await withBusy('bridge-sp', L('A aplicar as bolas paradas no FM', 'Applying set pieces in FM'), () => FMB.applySetPieces(plan));
+      ST.spDone = done; toast(L('Bolas paradas aplicadas no FM', 'Set pieces applied in FM'));
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
   setName(v) { ST.tactic.name = v; save(); },
   setMent(v) { ST.tactic.ment = v; save(); render(); },
   setForm(phase, v) {
