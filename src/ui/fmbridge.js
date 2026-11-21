@@ -21,6 +21,13 @@ const FMB_IDS = {
     key: { kind: 1398883404, list: 961376122 },
     kind: { corner: 5, freeKick: 6 },
     technique: { inswing: 0, outswing: 1 },
+    // corner "aim for": the engine reads the number; FM also sends the option's text in the game's language.
+    // fr = captured by fm27-assistant; en/pt = FM's usual wording, to confirm with the recorder (Settings › Bridge).
+    ev2: { target: 1249537108 },
+    target: {
+      farPost: { n: 3, label: { fr: '2ème poteau', en: 'Far Post', pt: '2.º Poste' } },
+      short:   { n: 1, label: { fr: 'Courte distance', en: 'Short', pt: 'Curto' } },
+    },
   },
   // FM position bits (low 20 bits) -> app slot base
   posBits: [[1, 'GK'], [2, 'SW'], [4, 'DR'], [8, 'DL'], [16, 'DC'], [32, 'WBR'], [64, 'WBL'], [128, 'DM'], [256, 'MR'], [512, 'ML'], [1024, 'MC'], [2048, 'AMR'], [4096, 'AML'], [8192, 'AMC'], [16384, 'ST']],
@@ -60,6 +67,16 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
+  // language FM runs in (labels sent with some options); defaults to the app language
+  fmLang() { return (ST.bridge && ST.bridge.fmLang) || (LANG === 'pt' ? 'pt' : 'en'); },
+  // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
+  async recStart() { await FMB.ok('RECORD 1'); await FMB.ok('EVENTS'); FMB.rec = { on: true, since: Date.now(), out: '' }; },
+  async recStop() {
+    const r = await FMB.ok('EVENTS');
+    const evs = r ? r.split('\u001e').filter(Boolean).map(x => { try { return JSON.parse(x); } catch (e) { return x; } }) : [];
+    FMB.rec = { on: false, out: JSON.stringify({ fm: FMB.state && FMB.state.fm, plugin: FMB.state && FMB.state.version, fmLang: FMB.fmLang(), events: evs }, null, 1) };
+    return evs.length;
+  },
   // ---- helpers over the plugin's JSON format
   field(rec, key) { const e = rec && rec.entries && rec.entries.find(x => x[0] === key); return e ? e[2] : null; },
   num(v, d) { const n = parseFloat(v); return isFinite(n) ? Math.round(n) : (d === undefined ? NaN : d); },
@@ -144,6 +161,10 @@ const FMB = {
     await new Promise(r => setTimeout(r, 500));
     await FMB.send(S.ev.technique, 'SetPieceReference', S.pairs(c), ['SI.Core.DynamicNumber', String(air ? S.technique.inswing : S.technique.outswing)]);
     done.push(air ? L('Cantos: em curva para dentro', 'Corners: inswinging') : L('Cantos: em curva para fora', 'Corners: outswinging'));
+    const tz = air ? S.target.farPost : S.target.short, lang = FMB.fmLang();
+    await FMB.send(S.ev2.target, 'SetPieceReference', S.pairs(c), { type: 'SI.Bindable.DynamicReference', entries: [
+      [FMB_IDS.key.payload, 'System.String', tz.label[lang] || tz.label.en], [FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(tz.n)]] });
+    done.push(air ? L('Cantos: procurar o 2.º poste', 'Corners: aim for the far post') : L('Cantos: curtos', 'Corners: short'));
     return done;
   },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */

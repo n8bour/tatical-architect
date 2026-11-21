@@ -21,3 +21,12 @@ The build copies the DLL to `BepInEx\plugins\TacticalBibleBridge`. CI can't buil
 3. On a **test save**: *Place my XI in FM* and compare with the game's tactic screen.
 4. If it fails: send `EVENTS`, do the action by hand in FM, compare the ids FM sent with `FMB_IDS` in `src/ui/fmbridge.js`
    (every event/property/key id lives in that one block) and update them.
+
+## Capturing a new action
+Settings › Integrations › Tactical Bible Bridge › **Record an action in FM** → change *one* option by hand in FM →
+**Stop recording** → **Copy**. The JSON has every order FM sent (event id, reference, payload). Record each option on
+its own, ideally twice with two different values, so the id and the value field are easy to tell apart.
+
+Still to capture (set pieces): penalty takers order, long throw takers, crossed free-kick takers, corner positions
+(near post / far post / edge / stays back …), defensive marking (zonal / man-marking / stay up), captain and vice.
+Corner target-zone labels for EN/PT are unconfirmed (FR is confirmed); one recording in each language settles it.

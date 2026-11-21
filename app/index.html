@@ -4512,7 +4512,7 @@ const ST = {
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [], sqMode: ST.sqMode, sqSort: ST.sqSort })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [], sqMode: ST.sqMode, sqSort: ST.sqSort, bridge: ST.bridge || null })); } catch (e) {}
 }
 
 function load() {
@@ -4533,6 +4533,7 @@ function load() {
     }
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
     if (d.gen) ST.gen = d.gen;
+    if (d.bridge) ST.bridge = d.bridge;
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
     if (d.sheetNames) ST.sheetNames = d.sheetNames;
     if (d.planK) ST.planK = d.planK;
@@ -5780,6 +5781,10 @@ function integrationsHTML(compact) {
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
     `<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, <b>Colocar o meu XI no FM</b> põe os jogadores na tática activa do jogo.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, <b>Place my XI in FM</b> puts the players into the game's active tactic.`)}</p>
+     ${fb.ok ? `<label class="f">${L('Idioma do FM', 'FM language')}<select onchange="A.bridgeLang(this.value)">${[['en', 'English'], ['pt', 'Português'], ['fr', 'Français']].map(([v, n]) => `<option value="${v}" ${FMB.fmLang() === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+       <div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}</div>
+       <p class="small muted">${L('Para acrescentar acções ou rever depois de um patch: carregue em Gravar, mude essa opção à mão no FM, e carregue em Parar.', 'To add actions or re-check after a patch: press Record, change that option by hand in FM, then press Stop.')}</p>
+       ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc('v' + (fb.version || '?') + ' · FM ' + (fb.fm || '?'))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
     DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>${fb.ok && fb.ready ? `<button class="btn primary sm" data-busy="bridge" onclick="A.bridgeXI()">${L('Colocar o meu XI no FM', 'Place my XI in FM')}</button>` : ''}` : '');
   return fmsaveCard + f9Card + labCard + bridgeCard;
@@ -5923,6 +5928,13 @@ const FMB_IDS = {
     key: { kind: 1398883404, list: 961376122 },
     kind: { corner: 5, freeKick: 6 },
     technique: { inswing: 0, outswing: 1 },
+    // corner "aim for": the engine reads the number; FM also sends the option's text in the game's language.
+    // fr = captured by fm27-assistant; en/pt = FM's usual wording, to confirm with the recorder (Settings › Bridge).
+    ev2: { target: 1249537108 },
+    target: {
+      farPost: { n: 3, label: { fr: '2ème poteau', en: 'Far Post', pt: '2.º Poste' } },
+      short:   { n: 1, label: { fr: 'Courte distance', en: 'Short', pt: 'Curto' } },
+    },
   },
   // FM position bits (low 20 bits) -> app slot base
   posBits: [[1, 'GK'], [2, 'SW'], [4, 'DR'], [8, 'DL'], [16, 'DC'], [32, 'WBR'], [64, 'WBL'], [128, 'DM'], [256, 'MR'], [512, 'ML'], [1024, 'MC'], [2048, 'AMR'], [4096, 'AML'], [8192, 'AMC'], [16384, 'ST']],
@@ -5962,6 +5974,16 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
+  // language FM runs in (labels sent with some options); defaults to the app language
+  fmLang() { return (ST.bridge && ST.bridge.fmLang) || (LANG === 'pt' ? 'pt' : 'en'); },
+  // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
+  async recStart() { await FMB.ok('RECORD 1'); await FMB.ok('EVENTS'); FMB.rec = { on: true, since: Date.now(), out: '' }; },
+  async recStop() {
+    const r = await FMB.ok('EVENTS');
+    const evs = r ? r.split('\u001e').filter(Boolean).map(x => { try { return JSON.parse(x); } catch (e) { return x; } }) : [];
+    FMB.rec = { on: false, out: JSON.stringify({ fm: FMB.state && FMB.state.fm, plugin: FMB.state && FMB.state.version, fmLang: FMB.fmLang(), events: evs }, null, 1) };
+    return evs.length;
+  },
   // ---- helpers over the plugin's JSON format
   field(rec, key) { const e = rec && rec.entries && rec.entries.find(x => x[0] === key); return e ? e[2] : null; },
   num(v, d) { const n = parseFloat(v); return isFinite(n) ? Math.round(n) : (d === undefined ? NaN : d); },
@@ -6046,6 +6068,10 @@ const FMB = {
     await new Promise(r => setTimeout(r, 500));
     await FMB.send(S.ev.technique, 'SetPieceReference', S.pairs(c), ['SI.Core.DynamicNumber', String(air ? S.technique.inswing : S.technique.outswing)]);
     done.push(air ? L('Cantos: em curva para dentro', 'Corners: inswinging') : L('Cantos: em curva para fora', 'Corners: outswinging'));
+    const tz = air ? S.target.farPost : S.target.short, lang = FMB.fmLang();
+    await FMB.send(S.ev2.target, 'SetPieceReference', S.pairs(c), { type: 'SI.Bindable.DynamicReference', entries: [
+      [FMB_IDS.key.payload, 'System.String', tz.label[lang] || tz.label.en], [FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(tz.n)]] });
+    done.push(air ? L('Cantos: procurar o 2.º poste', 'Corners: aim for the far post') : L('Cantos: curtos', 'Corners: short'));
     return done;
   },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */
@@ -6111,6 +6137,15 @@ const A = {
     } catch (e) { toast(String(e.message || e)); }
     FMB.status().then(() => render());
   },
+  bridgeLang(v) { ST.bridge = Object.assign({}, ST.bridge, { fmLang: v }); save(); render(); },
+  async bridgeRec() {
+    try {
+      if (FMB.rec && FMB.rec.on) { const n = await FMB.recStop(); toast(L(`${n} ordens gravadas`, `${n} orders recorded`)); }
+      else { await FMB.recStart(); toast(L('A gravar: mude a opção no FM e depois carregue em Parar.', 'Recording: change the option in FM, then press Stop.')); }
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
+  bridgeRecCopy() { navigator.clipboard.writeText((FMB.rec && FMB.rec.out) || '').then(() => toast(L('Copiado', 'Copied'))); },
   async bridgeSetPieces() {
     const plan = setPiecePlan(ST.tactic, players(), oppPlayers());
     if (!plan) return toast(L('Escolha o XI primeiro (Tática › Analisar).', 'Pick the XI first (Tactic › Analyse).'));

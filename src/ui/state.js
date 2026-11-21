@@ -21,7 +21,7 @@ const ST = {
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [], sqMode: ST.sqMode, sqSort: ST.sqSort })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [], sqMode: ST.sqMode, sqSort: ST.sqSort, bridge: ST.bridge || null })); } catch (e) {}
 }
 
 function load() {
@@ -42,6 +42,7 @@ function load() {
     }
     if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
     if (d.gen) ST.gen = d.gen;
+    if (d.bridge) ST.bridge = d.bridge;
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
     if (d.sheetNames) ST.sheetNames = d.sheetNames;
     if (d.planK) ST.planK = d.planK;

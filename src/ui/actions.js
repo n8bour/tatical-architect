@@ -16,6 +16,15 @@ const A = {
     } catch (e) { toast(String(e.message || e)); }
     FMB.status().then(() => render());
   },
+  bridgeLang(v) { ST.bridge = Object.assign({}, ST.bridge, { fmLang: v }); save(); render(); },
+  async bridgeRec() {
+    try {
+      if (FMB.rec && FMB.rec.on) { const n = await FMB.recStop(); toast(L(`${n} ordens gravadas`, `${n} orders recorded`)); }
+      else { await FMB.recStart(); toast(L('A gravar: mude a opção no FM e depois carregue em Parar.', 'Recording: change the option in FM, then press Stop.')); }
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
+  bridgeRecCopy() { navigator.clipboard.writeText((FMB.rec && FMB.rec.out) || '').then(() => toast(L('Copiado', 'Copied'))); },
   async bridgeSetPieces() {
     const plan = setPiecePlan(ST.tactic, players(), oppPlayers());
     if (!plan) return toast(L('Escolha o XI primeiro (Tática › Analisar).', 'Pick the XI first (Tactic › Analyse).'));
