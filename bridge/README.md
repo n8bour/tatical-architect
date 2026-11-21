@@ -27,10 +27,18 @@ Settings › Integrations › Tactical Bible Bridge › **Record an action in FM
 **Stop recording** → **Copy**. The JSON has every order FM sent (event id, reference, payload). Record each option on
 its own, ideally twice with two different values, so the id and the value field are easy to tell apart.
 
-Still to capture (set pieces): penalty takers order, long throw takers, crossed free-kick takers, corner positions
-(near post / far post / edge / stays back …), defensive marking (zonal / man-marking / stay up), captain and vice.
-Corner target zone: plain number, no label (confirmed). 1 = short, 3 = far post; other values unconfirmed.
+### Set pieces: what is decoded (FM27 EN, recorded through FM27Bridge)
+| Setting | Event | Payload | In the app |
+|---|---|---|---|
+| Corner / FK takers per foot | add L `1213227378`, add R `1416066355`, remove `910380099` | entry {kind, list, sel, person} | ✅ |
+| Corner technique | `927877996` | DynamicNumber 0 in / 1 out | ✅ |
+| Corner aim for | `1249537108` | {label, number}: Mixed 0, Short 1, Near Post 2, Far Post 3, Edge of Area 4, Centre 5 | ✅ |
+| Penalty order | `1649488964` | {inner {sel: current index, person}, `1782997593`: new index} | needs current order |
+| Move in a taker list | `1144009829` | {inner {kind, list, sel: current index, person}, `1782997593`: new index}; kind 9 = long throws | needs current order |
+| Corner slot instruction | `1633039705` | {label, {group `1114920816`, slot `1883858041`, option `1750627616`, kind `1398883404` (5 att, 0 def)}} | needs slot layout |
+| Swap two corner slots | `1449477207` | full slot state | not replayed |
+| Captains | — | — | left manual |
 
-## Using FM27 Assistant's plugin instead
-If FM27 Assistant is installed, its FM27Bridge (port 27027) speaks the same protocol. The app tries 27029 first, then 27027,
-so no extra install is needed. Settings › Integrations shows which one answered.
+Slots are filled by FM from its own rankings (Aerial Threats, Box Threats, Trackers…), so the app sets the instruction per
+slot, not per player. To wire the rest we need FM's current state: with FM27Bridge, use **Sample screen data** in Settings,
+open every set-piece tab in FM, stop, and share `%APPDATA%\FM27Scout\bridge_data.txt`.

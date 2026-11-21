@@ -5781,7 +5781,7 @@ function integrationsHTML(compact) {
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
     `<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Se já tem o <b>FM27 Assistant</b> instalado, o plugin dele (FM27Bridge) também serve. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, <b>Colocar o meu XI no FM</b> põe os jogadores na tática activa do jogo.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. If you already have <b>FM27 Assistant</b> installed, its plugin (FM27Bridge) works too. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, <b>Place my XI in FM</b> puts the players into the game's active tactic.`)}</p>
-     ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}</div>
+     ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}${fb.port === 27027 ? `<button class="btn sm" onclick="A.bridgeSample()">${FMB.sampling ? '⏹ ' + L('Parar recolha', 'Stop sampling') : '🔎 ' + L('Recolher dados do ecrã', 'Sample screen data')}</button>` : ''}</div>
        <p class="small muted">${L('Para acrescentar acções ou rever depois de um patch: carregue em Gravar, mude essa opção à mão no FM, e carregue em Parar.', 'To add actions or re-check after a patch: press Record, change that option by hand in FM, then press Stop.')}</p>
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
@@ -5927,10 +5927,20 @@ const FMB_IDS = {
     key: { kind: 1398883404, list: 961376122 },
     kind: { corner: 5, freeKick: 6 },
     technique: { inswing: 0, outswing: 1 },
-    // corner "aim for": FM sends a plain number (recorded in FM27 EN via FM27Bridge); no label, works in any language.
-    // 1 = short (confirmed: fm27-assistant + recording), 3 = far post (fm27-assistant), 0 = first option (recorded, name unconfirmed)
+    // corner "aim for" (recorded in FM27 EN): record { label, number }. The plain-number form of the same event is another setting.
     ev2: { target: 1249537108 },
-    target: { farPost: 3, short: 1 },
+    target: { mixed: 0, short: 1, nearPost: 2, farPost: 3, edge: 4, centre: 5 },
+    targetLabel: { 0: 'Mixed', 1: 'Short', 2: 'Near Post', 3: 'Far Post', 4: 'Edge of Area', 5: 'Centre' },   // FM English
+    // decoded, not wired yet (need the current state: see bridge/README.md)
+    todo: {
+      penaltyMove: 1649488964,   // { 1277188162: { sel: currentIndex, person }, 1782997593: newIndex }
+      listMove: 1144009829,      // { 1277188162: { kind, list, sel: currentIndex, person }, 1782997593: newIndex } (kind 9 = long throws)
+      slotSwap: 1449477207,      // swaps two corner slots (full slot state): not replayed
+      slotInstruction: 1633039705, // { label, { 1114920816: group, 1883858041: slot, 1750627616: option, 1398883404: kind (5 att / 0 def corners), 1279880290: 0 } }
+      kinds: { corner: 5, freeKick: 6, longThrow: 9, defCorner: 0 },
+      attOptions: { goForward: 4, attackNearPost: 5, attackEdge: 7 },          // others in the list: Attack Far Post, Lurk Near/Far Post, Mark Keeper (ids unconfirmed)
+      defOptions: { goBack: 1, stayForwardCentre: 2, playerMark: 6, zonalFarPost6yd: 11, edgeOfArea: 12 },
+    },
   },
   // FM position bits (low 20 bits) -> app slot base
   posBits: [[1, 'GK'], [2, 'SW'], [4, 'DR'], [8, 'DL'], [16, 'DC'], [32, 'WBR'], [64, 'WBL'], [128, 'DM'], [256, 'MR'], [512, 'ML'], [1024, 'MC'], [2048, 'AMR'], [4096, 'AML'], [8192, 'AMC'], [16384, 'ST']],
@@ -5982,6 +5992,8 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
+  // ---- screen sampling (FM27Bridge only: SAMPLE 1 logs every channel the FM UI shows to %APPDATA%\\FM27Scout\\bridge_data.txt)
+  async sample(on) { if (FMB.port !== 27027) throw new Error(L('Só com o FM27Bridge (FM27 Assistant).', 'Only with FM27Bridge (FM27 Assistant).')); await FMB.ok('SAMPLE ' + (on ? 1 : 0)); FMB.sampling = on; },
   // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
   async recStart() { await FMB.ok('RECORD 1'); await FMB.ok('EVENTS'); FMB.rec = { on: true, since: Date.now(), out: '' }; },
   async recStop() {
@@ -6074,7 +6086,9 @@ const FMB = {
     await new Promise(r => setTimeout(r, 500));
     await FMB.send(S.ev.technique, 'SetPieceReference', S.pairs(c), ['SI.Core.DynamicNumber', String(air ? S.technique.inswing : S.technique.outswing)]);
     done.push(air ? L('Cantos: em curva para dentro', 'Corners: inswinging') : L('Cantos: em curva para fora', 'Corners: outswinging'));
-    await FMB.send(S.ev2.target, 'SetPieceReference', S.pairs(c), ['SI.Core.DynamicNumber', String(air ? S.target.farPost : S.target.short)]);
+    const tz = air ? S.target.farPost : S.target.short;
+    await FMB.send(S.ev2.target, 'SetPieceReference', S.pairs(c), { type: 'SI.Bindable.DynamicReference', entries: [
+      [FMB_IDS.key.payload, 'System.String', S.targetLabel[tz]], [FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(tz)]] });
     done.push(air ? L('Cantos: procurar o 2.º poste', 'Corners: aim for the far post') : L('Cantos: curtos', 'Corners: short'));
     return done;
   },
@@ -6152,6 +6166,11 @@ const A = {
       if (FMB.rec && FMB.rec.on) { const n = await FMB.recStop(); toast(L(`${n} ordens gravadas`, `${n} orders recorded`)); }
       else { await FMB.recStart(); toast(L('A gravar: mude a opção no FM e depois carregue em Parar.', 'Recording: change the option in FM, then press Stop.')); }
     } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
+  async bridgeSample() {
+    try { await FMB.sample(!FMB.sampling); toast(FMB.sampling ? L('A recolher: abra os ecrãs de bolas paradas no FM (todas as abas) e depois carregue em Parar.', 'Sampling: open the set-piece screens in FM (every tab), then press Stop.') : L('Feito: envie o ficheiro %APPDATA%\\FM27Scout\\bridge_data.txt', 'Done: send the file %APPDATA%\\FM27Scout\\bridge_data.txt')); }
+    catch (e) { toast(String(e.message || e)); }
     render();
   },
   bridgeRecCopy() { navigator.clipboard.writeText((FMB.rec && FMB.rec.out) || '').then(() => toast(L('Copiado', 'Copied'))); },

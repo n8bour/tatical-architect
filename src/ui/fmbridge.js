@@ -21,10 +21,20 @@ const FMB_IDS = {
     key: { kind: 1398883404, list: 961376122 },
     kind: { corner: 5, freeKick: 6 },
     technique: { inswing: 0, outswing: 1 },
-    // corner "aim for": FM sends a plain number (recorded in FM27 EN via FM27Bridge); no label, works in any language.
-    // 1 = short (confirmed: fm27-assistant + recording), 3 = far post (fm27-assistant), 0 = first option (recorded, name unconfirmed)
+    // corner "aim for" (recorded in FM27 EN): record { label, number }. The plain-number form of the same event is another setting.
     ev2: { target: 1249537108 },
-    target: { farPost: 3, short: 1 },
+    target: { mixed: 0, short: 1, nearPost: 2, farPost: 3, edge: 4, centre: 5 },
+    targetLabel: { 0: 'Mixed', 1: 'Short', 2: 'Near Post', 3: 'Far Post', 4: 'Edge of Area', 5: 'Centre' },   // FM English
+    // decoded, not wired yet (need the current state: see bridge/README.md)
+    todo: {
+      penaltyMove: 1649488964,   // { 1277188162: { sel: currentIndex, person }, 1782997593: newIndex }
+      listMove: 1144009829,      // { 1277188162: { kind, list, sel: currentIndex, person }, 1782997593: newIndex } (kind 9 = long throws)
+      slotSwap: 1449477207,      // swaps two corner slots (full slot state): not replayed
+      slotInstruction: 1633039705, // { label, { 1114920816: group, 1883858041: slot, 1750627616: option, 1398883404: kind (5 att / 0 def corners), 1279880290: 0 } }
+      kinds: { corner: 5, freeKick: 6, longThrow: 9, defCorner: 0 },
+      attOptions: { goForward: 4, attackNearPost: 5, attackEdge: 7 },          // others in the list: Attack Far Post, Lurk Near/Far Post, Mark Keeper (ids unconfirmed)
+      defOptions: { goBack: 1, stayForwardCentre: 2, playerMark: 6, zonalFarPost6yd: 11, edgeOfArea: 12 },
+    },
   },
   // FM position bits (low 20 bits) -> app slot base
   posBits: [[1, 'GK'], [2, 'SW'], [4, 'DR'], [8, 'DL'], [16, 'DC'], [32, 'WBR'], [64, 'WBL'], [128, 'DM'], [256, 'MR'], [512, 'ML'], [1024, 'MC'], [2048, 'AMR'], [4096, 'AML'], [8192, 'AMC'], [16384, 'ST']],
@@ -76,6 +86,8 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
+  // ---- screen sampling (FM27Bridge only: SAMPLE 1 logs every channel the FM UI shows to %APPDATA%\\FM27Scout\\bridge_data.txt)
+  async sample(on) { if (FMB.port !== 27027) throw new Error(L('Só com o FM27Bridge (FM27 Assistant).', 'Only with FM27Bridge (FM27 Assistant).')); await FMB.ok('SAMPLE ' + (on ? 1 : 0)); FMB.sampling = on; },
   // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
   async recStart() { await FMB.ok('RECORD 1'); await FMB.ok('EVENTS'); FMB.rec = { on: true, since: Date.now(), out: '' }; },
   async recStop() {
@@ -168,7 +180,9 @@ const FMB = {
     await new Promise(r => setTimeout(r, 500));
     await FMB.send(S.ev.technique, 'SetPieceReference', S.pairs(c), ['SI.Core.DynamicNumber', String(air ? S.technique.inswing : S.technique.outswing)]);
     done.push(air ? L('Cantos: em curva para dentro', 'Corners: inswinging') : L('Cantos: em curva para fora', 'Corners: outswinging'));
-    await FMB.send(S.ev2.target, 'SetPieceReference', S.pairs(c), ['SI.Core.DynamicNumber', String(air ? S.target.farPost : S.target.short)]);
+    const tz = air ? S.target.farPost : S.target.short;
+    await FMB.send(S.ev2.target, 'SetPieceReference', S.pairs(c), { type: 'SI.Bindable.DynamicReference', entries: [
+      [FMB_IDS.key.payload, 'System.String', S.targetLabel[tz]], [FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(tz)]] });
     done.push(air ? L('Cantos: procurar o 2.º poste', 'Corners: aim for the far post') : L('Cantos: curtos', 'Corners: short'));
     return done;
   },
