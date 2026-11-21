@@ -16,7 +16,6 @@ const A = {
     } catch (e) { toast(String(e.message || e)); }
     FMB.status(true).then(() => render());
   },
-  bridgeLang(v) { ST.bridge = Object.assign({}, ST.bridge, { fmLang: v }); save(); render(); },
   async bridgeRec() {
     try {
       if (FMB.rec && FMB.rec.on) { const n = await FMB.recStop(); toast(L(`${n} ordens gravadas`, `${n} orders recorded`)); }
