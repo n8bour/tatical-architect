@@ -120,3 +120,18 @@ Shooting Range 1, Attacking Third 2 (the full tab list, with Wide 3, Deep 4, Mid
 one) → `FixtureReference` whose `1717663572` / `1718119764` are the two teams (`1717859429` the date). Opponent's players:
 `TeamReference|…=<their team>` property `926359584` (list of `PersonReference`; `1400137537` is the staff). Each player's
 `PersonReference` `1970170212` = fmsave `unique_id` → the save database gives the attributes (52/52 matched for RB Salzburg).
+
+### Tactics (work in progress, FM27 EN, recorded 22 Nov)
+Active tactic = `TeamTacticReference|825307168=126;<session>;1651271022=1;1685218662=<team>`.
+- **Verified from the bridge** (seen on FM's screen): mentality = `WRITE …|1162170689 {1886680684: n, 1903577654: label}`
+  (options in `1280014444`: Very Defensive 1 … Balanced 4, Positive 5 …); move a position = event `21`
+  {`929121399` {`929121399` from-bits, `1769491558` in-possession, `857762170` slot}, `944851554` {`944851554` to-bits, `1769491558`}}.
+  In-possession bits = the app's `posBits`, plus `2^21` (left of a central pair) / `2^20` (right), e.g. DCL 2097168.
+- Slots: `1919628150` (11 records: `1414752632` slot, `1835167823` IP position, `1668237639` OOP position, `1886157170` player).
+  Out-of-possession positions use another bit set (32768, 2^35, 2^42 …): mapping still to do.
+- **Role (in possession)**: event `1467503190` {`1414752632` slot, `1349481322` {`1886680684` 1, `1903577654` role record
+  {`1349481322` role bit, `909713440` name, `1464367445` rating}}, `1265792339` True}. Role bits are global (ST: Deep-Lying
+  Forward 1024, Centre Forward 2048, Target Forward 262144, Poacher 524288, Channel Forward 2^31, False Nine 2^40); the
+  selected slot's role list (with names) is `2033407086`. Out-of-possession role change produced no event: to redo.
+- Team instructions: changing directness / line of engagement / defensive line wrote `1381059181`, `1749303654` and events
+  `1515149153`, `879515246`: to decode one at a time. Name `1851878757`, style `1836216183` (presets `1214728517`).
