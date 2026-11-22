@@ -28,7 +28,7 @@ const A = {
     const plan = setPiecePlan(ST.tactic, players(), oppPlayers());
     if (!plan) return toast(L('Escolha o XI primeiro (Tática › Analisar).', 'Pick the XI first (Tactic › Analyse).'));
     try {
-      const done = await withBusy('bridge-sp', L('A aplicar as bolas paradas no FM', 'Applying set pieces in FM'), () => FMB.applySetPieces(plan));
+      const done = await withBusy('bridge-sp', L('A aplicar as bolas paradas no FM', 'Applying set pieces in FM'), () => FMB.applySetPieces(plan, (t) => busyUpdate('bridge-sp', { detail: t })), { detail: L('No FM, abra Táticas › Bolas paradas', 'In FM, open Tactics › Set Pieces') });
       ST.spDone = done; toast(L('Bolas paradas aplicadas no FM', 'Set pieces applied in FM'));
     } catch (e) { toast(String(e.message || e)); }
     render();

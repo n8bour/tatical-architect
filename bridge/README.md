@@ -28,6 +28,9 @@ Any .NET SDK ≥ 6 works (tested with 8.0.428). Restart FM after building: the p
   player in a slot and putting the original back restores the exact original state.
 - **Set pieces › Apply in FM** ✅ (checked on FM's screen): corner + direct free-kick takers per foot replaced (old
   entries removed, no duplicates), corner technique (inswinging) and aim for (far post) applied.
+- **Corner routines** ✅ (app `FMB.applyRoutine`, plugin ≥ 0.3): with Tactics › Set Pieces › Corners open in FM, each slot gets
+  the instruction the app planned for the player FM put there (attacking and defending; the app asks the user to click
+  Attacking/Defending). Verified on both, with read-back and restore (`bridge/dev/_routine.mjs`).
 - Read-back limits: `1786266473` (takers) returns just one 2-entry list `{sel, person}` with no kind/foot, unchanged by
   the apply. A plain `READ` of `1867869768` (routine) returns FM's empty default: use `READAT auto` (see below).
 

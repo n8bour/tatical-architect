@@ -4,7 +4,7 @@
 // Capture new ids with the plugin's EVENTS command (do the action by hand in FM, then read what FM sent).
 // ============================================================
 const FMB_IDS = {
-  builtFor: 'FM27 (ids captured with fm27-assistant 3.1.x)',
+  builtFor: 'FM27 27.1 (verified with Tactical Bible Bridge 0.4)',
   prop: { name: 1851878757, slots: 1919628150, selection: 1098208873 },
   ev: { place: 826434931 },
   key: { slot: 1414752632, pos: 1835167823, person: 1886157170, sel: 1883858041, personId: 1685218662, number: 1886680684, payload: 1903577654, selIdx: 1635149634 },
@@ -25,17 +25,25 @@ const FMB_IDS = {
     ev2: { target: 1249537108 },
     target: { mixed: 0, short: 1, nearPost: 2, farPost: 3, edge: 4, centre: 5 },
     targetLabel: { 0: 'Mixed', 1: 'Short', 2: 'Near Post', 3: 'Far Post', 4: 'Edge of Area', 5: 'Centre' },   // FM English
-    // decoded, not wired yet (need the current state: see bridge/README.md)
+    // ---- routines (corner instructions per slot). Read with READAT auto (plugin ≥ 0.3, Set Pieces screen open in FM).
+    routine: {
+      prop: 1867869768,                       // the routine shown on FM's Set Pieces screen (tab + attacking/defending)
+      kind: 1398883404, side: 1919054668,     // routine kind (5 att corners, 0 def corners, 6 att FK, 1 def FK, 9 throw-ins); side 1 att / 2 def
+      inBox: 1750096198, outBox: 945304884,   // lists of groups
+      group: 1114920816, slots: 1752528242,   // group id; its slots
+      slot: 1883858041, name: 1851878757, person: 1886157170, current: 1750627616, options: 1833723970, optItem: 1383036740, option: 1750627616,
+      ev: 1633039705,                         // set one slot's instruction: { label, { group, slot, option, kind, 1279880290: 0 } }
+      flag: 1279880290,
+    },
+    kinds: { attCorner: 5, defCorner: 0, attFK: 6, defFK: 1, throwIn: 9 },
+    // app plan role -> FM option ids, in order of preference (ids are language-independent; verified FM27 EN, see bridge/README.md)
+    attRole: { far: [6, 9, 4], near: [5, 8, 4], centre: [4], spot: [4, 11], edge: [7, 10], short: [12], back: [2, 3] },
+    defRole: { zn: [7, 3], zc: [9, 8, 10], zf: [11, 4], m: [6], de: [12], o0: [2, 13, 14], o1: [14, 13, 2] },
+    // decoded, not wired yet
     todo: {
       penaltyMove: 1649488964,   // { 1277188162: { sel: currentIndex, person }, 1782997593: newIndex }
       listMove: 1144009829,      // { 1277188162: { kind, list, sel: currentIndex, person }, 1782997593: newIndex } (kind 9 = long throws)
-      slotSwap: 1449477207,      // swaps two corner slots (full slot state): not replayed
-      slotInstruction: 1633039705, // { label, { 1114920816: group, 1883858041: slot, 1750627616: option, 1398883404: kind (5 att / 0 def corners), 1279880290: 0 } }
-      kinds: { corner: 5, freeKick: 6, longThrow: 9, defCorner: 0 },
-      // state of the set-piece tab currently open in FM (found with SAMPLE)
-      read: { routine: 1867869768, takers: 1786266473, pool: 1852847988, type: 1668375608 },
-      attOptions: { goForward: 4, attackNearPost: 5, attackEdge: 7 },          // others in the list: Attack Far Post, Lurk Near/Far Post, Mark Keeper (ids unconfirmed)
-      defOptions: { goBack: 1, stayForwardCentre: 2, playerMark: 6, zonalFarPost6yd: 11, edgeOfArea: 12 },
+      slotMove: 1449477207,      // move an instruction to another group/position (see bridge/README.md)
     },
   },
   // FM position bits (low 20 bits) -> app slot base
@@ -73,11 +81,13 @@ const FMB = {
       return (FMB.state = { ok: true, ready: /ready|prêt/.test(p), version, fm, plugin: FMB.pluginName(), port: FMB.port });
     } catch (e) { return (FMB.state = { ok: false, err: String(e.message || e) }); }
   },
-  async read(reqs) {   // reqs: [[type, pairs, prop]] -> [json|null]
+  // reqs: [[type, pairs, prop]] -> [json|null]. at = 'auto': read under the node of FM's own open screen (plugin ≥ 0.3),
+  // needed for data that depends on the screen's view (e.g. the set-piece routine).
+  async read(reqs, at) {
     const out = [];
     for (let i = 0; i < reqs.length; i += 60) {
       const chunk = reqs.slice(i, i + 60);
-      const r = await FMB.ok('READ ' + chunk.map(q => `FM.UI.${q[0]}|${q[1]}|${q[2]}`).join(';;'), 20000);
+      const r = await FMB.ok((at ? `READAT ${at} ` : 'READ ') + chunk.map(q => `FM.UI.${q[0]}|${q[1]}|${q[2]}`).join(';;'), 20000);
       const parts = r.split('\u001e');
       chunk.forEach((_, j) => {
         let p = parts[j] || 'ERR';
@@ -157,9 +167,9 @@ const FMB = {
     if (right.length) await FMB.send(S.ev.addRight, 'SetPieceReference', pairs, asList(right));
   },
   /** Applies the set-piece plan: corner + direct free-kick takers per foot, corner technique. Returns lines describing what was done. */
-  async applySetPieces(plan) {
-    const c = await FMB.context(), S = FMB_IDS.sp;
-    const personOf = await FMB.personsOf(c);
+  /** Takers (corners + direct free kicks, per foot), corner technique and aim. Returns lines describing what was done. */
+  async applyTakers(c, plan, personOf) {
+    const S = FMB_IDS.sp;
     const field = plan.xi.filter(x => x.group !== 'GK' && x.p.meta && personOf[x.p.meta.uid]);
     if (!field.length) throw new Error(L('Nenhum jogador do XI encontrado no FM: o plantel tem de vir do save do clube que treina.', 'No XI player found in FM: the squad must come from the save of the club you manage.'));
     // best 2 per foot (players with "either" foot count for both); without foot data, the best overall go in both lists
@@ -184,6 +194,91 @@ const FMB = {
     await FMB.send(S.ev2.target, 'SetPieceReference', S.pairs(c), { type: 'SI.Bindable.DynamicReference', entries: [
       [FMB_IDS.key.payload, 'System.String', S.targetLabel[tz]], [FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(tz)]] });
     done.push(air ? L('Cantos: procurar o 2.º poste', 'Corners: aim for the far post') : L('Cantos: curtos', 'Corners: short'));
+    return done;
+  },
+  /** Routines need our plugin (READAT, 0.3+); FM27Bridge (27027) or older plugins can only do the takers. */
+  canRoutines() {
+    const st = FMB.state || {}; if (FMB.port === 27027 || !st.version) return false;
+    const [a, b] = String(st.version).split('.').map(Number); return a > 0 || b >= 3;
+  },
+  /** The routine shown on FM's Set Pieces screen: { kind, side, slots: [{ group, slot, name, person, option, label, options: [{ id, label }] }] }
+   *  or null when the screen isn't open (FM answers with its empty default, kind -1). */
+  async readRoutine(c) {
+    const R = FMB_IDS.sp.routine;
+    const [r] = await FMB.read([['SetPieceReference', FMB_IDS.sp.pairs(c), R.prop]], 'auto');
+    const kind = FMB.num(FMB.field(r, R.kind), -1);
+    if (!r || kind < 0) return null;
+    const optOf = (rec) => { const inner = FMB.field(rec, FMB_IDS.key.number); return { id: FMB.num(FMB.field(inner, R.option), -1), label: FMB.field(rec, FMB_IDS.key.payload) || '' }; };
+    const slots = [];
+    [R.inBox, R.outBox].forEach(k => FMB.items(FMB.field(r, k)).forEach(g => {
+      const group = FMB.num(FMB.field(g, R.group), -1);
+      FMB.items(FMB.field(g, R.slots)).forEach(s => {
+        const cur = optOf(FMB.field(s, R.current));
+        slots.push({ group, slot: FMB.num(FMB.field(s, R.slot), -1), name: FMB.field(s, R.name) || '', person: FMB.pair(FMB.field(s, R.person), FMB_IDS.key.personId),
+          option: cur.id, label: cur.label, options: FMB.items(FMB.field(s, R.options)).map(o => optOf(FMB.field(o, R.optItem))).filter(o => o.id >= 0) });
+      });
+    }));
+    return { kind, side: FMB.num(FMB.field(r, R.side), 0), slots };
+  },
+  /** Sets one slot's instruction. kind = routine kind (5 att corners, 0 def corners): writes don't depend on the view FM shows. */
+  setInstruction(c, kind, s, opt) {
+    const R = FMB_IDS.sp.routine, N = (k, v) => [k, 'SI.Core.DynamicNumber', String(v)];
+    return FMB.send(R.ev, 'SetPieceReference', FMB_IDS.sp.pairs(c), { type: 'SI.Bindable.DynamicReference', entries: [
+      [FMB_IDS.key.payload, 'System.String', opt.label],
+      [FMB_IDS.key.number, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [
+        N(R.group, s.group), N(R.slot, s.slot), N(R.option, opt.id), N(R.kind, kind), N(R.flag, 0)] }]] });
+  },
+  /** Applies the app's corner plan to the routine FM shows (attacking or defending corners), slot by slot:
+   *  FM fills each slot with a player from its own rankings, so each slot gets the instruction the app planned for that player. */
+  async applyRoutine(c, plan, routine, personOf) {
+    const S = FMB_IDS.sp, att = routine.kind === S.kinds.attCorner;
+    const rows = att ? plan.attack : plan.defend, prefs = att ? S.attRole : S.defRole;
+    const roleOf = {};     // FM person -> { prefs, row }
+    rows.forEach(r => {
+      if (r.k === 'taker' || !r.x || !r.x.p.meta) return;
+      const person = personOf[r.x.p.meta.uid]; if (!person) return;
+      const key = r.k.replace(/^back\d$/, 'back').replace(/^m\d$/, 'm');
+      if (prefs[key]) roleOf[person] = { ids: prefs[key], row: r };
+    });
+    const done = [], kept = [];
+    for (const s of routine.slots) {
+      const want = roleOf[s.person]; if (!want) continue;
+      delete roleOf[s.person];
+      const opt = want.ids.map(id => s.options.find(o => o.id === id)).find(Boolean);
+      const who = shortName(want.row.x.p);
+      if (!opt) { kept.push(`${who} (${want.row.n})`); continue; }
+      if (opt.id !== s.option) await FMB.setInstruction(c, routine.kind, s, opt);
+      done.push(`${who}: ${opt.label}`);
+    }
+    const title = att ? L('Canto ofensivo', 'Attacking corner') : L('Canto defensivo', 'Defending corner');
+    const out = [`${title}: ${done.join(' · ') || L('nada a mudar', 'nothing to change')}`];
+    if (kept.length) out.push(L(`${title}: sem instrução compatível na categoria do FM para `, `${title}: no matching instruction in FM's category for `) + kept.join(', '));
+    const missing = Object.values(roleOf).map(v => shortName(v.row.x.p));   // planned players FM didn't put in any slot
+    if (missing.length) out.push(L(`${title}: o FM não escalou `, `${title}: FM didn't put `) + missing.join(', ') + L(' nesta rotina (escolhe pelos seus rankings)', ' in this routine (it picks from its own rankings)'));
+    return out;
+  },
+  /** Set pieces in FM: takers, then the attacking and defending corner routines. The routines are read from FM's Set Pieces
+   *  screen, so the user opens it and switches Attacking/Defending when asked (say(text) shows the prompt). */
+  async applySetPieces(plan, say = () => {}) {
+    await FMB.status(true);
+    const c = await FMB.context(), S = FMB_IDS.sp, sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const personOf = await FMB.personsOf(c);
+    say(L('A aplicar os marcadores', 'Applying the takers'));
+    const done = await FMB.applyTakers(c, plan, personOf);
+    if (!FMB.canRoutines()) { done.push(L('Rotinas dos cantos: precisam do Tactical Bible Bridge 0.3 ou mais recente.', 'Corner routines: need Tactical Bible Bridge 0.3 or newer.')); return done; }
+    const need = new Set([S.kinds.attCorner, S.kinds.defCorner]);
+    const t0 = Date.now();
+    while (need.size && Date.now() - t0 < 120000) {
+      const r = await FMB.readRoutine(c);
+      if (r && need.has(r.kind)) { say(r.kind === S.kinds.attCorner ? L('A aplicar o canto ofensivo', 'Applying the attacking corner') : L('A aplicar o canto defensivo', 'Applying the defending corner'));
+        done.push(...await FMB.applyRoutine(c, plan, r, personOf)); need.delete(r.kind); continue; }
+      say(!r ? L('No FM, abra Táticas › Bolas paradas › Cantos', 'In FM, open Tactics › Set Pieces › Corners')
+        : need.has(S.kinds.defCorner) && r.kind === S.kinds.attCorner ? L('No FM, carregue em Defender (cantos)', 'In FM, click Defending (corners)')
+        : need.has(S.kinds.attCorner) && r.kind === S.kinds.defCorner ? L('No FM, carregue em Atacar (cantos)', 'In FM, click Attacking (corners)')
+        : L('No FM, abra o separador Cantos', 'In FM, open the Corners tab'));
+      await sleep(1200);
+    }
+    if (need.size) done.push(L('Rotinas: o tempo acabou antes de abrir ', 'Routines: timed out before opening ') + [...need].map(k => k === S.kinds.attCorner ? L('o canto ofensivo', 'the attacking corner') : L('o canto defensivo', 'the defending corner')).join(L(' e ', ' and ')) + L(' no FM.', ' in FM.'));
     return done;
   },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */
