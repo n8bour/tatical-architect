@@ -4492,7 +4492,7 @@ function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_I
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.13.2';
+const VERSION = '4.13.3';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -5781,7 +5781,7 @@ function integrationsHTML(compact) {
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
     `<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Se já tem o <b>FM27 Assistant</b> instalado, o plugin dele (FM27Bridge) também serve. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, <b>Colocar o meu XI no FM</b> põe os jogadores na tática activa do jogo.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. If you already have <b>FM27 Assistant</b> installed, its plugin (FM27Bridge) works too. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, <b>Place my XI in FM</b> puts the players into the game's active tactic.`)}</p>
-     ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}${fb.port === 27027 ? `<button class="btn sm" onclick="A.bridgeSample()">${FMB.sampling ? '⏹ ' + L('Parar recolha', 'Stop sampling') : '🔎 ' + L('Recolher dados do ecrã', 'Sample screen data')}</button>` : ''}</div>
+     ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}<button class="btn sm" data-busy="bridge-dump" onclick="A.bridgeDumpSP()">📋 ${L('Copiar estado das bolas paradas', 'Copy set-piece state')}</button>${fb.port === 27027 ? `<button class="btn sm" onclick="A.bridgeSample()">${FMB.sampling ? '⏹ ' + L('Parar recolha', 'Stop sampling') : '🔎 ' + L('Recolher dados do ecrã', 'Sample screen data')}</button>` : ''}</div>
        <p class="small muted">${L('Para acrescentar acções ou rever depois de um patch: carregue em Gravar, mude essa opção à mão no FM, e carregue em Parar.', 'To add actions or re-check after a patch: press Record, change that option by hand in FM, then press Stop.')}</p>
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
@@ -5938,6 +5938,8 @@ const FMB_IDS = {
       slotSwap: 1449477207,      // swaps two corner slots (full slot state): not replayed
       slotInstruction: 1633039705, // { label, { 1114920816: group, 1883858041: slot, 1750627616: option, 1398883404: kind (5 att / 0 def corners), 1279880290: 0 } }
       kinds: { corner: 5, freeKick: 6, longThrow: 9, defCorner: 0 },
+      // state of the set-piece tab currently open in FM (found with SAMPLE)
+      read: { routine: 1867869768, takers: 1786266473, pool: 1852847988, type: 1668375608 },
       attOptions: { goForward: 4, attackNearPost: 5, attackEdge: 7 },          // others in the list: Attack Far Post, Lurk Near/Far Post, Mark Keeper (ids unconfirmed)
       defOptions: { goBack: 1, stayForwardCentre: 2, playerMark: 6, zonalFarPost6yd: 11, edgeOfArea: 12 },
     },
@@ -5992,6 +5994,12 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
+  /** Full state of the set-piece tab open in FM (routine + slots, taker list, type), for mapping. */
+  async dumpSetPieces() {
+    const c = await FMB.context(), S = FMB_IDS.sp, R = S.todo.read, pairs = S.pairs(c);
+    const [routine, takers, type] = await FMB.read([['SetPieceReference', pairs, R.routine], ['SetPieceReference', pairs, R.takers], ['SetPieceReference', pairs, R.type]]);
+    return JSON.stringify({ type, takers, routine });
+  },
   // ---- screen sampling (FM27Bridge only: SAMPLE 1 logs every channel the FM UI shows to %APPDATA%\\FM27Scout\\bridge_data.txt)
   async sample(on) { if (FMB.port !== 27027) throw new Error(L('Só com o FM27Bridge (FM27 Assistant).', 'Only with FM27Bridge (FM27 Assistant).')); await FMB.ok('SAMPLE ' + (on ? 1 : 0)); FMB.sampling = on; },
   // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
@@ -6171,6 +6179,14 @@ const A = {
   async bridgeSample() {
     try { await FMB.sample(!FMB.sampling); toast(FMB.sampling ? L('A recolher: abra os ecrãs de bolas paradas no FM (todas as abas) e depois carregue em Parar.', 'Sampling: open the set-piece screens in FM (every tab), then press Stop.') : L('Feito: envie o ficheiro %APPDATA%\\FM27Scout\\bridge_data.txt', 'Done: send the file %APPDATA%\\FM27Scout\\bridge_data.txt')); }
     catch (e) { toast(String(e.message || e)); }
+    render();
+  },
+  async bridgeDumpSP() {
+    try {
+      const out = await withBusy('bridge-dump', L('A ler o ecrã de bolas paradas', 'Reading the set-piece screen'), () => FMB.dumpSetPieces());
+      FMB.rec = { on: false, out }; await navigator.clipboard.writeText(out).catch(() => {});
+      toast(L('Copiado: estado do separador aberto no FM', 'Copied: state of the tab open in FM'));
+    } catch (e) { toast(String(e.message || e)); }
     render();
   },
   bridgeRecCopy() { navigator.clipboard.writeText((FMB.rec && FMB.rec.out) || '').then(() => toast(L('Copiado', 'Copied'))); },

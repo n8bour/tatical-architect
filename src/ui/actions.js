@@ -28,6 +28,14 @@ const A = {
     catch (e) { toast(String(e.message || e)); }
     render();
   },
+  async bridgeDumpSP() {
+    try {
+      const out = await withBusy('bridge-dump', L('A ler o ecrã de bolas paradas', 'Reading the set-piece screen'), () => FMB.dumpSetPieces());
+      FMB.rec = { on: false, out }; await navigator.clipboard.writeText(out).catch(() => {});
+      toast(L('Copiado: estado do separador aberto no FM', 'Copied: state of the tab open in FM'));
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
   bridgeRecCopy() { navigator.clipboard.writeText((FMB.rec && FMB.rec.out) || '').then(() => toast(L('Copiado', 'Copied'))); },
   async bridgeSetPieces() {
     const plan = setPiecePlan(ST.tactic, players(), oppPlayers());

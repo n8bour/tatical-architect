@@ -1,7 +1,6 @@
-## FM27 Tactical Bible 4.13.2
+## FM27 Tactical Bible 4.13.3
 
-- **Sample screen data** (Settings › Integrations, with FM27 Assistant's FM27Bridge): logs what FM's set-piece screens show, so penalty order, long throws, corner positions and defensive marking can be wired next.
-- Corner "aim for" now knows all six FM options (Mixed, Short, Near Post, Far Post, Edge of Area, Centre), sent in the exact format FM uses.
+- **Copy set-piece state** (Settings › Integrations › Tactical Bible Bridge): reads the set-piece tab open in FM (routine, slots, taker list) in full and copies it, to finish wiring penalties, long throws, corner positions and defensive marking.
 
 ### Installation
 Download `…setup.exe` (installer) or `FM27-Tactical-Bible-portatil.exe` (runs without installing).

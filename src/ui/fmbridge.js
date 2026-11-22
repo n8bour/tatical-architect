@@ -32,6 +32,8 @@ const FMB_IDS = {
       slotSwap: 1449477207,      // swaps two corner slots (full slot state): not replayed
       slotInstruction: 1633039705, // { label, { 1114920816: group, 1883858041: slot, 1750627616: option, 1398883404: kind (5 att / 0 def corners), 1279880290: 0 } }
       kinds: { corner: 5, freeKick: 6, longThrow: 9, defCorner: 0 },
+      // state of the set-piece tab currently open in FM (found with SAMPLE)
+      read: { routine: 1867869768, takers: 1786266473, pool: 1852847988, type: 1668375608 },
       attOptions: { goForward: 4, attackNearPost: 5, attackEdge: 7 },          // others in the list: Attack Far Post, Lurk Near/Far Post, Mark Keeper (ids unconfirmed)
       defOptions: { goBack: 1, stayForwardCentre: 2, playerMark: 6, zonalFarPost6yd: 11, edgeOfArea: 12 },
     },
@@ -86,6 +88,12 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
+  /** Full state of the set-piece tab open in FM (routine + slots, taker list, type), for mapping. */
+  async dumpSetPieces() {
+    const c = await FMB.context(), S = FMB_IDS.sp, R = S.todo.read, pairs = S.pairs(c);
+    const [routine, takers, type] = await FMB.read([['SetPieceReference', pairs, R.routine], ['SetPieceReference', pairs, R.takers], ['SetPieceReference', pairs, R.type]]);
+    return JSON.stringify({ type, takers, routine });
+  },
   // ---- screen sampling (FM27Bridge only: SAMPLE 1 logs every channel the FM UI shows to %APPDATA%\\FM27Scout\\bridge_data.txt)
   async sample(on) { if (FMB.port !== 27027) throw new Error(L('Só com o FM27Bridge (FM27 Assistant).', 'Only with FM27Bridge (FM27 Assistant).')); await FMB.ok('SAMPLE ' + (on ? 1 : 0)); FMB.sampling = on; },
   // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
