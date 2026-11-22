@@ -4492,7 +4492,7 @@ function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_I
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '4.13.3';
+const VERSION = '4.13.4';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -5994,11 +5994,31 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
-  /** Full state of the set-piece tab open in FM (routine + slots, taker list, type), for mapping. */
+  /** Full state of each set-piece tab (switches the tab itself, reads twice, restores the tab). For mapping. */
   async dumpSetPieces() {
-    const c = await FMB.context(), S = FMB_IDS.sp, R = S.todo.read, pairs = S.pairs(c);
-    const [routine, takers, type] = await FMB.read([['SetPieceReference', pairs, R.routine], ['SetPieceReference', pairs, R.takers], ['SetPieceReference', pairs, R.type]]);
-    return JSON.stringify({ type, takers, routine });
+    const c = await FMB.context(), S = FMB_IDS.sp, R = S.todo.read, pairs = S.pairs(c), sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const NOISE = new Set([1110849335, 1648775545, 1932870466, 1227978093, 1748388691, 1498624628, 1850421847]);   // help texts + pitch layout
+    const strip = (v) => Array.isArray(v) ? v.map(strip) : (v && typeof v === 'object')
+      ? (v.entries ? { ...v, entries: v.entries.filter(e => !NOISE.has(e[0])).map(e => [e[0], e[1], strip(e[2])]) } : v) : v;
+    const flagProps = [1094150473, 1684567637, 846214501, 1128877878, 1633050961, 1664177205];
+    const tabs = [[0, 'Corners'], [1, 'Shooting Range'], [2, 'Attacking Third']];
+    const setType = (n, label) => FMB.ok(`WRITE FM.UI.SetPieceReference|${pairs}|${R.type} ${JSON.stringify({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(n)], [FMB_IDS.key.payload, 'System.String', label]] })}`);
+    const empty = (routine) => { const g = FMB.field(routine, 1750096198); return !FMB.items(g).some(x => FMB.items(FMB.field(x, 1752528242)).length) && !FMB.items(FMB.field(routine, 945304884)).some(x => FMB.items(FMB.field(x, 1752528242)).length); };
+    const read = () => FMB.read([['SetPieceReference', pairs, R.routine], ['SetPieceReference', pairs, R.takers], ['SetPieceReference', pairs, R.type], ...flagProps.map(f => ['SetPieceReference', pairs, f])]);
+    const before = (await FMB.read([['SetPieceReference', pairs, R.type]]))[0];
+    const out = { version: 2, tabs: {} };
+    try {
+      for (const [n, label] of tabs) {
+        await setType(n, label); await sleep(900);
+        await read(); await sleep(900);                 // first read may be FM's placeholder
+        const [routine, takers, type, ...flags] = await read();
+        out.tabs[label] = { emptyRoutine: empty(routine), flags: Object.fromEntries(flagProps.map((f, i) => [f, flags[i]])), type, takers: strip(takers), routine: strip(routine) };
+      }
+    } finally {
+      const n = before && FMB.num(FMB.field(before, FMB_IDS.key.number), 0), l = before && FMB.field(before, FMB_IDS.key.payload);
+      if (before) { try { await setType(n, l); } catch (e) {} }
+    }
+    return JSON.stringify(out);
   },
   // ---- screen sampling (FM27Bridge only: SAMPLE 1 logs every channel the FM UI shows to %APPDATA%\\FM27Scout\\bridge_data.txt)
   async sample(on) { if (FMB.port !== 27027) throw new Error(L('Só com o FM27Bridge (FM27 Assistant).', 'Only with FM27Bridge (FM27 Assistant).')); await FMB.ok('SAMPLE ' + (on ? 1 : 0)); FMB.sampling = on; },
