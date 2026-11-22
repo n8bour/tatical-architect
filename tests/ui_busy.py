@@ -13,7 +13,7 @@ with sync_playwright() as p:
     # gerador: indicador durante, botão bloqueado, tudo limpo no fim
     pg = b.new_page(viewport={'width': 1366, 'height': 860}); pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.goto(U.APP); pg.evaluate(U.SETUP); pg.evaluate("A.tab('team','gen')")
-    pg.evaluate("window.__seen=0; new MutationObserver(()=>{ if(document.querySelector('#busy').classList.contains('on')) window.__seen++; }).observe(document.querySelector('aside'),{childList:true,subtree:true,attributes:true})")
+    pg.evaluate("window.__seen=0; new MutationObserver(()=>{ if(document.querySelector('#busy').classList.contains('on')) window.__seen++; }).observe(document.querySelector('#nav'),{childList:true,subtree:true,attributes:true})")
     pg.click('button[data-busy="gen"]'); pg.wait_for_timeout(40)
     ok(pg.evaluate("document.querySelector('#topbar').classList.contains('on')"), 'gerador: barra do topo não apareceu')
     ok(pg.evaluate("document.querySelector('button[data-busy=gen]').disabled"), 'gerador: botão não ficou bloqueado')

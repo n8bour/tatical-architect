@@ -14,7 +14,7 @@ const EMPTY_SQUAD = () => ({ players: [], source: '', warnings: [], mapped: [], 
 const ST = {
   view: 'home', tabs: { team: 'squad', tactic: 'analyze', bible: 'roles' },
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
-  saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
+  saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'dark',
   auto: { on: false, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 45 },   // carregamento automático (app instalada)
   lastSave: null, gen: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
@@ -60,7 +60,8 @@ function load() {
 
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = T(msg); t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2200); }
 
-function applyTheme() { if (ST.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', ST.theme); }
+// 'dark' = Dark Paper (por defeito), 'light' = Paper; 'auto' segue o sistema
+function applyTheme() { const t = ST.theme === 'auto' ? (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : ST.theme; document.documentElement.setAttribute('data-theme', t); }
 
 function players() { return ST.squad.players || []; }
 function oppPlayers() { return ST.opp.players || []; }

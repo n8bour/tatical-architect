@@ -6,26 +6,28 @@
 <title>FM27 Tactical Bible</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 <style>
+/* ============================================================
+   Tema "Dark Paper" (por defeito) e "Paper" (claro), ao estilo FM27 / Jonukas Skin:
+   barra de topo na cor do clube, folhas de papel escuro sobre a secretária, títulos condensados em maiúsculas.
+   ============================================================ */
 :root{
-  --bg:#f3f5f2; --panel:#ffffff; --panel2:#eef1ec; --line:#d9ded6; --text:#17201a; --muted:#5d6b61;
-  --accent:#0f7b4f; --accent2:#0a5c3a; --accent-ink:#ffffff; --pitch:#2f7d4f; --pitch2:#2a7248; --pitchline:rgba(255,255,255,.75);
-  --good:#1c8a4d; --warn:#b7791f; --crit:#c2412d; --info:#3b6ea8; --chip:#e4eae1;
-  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.05);
+  --font-head:"Bahnschrift SemiCondensed","Bahnschrift","Arial Narrow","Roboto Condensed","Segoe UI",sans-serif;
+  --bar:#b3131d; --bar-ink:#ffffff; --sub:#211f1c; --desk:#141311;
+  --bg:#1a1917; --panel:#282622; --panel2:#322f2b; --line:#45403a; --text:#ece5d6; --muted:#a69e90;
+  --accent:#3f8ad8; --accent2:#6aa7e6; --accent-ink:#ffffff; --pitch:#2c5a36; --pitch2:#275131; --pitchline:rgba(255,255,255,.6);
+  --good:#52b25a; --warn:#e3a83f; --crit:#e5553f; --info:#5b9be0; --chip:#3a3631;
+  --att-hi:#2f9e4f; --att-mid:#c9a227; --att-lo:#5d5850;
+  --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 20px rgba(0,0,0,.28);
+  color-scheme: dark;
+}
+:root[data-theme="light"]{
+  --bar:#b3131d; --bar-ink:#ffffff; --sub:#efe8d8; --desk:#8b7558;
+  --bg:#c8b594; --panel:#f5f0e4; --panel2:#ebe3d1; --line:#d6cbb3; --text:#211e19; --muted:#6c6353;
+  --accent:#2f74c0; --accent2:#1f5a99; --accent-ink:#ffffff; --pitch:#3a7a45; --pitch2:#347040; --pitchline:rgba(255,255,255,.8);
+  --good:#2e8b3e; --warn:#b7791f; --crit:#c2412d; --info:#3b6ea8; --chip:#e6dcc6;
+  --att-hi:#2f8f48; --att-mid:#c79a1c; --att-lo:#cfc4ad;
+  --shadow:0 1px 0 rgba(0,0,0,.18),0 8px 20px rgba(0,0,0,.18);
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0e1411; --panel:#151d18; --panel2:#1b251f; --line:#27342c; --text:#e4ece6; --muted:#90a196;
-    --accent:#2fbf7f; --accent2:#5fd6a0; --accent-ink:#06130c; --pitch:#1d4d33; --pitch2:#1a452e; --pitchline:rgba(255,255,255,.55);
-    --good:#3cc47b; --warn:#e0a640; --crit:#ef6a55; --info:#6fa3e0; --chip:#223028;
-    --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme: dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0e1411; --panel:#151d18; --panel2:#1b251f; --line:#27342c; --text:#e4ece6; --muted:#90a196;
-  --accent:#2fbf7f; --accent2:#5fd6a0; --accent-ink:#06130c; --pitch:#1d4d33; --pitch2:#1a452e; --pitchline:rgba(255,255,255,.55);
-  --good:#3cc47b; --warn:#e0a640; --crit:#ef6a55; --info:#6fa3e0; --chip:#223028;
-  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme: dark;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -35,16 +37,6 @@ h1,h2,h3,h4{margin:0 0 .4em;line-height:1.2}
 h1{font-size:28px} h2{font-size:21px} h3{font-size:16px} h4{font-size:14px}
 p{margin:.3em 0 .7em}
 a{color:var(--accent)}
-.app{display:grid;grid-template-columns:230px 1fr;height:100vh}
-aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 10px;gap:4px;overflow:auto}
-.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 16px}
-.brand .logo{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-size:10.5px;letter-spacing:-.02em}
-.brand b{display:block;font-size:14px}.brand span{font-size:11px;color:var(--muted)}
-.nav-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 12px;border:0;border-radius:8px;background:transparent;cursor:pointer;color:var(--muted)}
-.nav-btn:hover{background:var(--panel2);color:var(--text)}
-.nav-btn.active{background:var(--accent);color:var(--accent-ink);font-weight:600}
-.nav-sep{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 12px 4px}
-.aside-foot{margin-top:auto;font-size:11px;color:var(--muted);padding:8px 12px}
 main{overflow:auto;padding:22px 28px 60px}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap}
 .eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
@@ -108,9 +100,6 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
 .kv{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:13px}
 .kv span{color:var(--muted)}
 code,.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
-.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;border-bottom:1px solid var(--line)}
-.tabs button{border:0;background:transparent;padding:8px 12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent}
-.tabs button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
 .hero{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
 .step{display:flex;gap:12px}
 .step .n{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;flex:none}
@@ -119,8 +108,8 @@ code,.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .toast.on{opacity:.95}
 ul.clean{margin:.3em 0;padding-left:18px} ul.clean li{margin:.25em 0}
 @media (max-width:1100px){.split,.hero{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
-@media (max-width:760px){.app{grid-template-columns:1fr}aside{display:none}.g2,.g3,.g4{grid-template-columns:1fr}main{padding:14px}}
-@media print{aside,.no-print{display:none!important}.app{display:block;height:auto}main{overflow:visible}}
+@media (max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}main{padding:14px}}
+@media print{#nav,.no-print{display:none!important}.app{display:block;height:auto}main{overflow:visible}}
 
 /* ---------- campo animado ---------- */
 .simgrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
@@ -147,8 +136,6 @@ svg.simpitch{display:block;width:100%;height:auto}
 @media print{.sheet{grid-template-columns:1fr 1fr!important}.panel{box-shadow:none;break-inside:avoid}}
 
 /* ---------- v3: navegação, estado, cartões guiados ---------- */
-.nav-btn .ic{width:18px;text-align:center}
-.aside-status{margin-top:18px;padding:10px 12px;border-top:1px solid var(--line);display:grid;gap:6px;font-size:12px;color:var(--muted)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);margin-right:7px;vertical-align:middle}
 .dot.ok{background:var(--good)}
 .step-card .n{width:30px;height:30px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-weight:800;color:var(--muted)}
@@ -165,7 +152,6 @@ svg.simpitch{display:block;width:100%;height:auto}
 .oppbar .t em{position:absolute;top:-4px;width:3px;height:17px;background:var(--text);border-radius:2px;transform:translateX(-1px)}
 #dropov{position:fixed;inset:0;background:color-mix(in srgb,var(--accent) 22%,transparent);border:3px dashed var(--accent);display:none;place-items:center;z-index:20;pointer-events:none;font-size:22px;font-weight:700;color:var(--text)}
 #dropov.on{display:grid}
-main>.tabs{position:sticky;top:-22px;background:var(--bg);z-index:3;padding-top:4px}
 .panel.grid{align-content:start}
 
 .sp-fig{margin:0 0 10px}.sp-svg{width:100%;height:auto;display:block;border-radius:10px}
@@ -180,22 +166,6 @@ main>.tabs{position:sticky;top:-22px;background:var(--bg);z-index:3;padding-top:
 tr.dim td{color:var(--muted)}
 .depth{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 
-/* ---------- laboratório ---------- */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:10px}
-.kpis div{background:var(--panel2);border-radius:8px;padding:8px 10px;min-width:0}
-.kpis span{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kpis b{font-size:15px;white-space:nowrap}.kpis em{display:block;font-style:normal;font-size:11px;color:var(--muted)}
-.verdict{border-left:4px solid var(--info)}.verdict.good{border-left-color:var(--good)}.verdict.crit{border-left-color:var(--crit)}.verdict.warn{border-left-color:var(--warn)}
-.cibar{position:relative;height:14px;background:var(--panel2);border-radius:7px;margin:6px 0 4px;overflow:hidden}
-.cibar .zero{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
-.cibar b{position:absolute;top:3px;height:8px;border-radius:4px;opacity:.85}
-.cibar em{position:absolute;top:0;width:3px;height:14px;background:var(--text);transform:translateX(-1px)}
-.progress{height:8px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:12px}.progress i{display:block;height:100%;background:var(--accent)}
-.jobitem{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 11px;margin:6px 0;cursor:pointer}
-.jobitem b{display:block}.jobitem.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
-.jobitem .st{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--chip);margin-right:6px}
-.jobitem .st.running,.jobitem .st.queued{background:color-mix(in srgb,var(--warn) 25%,transparent)}.jobitem .st.complete{background:color-mix(in srgb,var(--good) 22%,transparent)}
-@media (max-width:1400px){.lab-vars{grid-template-columns:1fr!important}}
 
 /* ---------- v4.0.1: nada transborda a sua coluna ---------- */
 /* itens de grelha podem encolher (por defeito o mínimo é o conteúdo, o que empurrava colunas) */
@@ -220,25 +190,6 @@ svg.pitch{max-width:420px;margin-inline:auto}
 .pc-toggle:focus-visible,.nav-btn:focus-visible,.btn:focus-visible,.nav-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .panel.collapsed>*:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:12px}
-.brand{position:relative}
-.nav-mini{margin-left:auto;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;flex:none}
-.nav-mini:hover{color:var(--text)}
-.nav-btn .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app{transition:grid-template-columns .15s}
-.app.mini{grid-template-columns:64px 1fr}
-.app.mini aside{padding:16px 8px;align-items:center}
-.app.mini .brand{flex-direction:column;padding:4px 0 12px;gap:8px}
-.app.mini .brand .lbl,.app.mini .nav-btn .lbl,.app.mini .aside-status,.app.mini .aside-foot{display:none}
-.app.mini .nav-btn{justify-content:center;padding:10px 0;width:44px}
-.app.mini .nav-btn .ic{width:auto;font-size:16px}
-/* ecrãs estreitos (ex.: 1366 com escala 125%): menu só com ícones automaticamente */
-@media (max-width:1150px) and (min-width:761px){
-  .app{grid-template-columns:64px 1fr}
-  aside{padding:16px 8px;align-items:center}
-  .brand{flex-direction:column;padding:4px 0 12px;gap:8px}
-  .brand .lbl,.nav-btn .lbl,.aside-status,.aside-foot,.nav-mini{display:none}
-  .nav-btn{justify-content:center;padding:10px 0;width:44px}
-}
 /* títulos longos nunca empurram os botões do cabeçalho */
 .top>div:first-child{min-width:0;flex:1 1 320px}
 .top h2{overflow-wrap:anywhere}
@@ -251,8 +202,6 @@ svg.pitch{max-width:420px;margin-inline:auto}
 #topbar.on:not(.det) i{animation:fm-indet 1.2s ease-in-out infinite}
 #topbar.det i{transition:width .3s}
 @keyframes fm-indet{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
-#busy{display:none;flex-direction:column;gap:8px;margin-top:14px;width:100%}
-#busy.on{display:flex}
 .busy-item{display:flex;gap:9px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:9px 10px;min-width:0}
 .busy-pct{display:none;font-size:10px;font-weight:700}
 .busy-body{min-width:0;display:grid;gap:4px}
@@ -267,12 +216,6 @@ svg.pitch{max-width:420px;margin-inline:auto}
 .btn:disabled{cursor:progress}
 @media (prefers-reduced-motion: reduce){#topbar.on:not(.det) i{animation:none;width:100%;opacity:.6}.spin,.btn.is-busy::after{animation-duration:2.4s}}
 
-/* menu só com ícones: a actividade fica um spinner (com a percentagem) e o detalhe no tooltip */
-.app.mini #busy .busy-body{display:none}
-.app.mini .busy-item{flex-direction:column;align-items:center;padding:8px 4px;width:44px;gap:4px}
-.app.mini .busy-pct{display:block}
-@media (max-width:1150px) and (min-width:761px){#busy .busy-body{display:none}.busy-item{flex-direction:column;align-items:center;padding:8px 4px;width:44px;gap:4px}.busy-pct{display:block}}
-@media (max-width:760px){#busy{position:fixed;left:12px;right:12px;bottom:12px;z-index:25;margin:0}}
 
 /* ---------- integrações ---------- */
 .integ{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);margin:8px 0}
@@ -337,23 +280,96 @@ tr.cliprow td{background:var(--panel2)}
 .pair.attr-row>button{width:auto}
 .scout-filters input,.scout-filters select{min-width:0;width:100%;box-sizing:border-box}
 
-/* ---------- dados do jogo (barra lateral) ---------- */
-.data-card{margin:14px 0 4px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);display:grid;gap:6px}
-.data-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.data-btn{display:flex;align-items:center;gap:8px;justify-content:flex-start;width:100%}
-.data-btn .ic{width:18px;text-align:center}
-.app.mini .data-card{padding:6px;border:0;background:none;justify-items:center;margin-top:10px}
-.app.mini .data-btn{width:44px;justify-content:center;padding:9px 0}
-@media (max-width:1150px) and (min-width:761px){.data-card{padding:6px;border:0;background:none;justify-items:center}.data-btn{width:44px;justify-content:center;padding:9px 0}.data-card .lbl{display:none}}
-.app.mini .data-card .lbl{display:none}
-.app.mini .data-btn .ic{width:auto;font-size:16px}
-.app.mini .data-card{padding:0}
-@media (max-width:1150px) and (min-width:761px){.data-card{padding:0}}
+
+/* ============================================================
+   v5: barra de topo (menu principal + separadores do ecrã), estilo FM
+   ============================================================ */
+.app{display:grid;grid-template-rows:auto minmax(0,1fr);grid-template-columns:minmax(0,1fr);height:100vh}
+#nav{background:var(--bar);color:var(--bar-ink);position:relative;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.35);min-width:0}
+.tb-row{display:flex;align-items:center;gap:4px;height:48px;padding:0 10px 0 6px;min-width:0}
+.tb-brand{display:flex;align-items:center;gap:9px;border:0;background:transparent;color:inherit;cursor:pointer;padding:4px 10px 4px 6px;flex:none;height:100%}
+.tb-brand .logo{background:#fff;color:var(--bar);font:700 11px/1 var(--font-head);width:34px;height:34px;border-radius:3px;display:grid;place-items:center;letter-spacing:.02em}
+.tb-brand .lbl{font:700 16px/1 var(--font-head);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.tb-nav{display:flex;align-items:stretch;height:100%;min-width:0;overflow:hidden}
+.tb-nav .nav-btn{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:rgba(255,255,255,.86);font:600 15px/1 var(--font-head);text-transform:uppercase;letter-spacing:.05em;padding:0 13px;cursor:pointer;white-space:nowrap;position:relative}
+.tb-nav .nav-btn .ic{display:none;font-size:15px;width:auto}
+.tb-nav .nav-btn:hover{color:#fff;background:rgba(0,0,0,.14)}
+.tb-nav .nav-btn.active{color:#fff;background:rgba(0,0,0,.24)}
+.tb-nav .nav-btn.active::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:3px;background:#fff}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;min-width:0}
+.tb-status{display:flex;gap:12px;font-size:12px;align-items:center;min-width:0}
+.tb-stat{display:inline-flex;align-items:center;white-space:nowrap;max-width:230px;min-width:0;cursor:default}
+.tb-stat .lbl{overflow:hidden;text-overflow:ellipsis}
+#nav .dot{background:rgba(255,255,255,.35);margin-right:6px;flex:none}
+#nav .dot.ok{background:#8ef0a4;box-shadow:0 0 0 2px rgba(0,0,0,.18)}
+.data-card{display:flex;gap:6px;align-items:center}
+.data-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.data-btn .ic{font-size:13px}
+#nav .btn{background:rgba(0,0,0,.2);border-color:rgba(255,255,255,.28);color:#fff}
+#nav .btn:hover{border-color:#fff}
+#nav .btn.primary{background:#fff;color:var(--bar);border-color:#fff}
+#nav .seg{border-color:rgba(255,255,255,.3)}
+#nav .seg button{color:#fff}
+#nav .seg button.on{background:#fff;color:var(--bar)}
+.tb-icon{border:0;background:transparent;color:#fff;font-size:18px;width:34px;height:34px;border-radius:3px;cursor:pointer;flex:none}
+.tb-icon:hover,.tb-icon.on{background:rgba(0,0,0,.24)}
+.tb-icon:focus-visible,#nav .nav-btn:focus-visible,.tb-brand:focus-visible{outline:2px solid #fff;outline-offset:-3px}
+.tb-sub{display:flex;align-items:stretch;gap:2px;height:36px;padding:0 16px;background:var(--sub);color:var(--text);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tb-sub::-webkit-scrollbar{display:none}
+.tb-sub button{border:0;background:transparent;color:var(--muted);padding:0 12px;cursor:pointer;font-size:13px;white-space:nowrap;border-bottom:2px solid transparent;border-top:2px solid transparent}
+.tb-sub button:hover{color:var(--text)}
+.tb-sub button.on{color:var(--text);border-bottom-color:var(--bar);font-weight:600}
+.tb-crumb{align-self:center;font:600 13px/1 var(--font-head);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+/* actividade: cartão flutuante por baixo da barra, à direita */
+#busy{position:fixed;top:92px;right:14px;width:330px;max-width:calc(100vw - 28px);z-index:25;display:none;flex-direction:column;gap:8px}
+#busy.on{display:flex}
+#busy .busy-item{box-shadow:var(--shadow);background:var(--panel)}
+/* menu recolhido (Ctrl+B): só ícones */
+.app.mini .tb-nav .nav-btn .lbl{display:none}
+.app.mini .tb-nav .nav-btn .ic{display:inline}
+.app.mini .tb-nav .nav-btn{padding:0 12px}
+/* larguras: o estado fica só com as luzes (texto no tooltip), depois os botões só com ícone */
+@media (max-width:1560px){.tb-status .lbl{display:none}.tb-status{gap:8px}#nav .dot{margin-right:0}}
+@media (max-width:1366px){.data-btn .lbl,.tb-brand .lbl{display:none}}
+@media (max-width:1180px){.tb-nav .nav-btn{padding:0 9px;font-size:14px;letter-spacing:.03em}}
+@media (max-width:760px){.tb-nav .nav-btn .lbl{display:none}.tb-nav .nav-btn .ic{display:inline}}
+
+/* ============================================================
+   v5: pele "Dark Paper" — folhas sobre a secretária, títulos condensados
+   ============================================================ */
+body{background:var(--desk)}
+main{background:var(--bg);background-image:radial-gradient(rgba(255,255,255,.018) 1px,transparent 1px);background-size:5px 5px;padding:18px 22px 60px}
+h1,h2{font-family:var(--font-head);font-weight:600;letter-spacing:.01em}
+h1{font-size:30px} h2{font-size:24px}
+.top h2{text-transform:none}
+.panel{border-radius:3px;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow)}
+.panel>h3:first-child,.panel h3.pc-title{font:600 15px/1.2 var(--font-head);text-transform:uppercase;letter-spacing:.06em;padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.panel h4{font-family:var(--font-head);font-weight:600;letter-spacing:.03em}
+.btn{border-radius:3px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg{border-radius:3px}
+select,input[type=text],input[type=number],textarea{border-radius:3px}
+.chip{border-radius:3px}
+th{font-family:var(--font-head);font-size:12px;font-weight:600;letter-spacing:.05em;background:var(--panel)}
+tbody tr:nth-child(even)>td{background:color-mix(in srgb,var(--text) 2.5%,transparent)}
+tbody tr:hover>td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.notice{border-radius:3px}
+.modal{border-radius:4px;border:1px solid var(--line)}
+.eyebrow{color:var(--bar);font-family:var(--font-head);letter-spacing:.14em}
+:root:not([data-theme="light"]) .eyebrow{color:#ff6b6b}
+:root[data-theme="light"] main>.top .muted,:root[data-theme="light"] main>.top p{color:#3b3328}
+/* atributos ao estilo do FM: verde alto, amarelo médio, cinzento baixo */
+.attr .v{display:inline-block;min-width:24px;padding:0 4px;border-radius:2px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.attr .v.v4{background:var(--att-hi);color:#fff}
+.attr .v.v3{background:var(--att-mid);color:#1b1a17}
+.attr .v.v2{color:var(--text)}
+.attr .v.v1{color:var(--muted)}
+.attr{border-bottom:1px solid var(--line)}
 
 </style>
 </head>
 <body>
-<div class="app"><aside id="nav"></aside><main id="main"></main></div>
+<div class="app"><header id="nav"></header><main id="main"></main></div>
 <div id="dropov">Largue o ficheiro — plantel (CSV/HTML/JSON), tática .fmf ou cópia .json</div>
 <div id="topbar" aria-hidden="true"><i></i></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -4374,7 +4390,7 @@ const EMPTY_SQUAD = () => ({ players: [], source: '', warnings: [], mapped: [], 
 const ST = {
   view: 'home', tabs: { team: 'squad', tactic: 'analyze', bible: 'roles' },
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
-  saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
+  saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'dark',
   auto: { on: false, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 45 },   // carregamento automático (app instalada)
   lastSave: null, gen: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
@@ -4420,7 +4436,8 @@ function load() {
 
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = T(msg); t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2200); }
 
-function applyTheme() { if (ST.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', ST.theme); }
+// 'dark' = Dark Paper (por defeito), 'light' = Paper; 'auto' segue o sistema
+function applyTheme() { const t = ST.theme === 'auto' ? (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : ST.theme; document.documentElement.setAttribute('data-theme', t); }
 
 function players() { return ST.squad.players || []; }
 function oppPlayers() { return ST.opp.players || []; }
@@ -6213,25 +6230,33 @@ const TABS = {
   bible: [['roles', 'Papéis'], ['ti', 'Instruções'], ['concepts', 'Conceitos & adversários'], ['btraining', 'Treino & Effectiveness']],
 };
 
+// Barra de topo ao estilo do FM: menu principal + estado + dados do jogo; por baixo, os separadores do ecrã (como no FM).
 function renderNav() {
-  const sq = players().length, op = oppPlayers().length;
-  return `<div class="brand"><div class="logo">FM27</div><div class="lbl"><b>Tactical Bible</b><span>v${VERSION}${DESKTOP ? ' · app' : ' · browser'}</span></div>
-      <button class="nav-mini" onclick="A.navMini()" title="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'} (Ctrl+B)" aria-label="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'}">${ST.ui.navMini ? '»' : '«'}</button></div>` +
-    NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join('') +
-    `<div id="busy" aria-live="polite"></div>
-    ${dataCard()}
-    <div class="aside-status">
-      <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${L(`${sq} jogadores`, `${sq} players`)}${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
-      <div><span class="dot ${op ? 'ok' : ''}"></span>${op ? 'Adversário carregado' : 'Sem adversário'}</div>
-      ${DESKTOP ? `<div><span class="dot ${ST.auto.save && !ST.auto.saveErr ? 'ok' : ''}"></span>Save: ${SAVE_BUSY ? 'a ler…' : ST.auto.saveErr ? 'erro (ver Definições)' : ST.auto.save ? 'automático' : 'manual'}</div>
-      <div><span class="dot ${ST.auto.on && ST.f9Found ? 'ok' : ''}"></span>F9: ${!ST.f9Found ? 'plugin não encontrado' : ST.auto.on ? 'automático' : 'manual'}</div>` : ''}
+  const sq = players().length, op = oppPlayers().length, v = ST.view;
+  const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
+  const stat = (on, label, tip) => `<span class="tb-stat" title="${esc(tip || label)}"><span class="dot ${on ? 'ok' : ''}"></span><span class="lbl">${label}</span></span>`;
+  const saveTip = DESKTOP ? 'Save: ' + (SAVE_BUSY ? L('a ler…', 'reading…') : ST.auto.saveErr ? L('erro (ver Definições)', 'error (see Settings)') : ST.auto.save ? L('automático', 'automatic') : 'manual')
+    + ' · F9: ' + (!ST.f9Found ? L('plugin não encontrado', 'plugin not found') : ST.auto.on ? L('automático', 'automatic') : 'manual') : '';
+  const fmTip = fb.ok ? (fb.ready ? L('FM ligado (Tactical Bible Bridge)', 'FM connected (Tactical Bible Bridge)') : L('FM aberto, à espera do jogo', 'FM open, waiting for the game')) : L('FM não ligado (plugin opcional, ver Definições)', 'FM not connected (optional plugin, see Settings)');
+  const main = NAV.filter(([id]) => id !== 'settings');
+  const tabs = TABS[v] ? TABS[v].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[v] === k}" class="${ST.tabs[v] === k ? 'on' : ''}" onclick="A.tab('${v}','${k}')">${n}</button>`).join('')
+    : `<span class="tb-crumb">${(NAV.find(([id]) => id === v) || [, ''])[1]}</span>`;
+  return `<div class="tb-row">
+      <button class="tb-brand" onclick="A.go('home')" title="FM27 Tactical Bible v${VERSION}${DESKTOP ? ' · app' : ' · browser'}" aria-label="FM27 Tactical Bible"><span class="logo">FM27</span><span class="lbl">Tactical Bible</span></button>
+      <nav class="tb-nav" aria-label="${L('Menu', 'Menu')}">${main.map(([id, label, ic]) => `<button class="nav-btn ${v === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"${v === id ? ' aria-current="page"' : ''}><span class="ic" aria-hidden="true">${ic}</span><span class="lbl">${label}</span></button>`).join('')}</nav>
+      <div class="tb-right">
+        <div class="tb-status">
+          ${stat(sq, sq ? `${L(`${sq} jogadores`, `${sq} players`)}${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel', saveTip)}
+          ${stat(op, op ? 'Adversário carregado' : 'Sem adversário')}
+          ${DESKTOP ? stat(fb.ok && fb.ready, 'FM', fmTip) : ''}
+        </div>
+        ${dataCard()}
+        <div class="seg lang-seg" role="group" aria-label="Idioma">${[['en', 'EN'], ['pt', 'PT']].map(([k, n]) => `<button class="${LANG === k ? 'on' : ''}" onclick="A.lang('${k}')" aria-pressed="${LANG === k}">${n}</button>`).join('')}</div>
+        <button class="tb-icon ${v === 'settings' ? 'on' : ''}" onclick="A.go('settings')" title="Definições" aria-label="Definições">⚙</button>
+      </div>
     </div>
-    <div class="aside-foot"><div class="seg lang-seg" role="group" aria-label="Idioma">${[['en', 'EN'], ['pt', 'PT']].map(([k, n]) => `<button class="${LANG === k ? 'on' : ''}" onclick="A.lang('${k}')" aria-pressed="${LANG === k}">${n}</button>`).join('')}</div>
-      <div class="lbl" style="margin-top:8px">Arraste qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.</div></div>`;
-}
-
-function tabsHTML(view) {
-  return `<div class="tabs" role="tablist">${TABS[view].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[view] === k}" class="${ST.tabs[view] === k ? 'on' : ''}" onclick="A.tab('${view}','${k}')">${n}</button>`).join('')}</div>`;
+    <div class="tb-sub" role="tablist">${tabs}</div>
+    <div id="busy" aria-live="polite"></div>`;
 }
 
 function render(scrollTop) {
@@ -6242,11 +6267,11 @@ function render(scrollTop) {
   if (!isSim) cancelAnimationFrame(SIM.raf);
   let body;
   if (v === 'home') body = vHome();
-  else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
-  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
+  else if (v === 'team') body = (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
+  else if (v === 'tactic') body = (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
   else if (v === 'scout') body = vScout();
-  else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
+  else if (v === 'bible') body = (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
   document.querySelector('.app').classList.toggle('mini', !!ST.ui.navMini);
@@ -6305,12 +6330,12 @@ function dataButtons(size = '') {
 }
 function dataCard() {
   const at = ST.squad && ST.squad.at, sq = (ST.squad && ST.squad.players || []).length;
-  return `<div class="data-card" aria-label="${L('Dados do jogo', 'Game data')}">
-    <div class="data-h lbl">${L('Dados do jogo', 'Game data')}</div>
-    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)')}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
+  const when = sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet');
+  const drop = L('Também pode arrastar qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.', 'You can also drag any file (CSV, HTML, .fmf, .json) into the window.');
+  return `<div class="data-card" role="group" aria-label="${L('Dados do jogo', 'Game data')}">
+    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${esc(L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)') + ' — ' + when)}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
       <button class="btn sm data-btn" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar último F9', 'Load latest F9')}" aria-label="${L('Carregar último F9', 'Load latest F9')}"><span class="ic" aria-hidden="true">⌨</span><span class="lbl">${L('Último F9', 'Latest F9')}</span></button>`
-    : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)')}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
-    <div class="small muted lbl">${sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet')}</div>
+    : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${esc(L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)') + ' — ' + when + '. ' + drop)}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
   </div>`;
 }
 

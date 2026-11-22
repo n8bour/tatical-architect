@@ -16,25 +16,33 @@ const TABS = {
   bible: [['roles', 'Papéis'], ['ti', 'Instruções'], ['concepts', 'Conceitos & adversários'], ['btraining', 'Treino & Effectiveness']],
 };
 
+// Barra de topo ao estilo do FM: menu principal + estado + dados do jogo; por baixo, os separadores do ecrã (como no FM).
 function renderNav() {
-  const sq = players().length, op = oppPlayers().length;
-  return `<div class="brand"><div class="logo">FM27</div><div class="lbl"><b>Tactical Bible</b><span>v${VERSION}${DESKTOP ? ' · app' : ' · browser'}</span></div>
-      <button class="nav-mini" onclick="A.navMini()" title="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'} (Ctrl+B)" aria-label="${ST.ui.navMini ? 'Expandir menu' : 'Recolher menu'}">${ST.ui.navMini ? '»' : '«'}</button></div>` +
-    NAV.map(([id, label, ic]) => `<button class="nav-btn ${ST.view === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join('') +
-    `<div id="busy" aria-live="polite"></div>
-    ${dataCard()}
-    <div class="aside-status">
-      <div><span class="dot ${sq ? 'ok' : ''}"></span>${sq ? `${L(`${sq} jogadores`, `${sq} players`)}${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel'}</div>
-      <div><span class="dot ${op ? 'ok' : ''}"></span>${op ? 'Adversário carregado' : 'Sem adversário'}</div>
-      ${DESKTOP ? `<div><span class="dot ${ST.auto.save && !ST.auto.saveErr ? 'ok' : ''}"></span>Save: ${SAVE_BUSY ? 'a ler…' : ST.auto.saveErr ? 'erro (ver Definições)' : ST.auto.save ? 'automático' : 'manual'}</div>
-      <div><span class="dot ${ST.auto.on && ST.f9Found ? 'ok' : ''}"></span>F9: ${!ST.f9Found ? 'plugin não encontrado' : ST.auto.on ? 'automático' : 'manual'}</div>` : ''}
+  const sq = players().length, op = oppPlayers().length, v = ST.view;
+  const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
+  const stat = (on, label, tip) => `<span class="tb-stat" title="${esc(tip || label)}"><span class="dot ${on ? 'ok' : ''}"></span><span class="lbl">${label}</span></span>`;
+  const saveTip = DESKTOP ? 'Save: ' + (SAVE_BUSY ? L('a ler…', 'reading…') : ST.auto.saveErr ? L('erro (ver Definições)', 'error (see Settings)') : ST.auto.save ? L('automático', 'automatic') : 'manual')
+    + ' · F9: ' + (!ST.f9Found ? L('plugin não encontrado', 'plugin not found') : ST.auto.on ? L('automático', 'automatic') : 'manual') : '';
+  const fmTip = fb.ok ? (fb.ready ? L('FM ligado (Tactical Bible Bridge)', 'FM connected (Tactical Bible Bridge)') : L('FM aberto, à espera do jogo', 'FM open, waiting for the game')) : L('FM não ligado (plugin opcional, ver Definições)', 'FM not connected (optional plugin, see Settings)');
+  const main = NAV.filter(([id]) => id !== 'settings');
+  const tabs = TABS[v] ? TABS[v].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[v] === k}" class="${ST.tabs[v] === k ? 'on' : ''}" onclick="A.tab('${v}','${k}')">${n}</button>`).join('')
+    : `<span class="tb-crumb">${(NAV.find(([id]) => id === v) || [, ''])[1]}</span>`;
+  return `<div class="tb-row">
+      <button class="tb-brand" onclick="A.go('home')" title="FM27 Tactical Bible v${VERSION}${DESKTOP ? ' · app' : ' · browser'}" aria-label="FM27 Tactical Bible"><span class="logo">FM27</span><span class="lbl">Tactical Bible</span></button>
+      <nav class="tb-nav" aria-label="${L('Menu', 'Menu')}">${main.map(([id, label, ic]) => `<button class="nav-btn ${v === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"${v === id ? ' aria-current="page"' : ''}><span class="ic" aria-hidden="true">${ic}</span><span class="lbl">${label}</span></button>`).join('')}</nav>
+      <div class="tb-right">
+        <div class="tb-status">
+          ${stat(sq, sq ? `${L(`${sq} jogadores`, `${sq} players`)}${ST.myClub ? ' · ' + esc(ST.myClub) : ''}` : 'Sem plantel', saveTip)}
+          ${stat(op, op ? 'Adversário carregado' : 'Sem adversário')}
+          ${DESKTOP ? stat(fb.ok && fb.ready, 'FM', fmTip) : ''}
+        </div>
+        ${dataCard()}
+        <div class="seg lang-seg" role="group" aria-label="Idioma">${[['en', 'EN'], ['pt', 'PT']].map(([k, n]) => `<button class="${LANG === k ? 'on' : ''}" onclick="A.lang('${k}')" aria-pressed="${LANG === k}">${n}</button>`).join('')}</div>
+        <button class="tb-icon ${v === 'settings' ? 'on' : ''}" onclick="A.go('settings')" title="Definições" aria-label="Definições">⚙</button>
+      </div>
     </div>
-    <div class="aside-foot"><div class="seg lang-seg" role="group" aria-label="Idioma">${[['en', 'EN'], ['pt', 'PT']].map(([k, n]) => `<button class="${LANG === k ? 'on' : ''}" onclick="A.lang('${k}')" aria-pressed="${LANG === k}">${n}</button>`).join('')}</div>
-      <div class="lbl" style="margin-top:8px">Arraste qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.</div></div>`;
-}
-
-function tabsHTML(view) {
-  return `<div class="tabs" role="tablist">${TABS[view].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[view] === k}" class="${ST.tabs[view] === k ? 'on' : ''}" onclick="A.tab('${view}','${k}')">${n}</button>`).join('')}</div>`;
+    <div class="tb-sub" role="tablist">${tabs}</div>
+    <div id="busy" aria-live="polite"></div>`;
 }
 
 function render(scrollTop) {
@@ -45,11 +53,11 @@ function render(scrollTop) {
   if (!isSim) cancelAnimationFrame(SIM.raf);
   let body;
   if (v === 'home') body = vHome();
-  else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
-  else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
+  else if (v === 'team') body = (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
+  else if (v === 'tactic') body = (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
   else if (v === 'scout') body = vScout();
-  else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
+  else if (v === 'bible') body = (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
   document.querySelector('.app').classList.toggle('mini', !!ST.ui.navMini);
@@ -108,12 +116,12 @@ function dataButtons(size = '') {
 }
 function dataCard() {
   const at = ST.squad && ST.squad.at, sq = (ST.squad && ST.squad.players || []).length;
-  return `<div class="data-card" aria-label="${L('Dados do jogo', 'Game data')}">
-    <div class="data-h lbl">${L('Dados do jogo', 'Game data')}</div>
-    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)')}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
+  const when = sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet');
+  const drop = L('Também pode arrastar qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.', 'You can also drag any file (CSV, HTML, .fmf, .json) into the window.');
+  return `<div class="data-card" role="group" aria-label="${L('Dados do jogo', 'Game data')}">
+    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${esc(L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)') + ' — ' + when)}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
       <button class="btn sm data-btn" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar último F9', 'Load latest F9')}" aria-label="${L('Carregar último F9', 'Load latest F9')}"><span class="ic" aria-hidden="true">⌨</span><span class="lbl">${L('Último F9', 'Latest F9')}</span></button>`
-    : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)')}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
-    <div class="small muted lbl">${sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet')}</div>
+    : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${esc(L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)') + ' — ' + when + '. ' + drop)}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
   </div>`;
 }
 

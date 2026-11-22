@@ -92,9 +92,9 @@ def main():
                         r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('.modal')"))
                         if r: problems[(w, mode, 'scout-card', None)] = r
                         pg.evaluate("A.scoutClose()")
-                # barra lateral (painel de dados do jogo incluído), nesta largura e neste modo
-                r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('aside')"))
-                if r: problems[(w, mode, 'aside', None)] = r
+                # barra de topo (menu, estado e dados do jogo), nesta largura e neste modo
+                r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('#nav')"))
+                if r: problems[(w, mode, 'topbar', None)] = r
                 if mode == 'painéis fechados': pg.evaluate("() => { ST.ui.collapsed = {}; save(); }")
                 pg.close()
         b.close()
