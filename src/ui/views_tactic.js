@@ -7,6 +7,7 @@ function vTactic() {
   const cats = Object.entries(au.scores);
   return `<div class="top"><div><h2>${esc(tName(ST.tactic))}</h2><p class="muted small" style="margin:0">Clique num jogador do campo para mudar papéis, jogador e instruções individuais.</p></div>
     <div class="row no-print">
+      ${fmButton('xi')}
       <button class="btn primary" onclick="A.simOpen()">▶ Ver em campo</button>
       <button class="btn" onclick="A.newTactic()">Nova</button>
       <button class="btn" onclick="A.saveTactic()">Guardar</button>

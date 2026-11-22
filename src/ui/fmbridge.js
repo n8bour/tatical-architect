@@ -88,34 +88,6 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
-  /** Full state of each set-piece tab (switches the tab itself, reads twice, restores the tab). For mapping. */
-  async dumpSetPieces() {
-    const c = await FMB.context(), S = FMB_IDS.sp, R = S.todo.read, pairs = S.pairs(c), sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    const NOISE = new Set([1110849335, 1648775545, 1932870466, 1227978093, 1748388691, 1498624628, 1850421847]);   // help texts + pitch layout
-    const strip = (v) => Array.isArray(v) ? v.map(strip) : (v && typeof v === 'object')
-      ? (v.entries ? { ...v, entries: v.entries.filter(e => !NOISE.has(e[0])).map(e => [e[0], e[1], strip(e[2])]) } : v) : v;
-    const flagProps = [1094150473, 1684567637, 846214501, 1128877878, 1633050961, 1664177205];
-    const tabs = [[0, 'Corners'], [1, 'Shooting Range'], [2, 'Attacking Third']];
-    const setType = (n, label) => FMB.ok(`WRITE FM.UI.SetPieceReference|${pairs}|${R.type} ${JSON.stringify({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(n)], [FMB_IDS.key.payload, 'System.String', label]] })}`);
-    const empty = (routine) => { const g = FMB.field(routine, 1750096198); return !FMB.items(g).some(x => FMB.items(FMB.field(x, 1752528242)).length) && !FMB.items(FMB.field(routine, 945304884)).some(x => FMB.items(FMB.field(x, 1752528242)).length); };
-    const read = () => FMB.read([['SetPieceReference', pairs, R.routine], ['SetPieceReference', pairs, R.takers], ['SetPieceReference', pairs, R.type], ...flagProps.map(f => ['SetPieceReference', pairs, f])]);
-    const before = (await FMB.read([['SetPieceReference', pairs, R.type]]))[0];
-    const out = { version: 2, tabs: {} };
-    try {
-      for (const [n, label] of tabs) {
-        await setType(n, label); await sleep(900);
-        await read(); await sleep(900);                 // first read may be FM's placeholder
-        const [routine, takers, type, ...flags] = await read();
-        out.tabs[label] = { emptyRoutine: empty(routine), flags: Object.fromEntries(flagProps.map((f, i) => [f, flags[i]])), type, takers: strip(takers), routine: strip(routine) };
-      }
-    } finally {
-      const n = before && FMB.num(FMB.field(before, FMB_IDS.key.number), 0), l = before && FMB.field(before, FMB_IDS.key.payload);
-      if (before) { try { await setType(n, l); } catch (e) {} }
-    }
-    return JSON.stringify(out);
-  },
-  // ---- screen sampling (FM27Bridge only: SAMPLE 1 logs every channel the FM UI shows to %APPDATA%\\FM27Scout\\bridge_data.txt)
-  async sample(on) { if (FMB.port !== 27027) throw new Error(L('Só com o FM27Bridge (FM27 Assistant).', 'Only with FM27Bridge (FM27 Assistant).')); await FMB.ok('SAMPLE ' + (on ? 1 : 0)); FMB.sampling = on; },
   // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
   async recStart() { await FMB.ok('RECORD 1'); await FMB.ok('EVENTS'); FMB.rec = { on: true, since: Date.now(), out: '' }; },
   async recStop() {
@@ -256,6 +228,21 @@ const FMB = {
     return { placed, skipped };
   },
 };
+
+// "Apply in FM" button for a screen (only in the installed app). Connected: primary button. Not connected: grey, opens
+// Settings and the tooltip says what is missing. kind: 'xi' (place the XI) | 'sp' (set pieces).
+function fmButton(kind) {
+  if (!DESKTOP) return '';
+  fmbRefresh(ST.view);
+  const st = FMB.state || {}, ready = !!(st.ok && st.ready);
+  const K = {
+    xi: ['bridge', 'A.bridgeXI()', L('Colocar XI no FM', 'Place XI in FM'), L('Põe os jogadores do teu XI na tática activa do FM.', 'Puts your XI into the active tactic in FM.')],
+    sp: ['bridge-sp', 'A.bridgeSetPieces()', L('Aplicar no FM', 'Apply in FM'), L('Aplica os marcadores e as rotinas de bolas paradas no FM. No FM, abra Táticas › Bolas paradas.', 'Applies the takers and set-piece routines in FM. In FM, open Tactics › Set Pieces.')],
+  }[kind];
+  const off = st.ok ? L('O FM está aberto mas ainda não carregou um jogo.', 'FM is open but has not loaded a game yet.')
+    : L('Precisa do plugin Tactical Bible Bridge dentro do FM (Definições › Integrações).', 'Needs the Tactical Bible Bridge plugin inside FM (Settings › Integrations).');
+  return `<button class="btn fm-btn${ready ? ' primary' : ''}" data-busy="${K[0]}" onclick="${ready ? K[1] : "A.go('settings')"}" title="${esc(ready ? K[3] : off)}"><span class="dot ${ready ? 'ok' : ''}" aria-hidden="true"></span>${K[2]}</button>`;
+}
 
 // called from views: refresh the bridge status in the background; re-render only if it changed and we're still on that view
 function fmbRefresh(view) {

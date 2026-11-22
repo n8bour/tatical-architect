@@ -5297,6 +5297,7 @@ function vTactic() {
   const cats = Object.entries(au.scores);
   return `<div class="top"><div><h2>${esc(tName(ST.tactic))}</h2><p class="muted small" style="margin:0">Clique num jogador do campo para mudar papéis, jogador e instruções individuais.</p></div>
     <div class="row no-print">
+      ${fmButton('xi')}
       <button class="btn primary" onclick="A.simOpen()">▶ Ver em campo</button>
       <button class="btn" onclick="A.newTactic()">Nova</button>
       <button class="btn" onclick="A.saveTactic()">Guardar</button>
@@ -5491,7 +5492,6 @@ function spPitch(rows, layout, title, gk) {
     ${dots}</svg><figcaption class="small muted">${esc(title)}</figcaption></figure>`;
 }
 function vSetPieces() {
-  if (DESKTOP) fmbRefresh('tactic');
   const ps = players();
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.</p><div class="row" style="justify-content:center">${dataButtons()} <button class="btn" onclick="A.sampleSquad();A.tab('tactic','setpieces')">Usar exemplo</button></div></div>`;
   const r = setPiecePlan(ST.tactic, ps, oppPlayers()); ST._sp = r;
@@ -5499,7 +5499,7 @@ function vSetPieces() {
   const row = (label, x, extra) => `<tr><td>${esc(label)}</td><td>${x ? `<b>${esc(x.p.name)}</b> <span class="muted small">${esc(x.code)}</span>` : '—'}</td><td class="small muted">${extra || ''}</td></tr>`;
   const a = (x, ks) => ks.map(k => `${attrName(k)} ${Math.round(x.p.a[k] ?? 0)}`).join(' · ');
   return `<div class="top"><div><h2>Bolas paradas & capitães</h2><p class="muted small" style="margin:0"><span>Escolhidos entre o XI de</span> “${esc(tName(ST.tactic))}”. <span>${oppPlayers().length ? 'Marcações individuais contra os mais fortes no ar do adversário carregado.' : 'Carregue o adversário para marcações individuais nominais.'}</span></p></div>
-    <div class="row"><button class="btn" onclick="A.tab('tactic','sheet')">Ver na Ficha para o FM27</button>${DESKTOP && FMB.state && FMB.state.ok && FMB.state.ready ? `<button class="btn primary" data-busy="bridge-sp" onclick="A.bridgeSetPieces()" title="${esc(L('Marcadores de cantos e livres directos (por pé) e curva dos cantos. Precisa do Tactical Bible Bridge.', 'Corner and direct free-kick takers (per foot) and corner swing. Needs the Tactical Bible Bridge.'))}">${L('Aplicar no FM', 'Apply in FM')}</button>` : ''}</div></div>
+    <div class="row"><button class="btn" onclick="A.tab('tactic','sheet')">Ver na Ficha para o FM27</button>${fmButton('sp')}</div></div>
   ${ST.spDone ? `<div class="notice small">${ST.spDone.map(esc).join('<br>')}<br><span class="muted">${L('Zonas, marcações e penáltis: siga a ficha (ainda não aplicados automaticamente).', 'Zones, marking and penalties: follow the sheet (not applied automatically yet).')}</span></div>` : ''}
   <div class="grid g2">
     <div class="panel"><h3>Marcadores</h3><table><tbody>
@@ -5659,12 +5659,12 @@ function integrationsHTML(compact) {
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
-    `<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Se já tem o <b>FM27 Assistant</b> instalado, o plugin dele (FM27Bridge) também serve. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, <b>Colocar o meu XI no FM</b> põe os jogadores na tática activa do jogo.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. If you already have <b>FM27 Assistant</b> installed, its plugin (FM27Bridge) works too. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, <b>Place my XI in FM</b> puts the players into the game's active tactic.`)}</p>
-     ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}<button class="btn sm" data-busy="bridge-dump" onclick="A.bridgeDumpSP()">📋 ${L('Copiar estado das bolas paradas', 'Copy set-piece state')}</button>${fb.port === 27027 ? `<button class="btn sm" onclick="A.bridgeSample()">${FMB.sampling ? '⏹ ' + L('Parar recolha', 'Stop sampling') : '🔎 ' + L('Recolher dados do ecrã', 'Sample screen data')}</button>` : ''}</div>
+    `<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, os botões <b>Colocar XI no FM</b> (Tática › Analisar) e <b>Aplicar no FM</b> (Tática › Bolas paradas) mudam o jogo directamente. O plugin FM27Bridge do FM27 Assistant só serve para o XI e os marcadores.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, the <b>Place XI in FM</b> (Tactic › Analyse) and <b>Apply in FM</b> (Tactic › Set pieces) buttons change the game directly. FM27 Assistant's FM27Bridge plugin only covers the XI and the takers.`)}</p>
+     ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}</div>
        <p class="small muted">${L('Para acrescentar acções ou rever depois de um patch: carregue em Gravar, mude essa opção à mão no FM, e carregue em Parar.', 'To add actions or re-check after a patch: press Record, change that option by hand in FM, then press Stop.')}</p>
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
-    DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>${fb.ok && fb.ready ? `<button class="btn primary sm" data-busy="bridge" onclick="A.bridgeXI()">${L('Colocar o meu XI no FM', 'Place my XI in FM')}</button>` : ''}` : '');
+    DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>` : '');
   return fmsaveCard + f9Card + bridgeCard;
 }
 function vSettings() {
@@ -5788,34 +5788,6 @@ const FMB = {
     return out;
   },
   send(ev, refType, pairs, rec) { return FMB.ok(`SENDJ ${ev} FM.UI.${refType} ${pairs} ${JSON.stringify(rec)}`); },
-  /** Full state of each set-piece tab (switches the tab itself, reads twice, restores the tab). For mapping. */
-  async dumpSetPieces() {
-    const c = await FMB.context(), S = FMB_IDS.sp, R = S.todo.read, pairs = S.pairs(c), sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    const NOISE = new Set([1110849335, 1648775545, 1932870466, 1227978093, 1748388691, 1498624628, 1850421847]);   // help texts + pitch layout
-    const strip = (v) => Array.isArray(v) ? v.map(strip) : (v && typeof v === 'object')
-      ? (v.entries ? { ...v, entries: v.entries.filter(e => !NOISE.has(e[0])).map(e => [e[0], e[1], strip(e[2])]) } : v) : v;
-    const flagProps = [1094150473, 1684567637, 846214501, 1128877878, 1633050961, 1664177205];
-    const tabs = [[0, 'Corners'], [1, 'Shooting Range'], [2, 'Attacking Third']];
-    const setType = (n, label) => FMB.ok(`WRITE FM.UI.SetPieceReference|${pairs}|${R.type} ${JSON.stringify({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(n)], [FMB_IDS.key.payload, 'System.String', label]] })}`);
-    const empty = (routine) => { const g = FMB.field(routine, 1750096198); return !FMB.items(g).some(x => FMB.items(FMB.field(x, 1752528242)).length) && !FMB.items(FMB.field(routine, 945304884)).some(x => FMB.items(FMB.field(x, 1752528242)).length); };
-    const read = () => FMB.read([['SetPieceReference', pairs, R.routine], ['SetPieceReference', pairs, R.takers], ['SetPieceReference', pairs, R.type], ...flagProps.map(f => ['SetPieceReference', pairs, f])]);
-    const before = (await FMB.read([['SetPieceReference', pairs, R.type]]))[0];
-    const out = { version: 2, tabs: {} };
-    try {
-      for (const [n, label] of tabs) {
-        await setType(n, label); await sleep(900);
-        await read(); await sleep(900);                 // first read may be FM's placeholder
-        const [routine, takers, type, ...flags] = await read();
-        out.tabs[label] = { emptyRoutine: empty(routine), flags: Object.fromEntries(flagProps.map((f, i) => [f, flags[i]])), type, takers: strip(takers), routine: strip(routine) };
-      }
-    } finally {
-      const n = before && FMB.num(FMB.field(before, FMB_IDS.key.number), 0), l = before && FMB.field(before, FMB_IDS.key.payload);
-      if (before) { try { await setType(n, l); } catch (e) {} }
-    }
-    return JSON.stringify(out);
-  },
-  // ---- screen sampling (FM27Bridge only: SAMPLE 1 logs every channel the FM UI shows to %APPDATA%\\FM27Scout\\bridge_data.txt)
-  async sample(on) { if (FMB.port !== 27027) throw new Error(L('Só com o FM27Bridge (FM27 Assistant).', 'Only with FM27Bridge (FM27 Assistant).')); await FMB.ok('SAMPLE ' + (on ? 1 : 0)); FMB.sampling = on; },
   // ---- recorder: capture what FM sends while you change a setting by hand (to add new actions / re-check after a patch)
   async recStart() { await FMB.ok('RECORD 1'); await FMB.ok('EVENTS'); FMB.rec = { on: true, since: Date.now(), out: '' }; },
   async recStop() {
@@ -5957,6 +5929,21 @@ const FMB = {
   },
 };
 
+// "Apply in FM" button for a screen (only in the installed app). Connected: primary button. Not connected: grey, opens
+// Settings and the tooltip says what is missing. kind: 'xi' (place the XI) | 'sp' (set pieces).
+function fmButton(kind) {
+  if (!DESKTOP) return '';
+  fmbRefresh(ST.view);
+  const st = FMB.state || {}, ready = !!(st.ok && st.ready);
+  const K = {
+    xi: ['bridge', 'A.bridgeXI()', L('Colocar XI no FM', 'Place XI in FM'), L('Põe os jogadores do teu XI na tática activa do FM.', 'Puts your XI into the active tactic in FM.')],
+    sp: ['bridge-sp', 'A.bridgeSetPieces()', L('Aplicar no FM', 'Apply in FM'), L('Aplica os marcadores e as rotinas de bolas paradas no FM. No FM, abra Táticas › Bolas paradas.', 'Applies the takers and set-piece routines in FM. In FM, open Tactics › Set Pieces.')],
+  }[kind];
+  const off = st.ok ? L('O FM está aberto mas ainda não carregou um jogo.', 'FM is open but has not loaded a game yet.')
+    : L('Precisa do plugin Tactical Bible Bridge dentro do FM (Definições › Integrações).', 'Needs the Tactical Bible Bridge plugin inside FM (Settings › Integrations).');
+  return `<button class="btn fm-btn${ready ? ' primary' : ''}" data-busy="${K[0]}" onclick="${ready ? K[1] : "A.go('settings')"}" title="${esc(ready ? K[3] : off)}"><span class="dot ${ready ? 'ok' : ''}" aria-hidden="true"></span>${K[2]}</button>`;
+}
+
 // called from views: refresh the bridge status in the background; re-render only if it changed and we're still on that view
 function fmbRefresh(view) {
   const before = JSON.stringify(FMB.state);
@@ -5987,19 +5974,6 @@ const A = {
     try {
       if (FMB.rec && FMB.rec.on) { const n = await FMB.recStop(); toast(L(`${n} ordens gravadas`, `${n} orders recorded`)); }
       else { await FMB.recStart(); toast(L('A gravar: mude a opção no FM e depois carregue em Parar.', 'Recording: change the option in FM, then press Stop.')); }
-    } catch (e) { toast(String(e.message || e)); }
-    render();
-  },
-  async bridgeSample() {
-    try { await FMB.sample(!FMB.sampling); toast(FMB.sampling ? L('A recolher: abra os ecrãs de bolas paradas no FM (todas as abas) e depois carregue em Parar.', 'Sampling: open the set-piece screens in FM (every tab), then press Stop.') : L('Feito: envie o ficheiro %APPDATA%\\FM27Scout\\bridge_data.txt', 'Done: send the file %APPDATA%\\FM27Scout\\bridge_data.txt')); }
-    catch (e) { toast(String(e.message || e)); }
-    render();
-  },
-  async bridgeDumpSP() {
-    try {
-      const out = await withBusy('bridge-dump', L('A ler o ecrã de bolas paradas', 'Reading the set-piece screen'), () => FMB.dumpSetPieces());
-      FMB.rec = { on: false, out }; await navigator.clipboard.writeText(out).catch(() => {});
-      toast(L('Copiado: estado do separador aberto no FM', 'Copied: state of the tab open in FM'));
     } catch (e) { toast(String(e.message || e)); }
     render();
   },
