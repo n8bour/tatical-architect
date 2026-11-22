@@ -30,6 +30,14 @@ const A = {
     } catch (e) { toast(String(e.message || e)); }
     FMB.status(true).then(() => render());
   },
+  async bridgeTactic() {
+    if (players().length < 11) return toast(L('Precisa de pelo menos 11 jogadores no plantel', 'You need at least 11 players in the squad'));
+    try {
+      ST.tacDone = await withBusy('bridge-tac', L('A aplicar a tática no FM', 'Applying the tactic in FM'), (prog) => FMB.applyTactic(ST.tactic, players(), (t) => prog(null, t)));
+      toast(L('Tática aplicada no FM', 'Tactic applied in FM'));
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
   async bridgeRec() {
     try {
       if (FMB.rec && FMB.rec.on) { const n = await FMB.recStop(); toast(L(`${n} ordens gravadas`, `${n} orders recorded`)); }

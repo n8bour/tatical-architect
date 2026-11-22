@@ -46,6 +46,28 @@ const FMB_IDS = {
       slotMove: 1449477207,      // move an instruction to another group/position (see bridge/README.md)
     },
   },
+  // ---- tactic (verified FM27 EN 22 Nov, see bridge/README.md): active tactic = TeamTacticReference
+  tactic: {
+    pairs: (c) => `825307168=126;1198877028=1;1651271022=1;1685218662=${c.team}`,
+    slots: 1919628150, slotIdx: 1414752632, ipPos: 1835167823,
+    ipRoles: 930166885, ipRole: 1698852728, oopRoles: 1798391651, oopRole: 1349481322,
+    move: 21, moveFrom: 929121399, moveTo: 944851554, moveIP: 1769491558, moveSlot: 857762170,
+    setRole: 1467503190, roleRec: 1349481322, roleName: 909713440, roleIP: 1265792339,
+    mentality: 1162170689,
+    tiPrev: 1249276755, tiNext: 862931569,   // value = instruction id; FM27's ‹ / › arrows (they stop at the ends)
+    left: 1048576, right: 2097152,           // added to central positions (DCL = DC + left); verified on FM's screen
+    roles: {acb: '16384', am_ip: '512', am_oop: '1073741824', ap: '131072', awb: '274877906944', b2b: '65536', b2bp: '70368744177664', bpcb: '16777216', bpgk: '4096', cb_ip: '2', cb_oop: '8', ccb: '32', cf_ip: '2048', cf_oop: '4398046511104', chf: '2147483648', chm: '72057594037927936', cm_ip: '32', cm_oop: '1048576', coam: '4294967296', cocf: '17592186044416', ddm: '65536', dlf: '1024', dlp: '32768', dm_ip: '16', dm_oop: '32768', f9: '1099511627776', fb_ip: '4', fb_oop: '512', gk_ip: '1', gk_oop: '1', hb: '34359738368', hfb: '2048', if_ip: '134217728', ifb: '4503599627370496', iow: '1099511627776', iw_ip: '562949953421312', iwb: '17592186044416', lhk: '4', mp: '144115188075855872', nncb: '536870912', nngk: '9007199254740992', pcm: '134217728', pdm: '131072', pfb: '1024', poa: '524288', pw: '8796093022208', pwb: '36028797018963968', scb: '16', scm: '268435456', sdm: '262144', socf: '35184372088832', swk: '2', tam: '2147483648', tcf: '8796093022208', tf: '262144', tw: '549755813888', twm: '68719476736', w_ip: '128', w_oop: '274877906944', wb_ip: '8', wb_oop: '8', wccm: '536870912', wcdm: '524288', wcm: '281474976710656', wf_ip: '35184372088832', wm_ip: '64', wm_oop: '34359738368', wow: '2199023255552', wowm: '137438953472'},
+    // app instruction key -> FM instruction id, number of FM options, app option index -> FM option index (null = no FM equivalent)
+    ti: {
+      passing: [1, 5, [0, 1, 2, 3, 4]], tempo: [21, 5, [0, 1, 2, 3, 4]], width: [4, 5, [0, 1, 2, 3, 4]], creative: [5, 3, [0, 1, 2]],
+      att_trans: [3, 3, [0, 1, 2]], set_pieces: [6, 2, [0, null, 1]], timewaste: [7, 3, [0, 1, 2]], reception: [20, 3, [2, 1, 0]],
+      buildup: [24, 3, [0, 1, 2]], goal_kicks: [29, 3, [0, 1, 2]], gk_speed: [17, 3, [0, 1, 2]], gk_target: [16, 7, [1, 2, 0, 3, 5]],
+      support_runs: [28, 4, [null, 0, 3]], dribbling: [19, 3, [0, 1, 2]], progress: [30, 5, [2, 0, 1, 3]], patience: [18, 3, [0, 1, 2]],
+      long_shots: [27, 3, [0, 1, 2]], crossing: [26, 4, [3, 0, 2, 1]], loe: [8, 3, [0, 1, 2]], dline: [9, 5, [0, 1, 2, 3, 4]],
+      trigger: [10, 5, [0, 1, 2, 3, 4]], def_trans: [11, 3, [0, 1, 2]], tackling: [12, 3, [0, 1, 2]], press_trap: [25, 3, [0, 1, 2]],
+      cross_eng: [22, 3, [2, 1, 0]], short_gk: [23, 2, [0, 1]], dl_behaviour: [15, 3, [2, 1, 0]],
+    },
+  },
   // ---- next opponent (verified FM27: TeamReference props; fixture keys)
   team: { pairs: (id) => `825307168=28;1198877028=1;1685218662=${id}`, nextFixture: 1852130921, players: 926359584, name: 1851878757 },
   fixture: { opp: 1717663572, us: 1718119764, date: 1717859429 },
@@ -386,6 +408,84 @@ const FMB = {
     if (!made) throw new Error(L('O FM não criou o Recruitment Focus.', 'FM did not create the Recruitment Focus.'));
     return made;
   },
+  // ---- tactic: formation (in possession), XI, roles, mentality, team instructions into FM's ACTIVE tactic
+  /** FM in-possession position bits for an app slot code (DCL = DC + left flag). */
+  ipBits(code) {
+    const T = FMB_IDS.tactic, m = /^(DC|DM|MC|AMC|ST)([LR])$/.exec(code), base = m ? m[1] : code;
+    const map = { GK: 1, DR: 4, DL: 8, DC: 16, WBR: 32, WBL: 64, DM: 128, MR: 256, ML: 512, MC: 1024, AMR: 2048, AML: 4096, AMC: 8192, ST: 16384 };
+    const b = map[base]; if (b == null) return null;
+    return b + (m ? (m[2] === 'L' ? T.left : T.right) : 0);
+  },
+  async readTacticSlots(c) {
+    const T = FMB_IDS.tactic, P = T.pairs(c);
+    const [slots, ips, oops] = await FMB.read([['TeamTacticReference', P, T.slots], ['TeamTacticReference', P, T.ipRoles], ['TeamTacticReference', P, T.oopRoles]]);
+    const ipR = {}, oopR = {}, side = BigInt(T.left) | BigInt(T.right) | 4194304n | 8388608n;
+    FMB.items(ips).forEach(r => { ipR[FMB.num(FMB.field(r, T.slotIdx))] = String(FMB.field(r, T.ipRole)); });
+    FMB.items(oops).forEach(r => { const v = FMB.field(r, T.oopRole); if (v != null) oopR[FMB.num(FMB.field(r, T.slotIdx))] = (BigInt(v) & ~side).toString(); });
+    return FMB.items(slots).map(r => { const slot = FMB.num(FMB.field(r, T.slotIdx)); return { slot, ip: FMB.num(FMB.field(r, T.ipPos)), ipRole: ipR[slot], oopRole: oopR[slot] }; });
+  },
+  /** Applies the app's tactic to FM's active tactic. say(text) shows progress. Returns lines describing what was done. */
+  async applyTactic(t, squad, say = () => {}) {
+    await FMB.status(true);
+    const v = String((FMB.state || {}).version || '0').split('.').map(Number);
+    if (FMB.port === 27027 || v[0] * 10000 + (v[1] || 0) * 100 + (v[2] || 0) < 402) throw new Error(L('Aplicar a tática precisa do Tactical Bible Bridge 0.4.2 ou mais recente (Definições › Integrações).', 'Applying the tactic needs Tactical Bible Bridge 0.4.2 or newer (Settings › Integrations).'));
+    const c = await FMB.context(), T = FMB_IDS.tactic, P = T.pairs(c), sleep = (ms) => new Promise(r => setTimeout(r, ms)), done = [];
+    const N = (k, v) => [k, 'SI.Core.DynamicNumber', String(v)], B = (k, v) => [k, 'System.Boolean', v ? 'True' : 'False'];
+    // 1. in-possession formation: move the FM slots that aren't on a target position to the free target positions
+    say(L('Formação', 'Formation'));
+    const want = t.slots.map(s => FMB.ipBits(s.ipCode));
+    if (want.some(b => b == null)) throw new Error(L('Posição da formação sem equivalente no FM.', 'Formation position with no FM equivalent.'));
+    let cur = await FMB.readTacticSlots(c);
+    const free = [...want], movers = [];
+    cur.forEach(s => { const i = free.indexOf(s.ip); if (i >= 0) free.splice(i, 1); else movers.push(s); });
+    for (const [i, s] of movers.entries()) {
+      const to = free[i]; if (to == null) break;
+      await FMB.send(T.move, 'TeamTacticReference', P, { type: 'SI.Core.Record', entries: [
+        [T.moveFrom, 'SI.Core.Record', { type: 'SI.Core.Record', entries: [N(T.moveFrom, s.ip), B(T.moveIP, true), N(T.moveSlot, s.slot)] }],
+        [T.moveTo, 'SI.Core.Record', { type: 'SI.Core.Record', entries: [N(T.moveTo, to), B(T.moveIP, true)] }]] });
+      await sleep(150);
+    }
+    done.push(L(`Formação com bola: ${t.ipForm} (${movers.length} posições mudadas)`, `In-possession formation: ${t.ipForm} (${movers.length} positions moved)`));
+    // 2. XI
+    say('XI');
+    const xi = await FMB.applyXI(t, squad); done.push(L(`XI: ${xi.placed} trocas`, `XI: ${xi.placed} swaps`) + (xi.skipped.length ? ' — ' + xi.skipped.slice(0, 3).join('; ') : ''));
+    // 3. roles, per FM slot holding that position
+    say(L('Papéis', 'Roles'));
+    cur = await FMB.readTacticSlots(c);
+    const used = new Set(), missing = [];
+    const setRole = (slot, bits, name, ip) => FMB.send(T.setRole, 'TeamTacticReference', P, { type: 'SI.Core.Record', entries: [N(T.slotIdx, slot),
+      [T.roleRec, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [N(FMB_IDS.key.number, 1), [FMB_IDS.key.payload, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [
+        N(T.roleRec, bits), [1464367445, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [N(1298233430, 14), N(1298755158, 14), B(1397715049, false)] }], B(1936487524, false), [T.roleName, 'System.String', name]] }]] }], B(T.roleIP, ip)] });
+    for (const s of t.slots) {
+      const bits = FMB.ipBits(s.ipCode), fm = cur.find(x => x.ip === bits && !used.has(x.slot)); if (!fm) continue; used.add(fm.slot);
+      for (const [rid, ip] of [[s.ip, true], [s.oop, false]]) {
+        const rb = rid && T.roles[rid], r = rid && ROLE_BY_ID[rid];
+        if (!rb) { if (rid) missing.push(roleName(r) || rid); continue; }
+        await setRole(fm.slot, rb, (r && (r.en || r.name)) || '', ip); await sleep(80);
+      }
+    }
+    const after = await FMB.readTacticSlots(c);
+    let okIP = 0, okOOP = 0, n = 0;
+    for (const s of t.slots) { const fm = after.find(x => x.ip === FMB.ipBits(s.ipCode)); if (!fm) continue; n++; if (fm.ipRole === T.roles[s.ip]) okIP++; if (fm.oopRole === T.roles[s.oop]) okOOP++; }
+    done.push(L(`Papéis: ${okIP}/${n} com bola e ${okOOP}/${n} sem bola confirmados no FM`, `Roles: ${okIP}/${n} in possession and ${okOOP}/${n} out of possession confirmed in FM`) + (missing.length ? L(' · sem equivalente: ', ' · no FM equivalent: ') + [...new Set(missing)].join(', ') : ''));
+    // 4. mentality
+    const mi = MENTALITIES.indexOf(t.ment);
+    if (mi >= 0) { await FMB.ok(`WRITE FM.UI.TeamTacticReference|${P}|${T.mentality} ${JSON.stringify({ type: 'SI.Bindable.DynamicReference', entries: [N(FMB_IDS.key.number, mi + 1), [FMB_IDS.key.payload, 'System.String', t.ment]] })}`); done.push(L('Mentalidade: ', 'Mentality: ') + t.ment); }
+    // 5. team instructions: ‹ to the first option, then › to the wanted one
+    say(L('Instruções de equipa', 'Team instructions'));
+    let nTI = 0; const noTI = [];
+    for (const [k, [id, count, map]] of Object.entries(T.ti)) {
+      const v = tiVal(t, k), target = v == null ? null : map[v];
+      if (target == null) { if (v != null && TI_BY_KEY[k]) noTI.push(TI_BY_KEY[k].n); continue; }
+      // FM drops arrow presses that arrive too fast: 150 ms between presses (verified on FM's screen)
+      for (let i = 0; i < count; i++) { await FMB.send(T.tiPrev, 'TeamTacticReference', P, ['SI.Core.DynamicNumber', String(id)]); await sleep(150); }
+      for (let i = 0; i < target; i++) { await FMB.send(T.tiNext, 'TeamTacticReference', P, ['SI.Core.DynamicNumber', String(id)]); await sleep(150); }
+      nTI++;
+    }
+    done.push(L(`Instruções de equipa: ${nTI} aplicadas`, `Team instructions: ${nTI} applied`) + (noTI.length ? L(' · sem opção igual no FM: ', ' · no matching FM option: ') + noTI.join(', ') : ''));
+    done.push(L('Formação sem bola: ajuste no FM (ainda não aplicada pela app).', 'Out-of-possession formation: set it in FM (not applied by the app yet).'));
+    return done;
+  },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */
   async applyXI(tactic, squad) {
     const c = await FMB.context(), K = FMB_IDS.key, pairs = FMB_IDS.tacticPairs(c);
@@ -437,6 +537,7 @@ function fmButton(kind) {
   const st = FMB.state || {}, ready = !!(st.ok && st.ready);
   const K = {
     xi: ['bridge', 'A.bridgeXI()', L('Colocar XI no FM', 'Place XI in FM'), L('Põe os jogadores do teu XI na tática activa do FM.', 'Puts your XI into the active tactic in FM.')],
+    tactic: ['bridge-tac', 'A.bridgeTactic()', L('Aplicar no FM', 'Apply in FM'), L('Escreve esta tática na tática activa do FM: formação com bola, XI, papéis, mentalidade e instruções de equipa.', 'Writes this tactic into FM’s active tactic: in-possession formation, XI, roles, mentality and team instructions.')],
     sp: ['bridge-sp', 'A.bridgeSetPieces()', L('Aplicar no FM', 'Apply in FM'), L('Aplica os marcadores e as rotinas de bolas paradas no FM. No FM, abra Táticas › Bolas paradas.', 'Applies the takers and set-piece routines in FM. In FM, open Tactics › Set Pieces.')],
     shortlist: ['bridge-sl', 'A.fmShortlist()', L('Lista → FM', 'Shortlist → FM'), L('Junta os jogadores da tua lista à shortlist do FM.', 'Adds the players on your list to FM\'s shortlist.')],
     focus: ['bridge-focus', 'A.focusOpen()', L('Observação no FM', 'Scout in FM'), L('Cria um Recruitment Focus (missão de observação) no FM a partir desta pesquisa.', 'Creates a Recruitment Focus (scouting assignment) in FM from this search.')],

@@ -422,7 +422,7 @@ async fn bridge_call(cmd: String, timeout_ms: Option<u64>) -> Result<BridgeReply
 // O DLL vai dentro do executável (serve o instalador e o .exe portátil). O CI não o consegue compilar (precisa dos
 // DLLs do jogo), por isso vem já compilado em bridge/dist (ver bridge/README.md). Requer o BepInEx 6 no FM27.
 const PLUGIN_DLL: &[u8] = include_bytes!("../../bridge/dist/TacticalBibleBridge.dll");
-const PLUGIN_VERSION: &str = "0.4.1";
+const PLUGIN_VERSION: &str = "0.4.2";
 
 #[derive(Serialize)]
 struct PluginStatus {

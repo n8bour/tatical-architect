@@ -49,7 +49,7 @@ namespace TacticalBibleBridge
     public class Plugin : BasePlugin
     {
         public const string Guid = "fm27.tacticalbible.bridge";
-        public const string Version = "0.4.1";
+        public const string Version = "0.4.2";
         public const int Port = 27029;
         const uint KeySession = 1198877028;
 
@@ -264,9 +264,12 @@ namespace TacticalBibleBridge
         }
 
         // ------------------------------------------------------------ values
-        internal static TypedValue Number(int n)
+        /// <summary>Game number: 32-bit when it fits (as the menus send most values), else 64-bit (role bits go up to 2^44).</summary>
+        static void SetNum(ref DynamicNumber dn, long n) { if (n >= int.MinValue && n <= int.MaxValue) dn.Set((int)n); else dn.Set(n); }
+
+        internal static TypedValue Number(long n)
         {
-            try { var dn = new DynamicNumber(); dn.Set(n); return TypedValue.CreateValueType<DynamicNumber>(dn); }
+            try { var dn = new DynamicNumber(); SetNum(ref dn, n); return TypedValue.CreateValueType<DynamicNumber>(dn); }
             catch (Exception e) { Write("number (method 1): " + e.Message); }
             try
             {
@@ -274,7 +277,7 @@ namespace TacticalBibleBridge
                 if (any != null)
                 {
                     var tv = TypedValue.CreateCopyFrom(any);
-                    var dn = tv.Get<DynamicNumber>(); dn.Set(n); tv.SetValue<DynamicNumber>(dn);
+                    var dn = tv.Get<DynamicNumber>(); SetNum(ref dn, n); tv.SetValue<DynamicNumber>(dn);
                     if (tv.AsString() == n.ToString()) return tv;
                 }
             }
@@ -436,7 +439,9 @@ namespace TacticalBibleBridge
             {
                 case "null": return TypedValue.Null;
                 case "SI.Bindable.NullReference": return RefValue(SI.Bindable.NullReference.Instance);
-                case "SI.Core.DynamicNumber": return Number(int.Parse(s));
+                case "SI.Core.DynamicNumber":
+                    if (long.TryParse(s, System.Globalization.NumberStyles.Integer, inv, out var whole)) return Number(whole);
+                    var real = new DynamicNumber(); real.Set(double.Parse(s, inv)); return TypedValue.CreateValueType<DynamicNumber>(real);   // decimals (e.g. pitch coordinates)
                 case "System.String": return TypedValue.Create(s);
                 case "System.Boolean": return TypedValue.Create(s.Equals("true", StringComparison.OrdinalIgnoreCase));
                 case "System.Int32": return TypedValue.Create(int.Parse(s));

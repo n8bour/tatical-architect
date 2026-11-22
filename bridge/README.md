@@ -135,3 +135,13 @@ Active tactic = `TeamTacticReference|825307168=126;<session>;1651271022=1;168521
   selected slot's role list (with names) is `2033407086`. Out-of-possession role change produced no event: to redo.
 - Team instructions: changing directness / line of engagement / defensive line wrote `1381059181`, `1749303654` and events
   `1515149153`, `879515246`: to decode one at a time. Name `1851878757`, style `1836216183` (presets `1214728517`).
+
+### Tactic › Apply in FM (verified on FM's screen, plugin 0.4.2)
+- Left/right of a central pair: **left = 2^20, right = 2^21** (DCL = 16 + 1048576).
+- Role event `1467503190` works in and out of possession (`1265792339` True/False); role bits are 64-bit (plugin ≥ 0.4.2).
+  Read back: IP role = `930166885`[slot].`1698852728`; OOP role = `1798391651`[slot].`1349481322` minus the flags 2^20..2^23.
+  The app's role → FM bits table is `FMB_IDS.tactic.roles` (68 of 77 roles; the others weren't on the positions clicked).
+- Team instructions: event `862931569` = › next option, `1249276755` = ‹ previous; value = instruction id (1–30). The arrows
+  stop at the ends, and FM drops presses that arrive too fast (150 ms between presses). Table: `FMB_IDS.tactic.ti`
+  (instruction id, number of FM options, app option → FM option). Ids 2, 13 and 14 never appeared.
+- Not done yet: out-of-possession formation (other position bits), creating a new tactic slot.

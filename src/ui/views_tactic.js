@@ -7,7 +7,7 @@ function vTactic() {
   const cats = Object.entries(au.scores);
   return `<div class="top"><div><h2>${esc(tName(ST.tactic))}</h2><p class="muted small" style="margin:0">Clique num jogador do campo para mudar papéis, jogador e instruções individuais.</p></div>
     <div class="row no-print">
-      ${fmButton('xi')}
+      ${fmButton('tactic')}
       <button class="btn primary" onclick="A.simOpen()">▶ Ver em campo</button>
       <button class="btn" onclick="A.newTactic()">Nova</button>
       <button class="btn" onclick="A.saveTactic()">Guardar</button>
@@ -15,6 +15,7 @@ function vTactic() {
       <label class="btn">Importar JSON<input type="file" accept=".json" hidden onchange="A.importJSON(this)"></label>
       <button class="btn" onclick="A.print()">Imprimir/PDF</button>
     </div></div>
+  ${ST.tacDone ? `<div class="notice small">${ST.tacDone.map(esc).join('<br>')}</div>` : ''}
   <div class="split">
     <div class="grid">
       <div class="panel grid">
