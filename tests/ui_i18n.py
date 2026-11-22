@@ -40,6 +40,7 @@ with sync_playwright() as p:
         pg.evaluate("t => A.scoutIngest(t, { save: 'db.csv' })", U.SCOUT_DB); pg.wait_for_function("SCOUT.db", timeout=20000)
         for k in ['cheap_wonder', 'reach', 'upgrade', 'weak_spot']:
             pg.evaluate(f"() => {{ A.scoutPreset('{k}'); A.scoutOpen(scoutResults()[0].id); }}"); [texts.add(x) for x in pg.evaluate(GRAB)]; pg.evaluate("A.scoutClose()")
+        pg.evaluate("A.focusOpen()"); [texts.add(x) for x in pg.evaluate(GRAB)]; pg.evaluate("A.focusClose()")
         pg.evaluate("() => { A.scoutTab('list'); }"); [texts.add(x) for x in pg.evaluate(GRAB)]; pg.evaluate("() => { A.scoutTab('results'); }")
         if desktop: pg.evaluate("() => { ST.auto.save = true; ST.auto.saveErr = 'x'; ST.lastSave = { name: 'T.fm', size: 1e8 }; ST.f9Found = true; render(); }")
         for v, t in U.VIEWS:

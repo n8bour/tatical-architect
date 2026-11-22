@@ -2760,7 +2760,7 @@ function scoutRowReader(head) {
     const lf = num(g(C.left_foot)), rf = num(g(C.right_foot));
     const endStr = g(C.contract_end) || '';
     const p = {
-      id: 'db' + (g(C.uid) || rows), uid: g(C.uid) || null, name, age: num(g(C.age)), nat: num(g(C.nation_id)), height: num(g(C.height_cm)),
+      id: 'db' + (g(C.uid) || rows), uid: g(C.uid) || null, uniq: g(C.unique_id) || null, name, age: num(g(C.age)), nat: num(g(C.nation_id)), height: num(g(C.height_cm)),
       ca: num(g(C.ability_current)), pa: pa != null ? pa : rng ? Math.round((rng[0] + rng[1]) / 2) : null, paRange: pa == null && rng ? rng : null,
       rep: num(g(C.reputation_current)), wrep: num(g(C.reputation_world)), club: g(C.club_name) || '', clubUid: g(C.club_uid) || '', clubNat: num(g(C.club_nation_id)), clubRep: num(g(C.club_reputation)),
       loan: /^true$/i.test(g(C.on_loan) || ''), loanFrom: g(C.loan_parent_club_name) || '', value: num(g(C.transfer_value)), wage: num(g(C.contract_wage)),
@@ -5227,7 +5227,7 @@ function vScout() {
   const open = S.open ? SCOUT.db.players.find(p => p.id === S.open) : null;
   const list = (ST.shortlist || []).map(x => SCOUT.db.players.find(p => p.id === x.id) || x);
   return `<div class="top"><div><h2>${L('Prospeção', 'Scouting')}</h2><p class="muted small" style="margin:0">${L(`${SCOUT.db.players.length.toLocaleString(LOCALE())} jogadores · ${esc(SCOUT.save)} · data do jogo ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimada)' : ''} · ${SCOUT.cached ? 'da cache' : 'lido em ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`, `${SCOUT.db.players.length.toLocaleString(LOCALE())} players · ${esc(SCOUT.save)} · game date ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimated)' : ''} · ${SCOUT.cached ? 'from cache' : 'read in ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`)}</p></div>
-    <div class="row">${DESKTOP ? `<button class="btn" data-busy="scout" onclick="A.scoutLoad(true)">${L('Actualizar do save', 'Refresh from save')}</button>` : ''}<button class="btn" onclick="A.scoutExport()">${L('Exportar CSV', 'Export CSV')}</button></div></div>
+    <div class="row">${DESKTOP ? `<button class="btn" data-busy="scout" onclick="A.scoutLoad(true)">${L('Actualizar do save', 'Refresh from save')}</button>` : ''}<button class="btn" onclick="A.scoutExport()">${L('Exportar CSV', 'Export CSV')}</button>${(ST.shortlist || []).length ? fmButton('shortlist') : ''}${fmButton('focus')}</div></div>
   <div class="plan-tabs" role="tablist" aria-label="${L('Pesquisas pré-definidas', 'Preset searches')}">${presets.map(p => `<button class="${S.preset === p.k ? 'on' : ''}" onclick="A.scoutPreset('${p.k}')" title="${esc(p.d)}" ${(p.needSquad && !ctx.squad.length) || (p.needMyClub && ctx.myRep == null) ? `disabled title="${esc(L('Carregue primeiro o seu plantel.', 'Load your squad first.'))}"` : ''}><span aria-hidden="true">${p.ic}</span> ${esc(p.n)}</button>`).join('')}</div>
   ${S.preset ? `<p class="small muted" style="margin:8px 0 0">${esc((presets.find(p => p.k === S.preset) || {}).d || '')}${S.weak ? ' ' + L(`Posição: ${S.weak}.`, `Position: ${S.weak}.`) : ''} ${L('Pode afinar com os filtros.', 'You can refine it with the filters.')}</p>` : ''}
   <div class="grid scout-grid" style="margin-top:12px">
@@ -5239,7 +5239,38 @@ function vScout() {
         : res.length ? scoutTable(res.slice(page * PAGE, page * PAGE + PAGE), extra) : `<p class="small muted">${L('Nenhum jogador com estes filtros. Alargue a pesquisa.', 'No players match these filters. Widen the search.')}</p>`}
     </div>
   </div>
-  ${open ? scoutCard(open) : ''}`;
+  ${open ? scoutCard(open) : ''}${S.focus ? focusDialog(res) : ''}`;
+}
+
+// ---- "Scout in FM": create a Recruitment Focus (scouting assignment) in FM from the current search
+// The countries come from the current results (where these players are from); FM's star filters are relative to the club.
+function focusAreas(res) {
+  const n = {}; res.forEach(p => { if (p.nat != null && SCOUT.nations[p.nat]) n[p.nat] = (n[p.nat] || 0) + 1; });
+  return Object.entries(n).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, c]) => ({ nat: +k, name: SCOUT.nations[k], count: c }));
+}
+function focusDefaults(res) {
+  const S = scoutState(), F = S.F, pre = scoutPresets(scoutCtx()).find(p => p.k === S.preset);
+  const ageMin = Math.max(15, +F.ageMin || 15), ageMax = Math.max(ageMin, +F.ageMax || (pre && /wonder/.test(pre.k) ? 19 : 30));
+  return { name: ((pre && pre.n) || L('Prospe\u00e7\u00e3o', 'Scouting')).slice(0, 25), ageMin, ageMax, caStars: 1, paStars: +F.paMin >= 140 ? 4 : 3,
+    areas: focusAreas(res).slice(0, 3).map(a => a.nat) };
+}
+function focusDialog(res) {
+  const S = scoutState(), d = S.focus, areas = focusAreas(res);
+  const stars = (k) => `<select onchange="A.focusSet('${k}', +this.value)" aria-label="${k}">${[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(v => `<option value="${v}" ${d[k] === v ? 'selected' : ''}>${'\u2605'.repeat(Math.floor(v))}${v % 1 ? '\u00bd' : ''} (${v})</option>`).join('')}</select>`;
+  return `<div class="modal-back" onclick="if(event.target===this)A.focusClose()"><div class="modal" role="dialog" aria-modal="true" aria-label="${L('Observa\u00e7\u00e3o no FM', 'Scout in FM')}" style="max-width:620px">
+    <div class="row" style="justify-content:space-between"><h3 style="margin:0">${L('Criar Recruitment Focus no FM', 'Create a Recruitment Focus in FM')}</h3><button class="btn sm" onclick="A.focusClose()" aria-label="${L('Fechar', 'Close')}">\u2715</button></div>
+    <p class="small muted">${L('Os teus olheiros passam a procurar jogadores assim nestes pa\u00edses. As estrelas do FM s\u00e3o relativas ao n\u00edvel do teu clube.', 'Your scouts start looking for players like these in these countries. FM\u2019s stars are relative to your club\u2019s level.')}</p>
+    <div class="grid g2">
+      <label class="f">${L('Nome (m\u00e1x. 25)', 'Name (max 25)')}<input type="text" maxlength="25" value="${esc(d.name)}" oninput="A.focusSet('name', this.value)"></label>
+      <div class="pair"><label class="f">${L('Idade m\u00ednima', 'Minimum age')}<input type="number" min="15" max="45" value="${d.ageMin}" onchange="A.focusSet('ageMin', +this.value)"></label><label class="f">${L('Idade m\u00e1xima', 'Maximum age')}<input type="number" min="15" max="45" value="${d.ageMax}" onchange="A.focusSet('ageMax', +this.value)"></label></div>
+      <label class="f">${L('Capacidade actual m\u00ednima', 'Minimum current ability')}${stars('caStars')}</label>
+      <label class="f">${L('Potencial m\u00ednimo', 'Minimum potential ability')}${stars('paStars')}</label>
+    </div>
+    <h4 style="margin-top:12px">${L('Pa\u00edses (de onde v\u00eam os resultados desta pesquisa)', 'Countries (where this search\u2019s results come from)')}</h4>
+    ${areas.length ? `<div class="chips" style="max-height:none">${areas.map(a => `<button class="chip pick ${d.areas.includes(a.nat) ? 'on' : ''}" onclick="A.focusArea(${a.nat})" aria-pressed="${d.areas.includes(a.nat)}">${esc(a.name)} \u00b7 ${a.count}</button>`).join('')}</div>`
+      : `<p class="small muted">${L('Sem resultados: ajuste a pesquisa primeiro.', 'No results: adjust the search first.')}</p>`}
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" onclick="A.focusClose()">${L('Cancelar', 'Cancel')}</button><button class="btn primary" data-busy="bridge-focus" ${d.areas.length ? '' : 'disabled'} onclick="A.focusCreate()">${L('Criar no FM', 'Create in FM')}</button></div>
+  </div></div>`;
 }
 
 ;
@@ -5746,6 +5777,17 @@ const FMB_IDS = {
       slotMove: 1449477207,      // move an instruction to another group/position (see bridge/README.md)
     },
   },
+  // ---- recruitment (decoded and verified from the bridge, see bridge/README.md)
+  search: { pairs: '825307168=98;1198877028=1;1719300978=1;1954115685=0', text: 1851878757, people: 1886547059, uniqueId: 1970170212 },
+  action: { ev: 44, pairs: (id) => `825307168=1;1198877028=1;1633904996=${id}`, shortlistAdd: 1097488485, shortlistRemove: 1500280650 },
+  focus: {
+    pairs: (c, id) => `825307168=85;1198877028=1;1348620377=${c.manager};1769566810=${c.team};1919314276=${id}`,
+    info: (c) => `825307168=97;1198877028=1;1348620377=${c.manager};1769566810=${c.team}`,
+    name: 1851878757, ageMin: 1394625906, ageMax: 929909872, ca: 1346584898, pa: 1347436866, level: 1298233430,
+    caStep: 1517250124, paStep: 1431517038, area: 1817143629, addArea: 0, areas: 1986161206, confirm: 55,
+    list: 1953983593, remove: 53, id: 1919314276,
+    nation: (natId) => 167772160 + natId,   // FM NationReference id = fmsave nation_id + 0x0A000000
+  },
   // FM position bits (low 20 bits) -> app slot base
   posBits: [[1, 'GK'], [2, 'SW'], [4, 'DR'], [8, 'DL'], [16, 'DC'], [32, 'WBR'], [64, 'WBL'], [128, 'DM'], [256, 'MR'], [512, 'ML'], [1024, 'MC'], [2048, 'AMR'], [4096, 'AML'], [8192, 'AMC'], [16384, 'ST']],
 };
@@ -5981,6 +6023,84 @@ const FMB = {
     if (need.size) done.push(L('Rotinas: o tempo acabou antes de abrir ', 'Routines: timed out before opening ') + [...need].map(k => k === S.kinds.attCorner ? L('o canto ofensivo', 'the attacking corner') : L('o canto defensivo', 'the defending corner')).join(L(' e ', ' and ')) + L(' no FM.', ' in FM.'));
     return done;
   },
+  // ---- recruitment: FM search, shortlist, recruitment focus (scout assignment)
+  /** FM person id for a player of the save: FM's own search by name, confirmed by fmsave's unique_id. null if not found. */
+  async findPerson(name, uniq) {
+    const S = FMB_IDS.search, sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    await FMB.ok(`WRITE FM.UI.SearchReference|${S.pairs}|${S.text} ${JSON.stringify(['System.String', name])}`);
+    for (let i = 0; i < 10; i++) {
+      await sleep(350);
+      const [list] = await FMB.read([['SearchReference', S.pairs, S.people]]);
+      const ids = FMB.items(list).map(x => FMB.pair(x, FMB_IDS.key.personId)).filter(Boolean);
+      if (!ids.length) continue;
+      if (!uniq) return ids.length === 1 ? ids[0] : null;
+      const uq = await FMB.read(ids.map(id => ['PersonReference', `825307168=28;1198877028=1;${FMB_IDS.key.personId}=${id}`, S.uniqueId]));
+      const k = uq.findIndex(v => String(v) === String(uniq));
+      return k >= 0 ? ids[k] : null;
+    }
+    return null;
+  },
+  shortlistAdd(c, person) {
+    const A = FMB_IDS.action, P = (id) => ({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.personId, 'SI.Core.DynamicNumber', String(id)]] });
+    return FMB.send(A.ev, 'ActionReference', A.pairs(A.shortlistAdd), { type: 'SI.Bindable.DynamicReference', entries: [
+      [1853189474, 'SI.Core.DynamicNumber', '1'], [2004054900, 'System.Collections.Generic.List`1', [['System.String', '']]],
+      [1214805357, 'SI.Bindable.DynamicReference', P(c.manager)], [FMB_IDS.key.personId, 'SI.Bindable.DynamicReference', P(person)],
+      [1685218636, 'System.Collections.Generic.List`1', [['SI.Bindable.DynamicReference', P(person)]]],
+      [1936223853, 'System.String', ''], [1954115685, 'SI.Core.DynamicNumber', '0'], [1818719336, 'SI.Core.DynamicNumber', '0']] });
+  },
+  /** Adds the app's shortlist to FM's shortlist. say(text) shows progress. Returns { added: [names], missing: [names] }. */
+  async pushShortlist(list, say = () => {}) {
+    const c = await FMB.context(), out = { added: [], missing: [] };
+    for (const [i, p] of list.entries()) {
+      say(`${i + 1}/${list.length} · ${p.name}`, i / list.length);
+      const person = await FMB.findPerson(p.name, p.uniq);
+      if (!person) { out.missing.push(p.name); continue; }
+      await FMB.shortlistAdd(c, person); out.added.push(p.name);
+    }
+    return out;
+  },
+  /** FM's recruitment focuses: [{ id, name }]. */
+  async focusList(c) {
+    const F = FMB_IDS.focus;
+    const [list] = await FMB.read([['ScoutingInfoReference', F.info(c), F.list]]);
+    const ids = FMB.items(list).map(x => FMB.pair(x, F.id)).filter(x => x != null);
+    const names = ids.length ? await FMB.read(ids.map(id => ['RecruitmentFocusItemReference', F.pairs(c, id), F.name])) : [];
+    return ids.map((id, k) => ({ id, name: names[k] || '' }));
+  },
+  /** Creates a recruitment focus (scout assignment) in FM. o: { name, ageMin, ageMax, caStars, paStars, areas: [{ id, label }] }.
+   *  Fills FM's "new focus" form in the game (any position) and confirms it. Returns the new focus { id, name }. */
+  async createFocus(o, say = () => {}) {
+    const c = await FMB.context(), F = FMB_IDS.focus, P = F.pairs(c, -1), sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const W = (prop, v) => FMB.ok(`WRITE FM.UI.RecruitmentFocusItemReference|${P}|${prop} ${JSON.stringify(v)}`);
+    const E = (ev, v) => FMB.send(ev, 'RecruitmentFocusItemReference', P, v);
+    const num = (n) => ({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(n)], [FMB_IDS.key.payload, 'System.String', String(n)]] });
+    const [areas] = await FMB.read([['RecruitmentFocusItemReference', P, F.areas]]);
+    if (FMB.items(areas).length) throw new Error(L('Há um Recruitment Focus a meio no FM (com áreas escolhidas): termine-o ou cancele-o primeiro.', 'There is a Recruitment Focus half-created in FM (with areas chosen): finish or cancel it first.'));
+    const before = new Set((await FMB.focusList(c)).map(f => f.id));
+    say(L('Idade e capacidade', 'Age and ability'));
+    await W(F.ageMin, num(o.ageMin)); await W(F.ageMax, num(o.ageMax));
+    const stepTo = async (prop, ev, stars) => {      // half-star steps: value = 10 + 2 × stars
+      const target = Math.round(10 + 2 * stars);
+      for (let i = 0; i < 14; i++) {
+        const [r] = await FMB.read([['RecruitmentFocusItemReference', P, prop]]);
+        const v = FMB.num(FMB.field(r, F.level), target); if (v === target) return;
+        await E(ev, ['SI.Core.DynamicNumber', v < target ? '1' : '0']); await sleep(200);
+      }
+    };
+    await stepTo(F.ca, F.caStep, o.caStars); await stepTo(F.pa, F.paStep, o.paStars);
+    say(L('Áreas', 'Areas'));
+    for (const a of o.areas) {
+      await W(F.area, { type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.payload, 'System.String', a.label],
+        [FMB_IDS.key.number, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.personId, 'SI.Core.DynamicNumber', String(a.id)]] }]] });
+      await E(F.addArea, null); await sleep(250);
+    }
+    await W(F.name, ['System.String', String(o.name).slice(0, 25)]); await sleep(300);
+    say(L('A confirmar', 'Confirming'));
+    await E(F.confirm, null); await sleep(900);
+    const made = (await FMB.focusList(c)).find(f => !before.has(f.id));
+    if (!made) throw new Error(L('O FM não criou o Recruitment Focus.', 'FM did not create the Recruitment Focus.'));
+    return made;
+  },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */
   async applyXI(tactic, squad) {
     const c = await FMB.context(), K = FMB_IDS.key, pairs = FMB_IDS.tacticPairs(c);
@@ -6033,6 +6153,8 @@ function fmButton(kind) {
   const K = {
     xi: ['bridge', 'A.bridgeXI()', L('Colocar XI no FM', 'Place XI in FM'), L('Põe os jogadores do teu XI na tática activa do FM.', 'Puts your XI into the active tactic in FM.')],
     sp: ['bridge-sp', 'A.bridgeSetPieces()', L('Aplicar no FM', 'Apply in FM'), L('Aplica os marcadores e as rotinas de bolas paradas no FM. No FM, abra Táticas › Bolas paradas.', 'Applies the takers and set-piece routines in FM. In FM, open Tactics › Set Pieces.')],
+    shortlist: ['bridge-sl', 'A.fmShortlist()', L('Lista → FM', 'Shortlist → FM'), L('Junta os jogadores da tua lista à shortlist do FM.', 'Adds the players on your list to FM\'s shortlist.')],
+    focus: ['bridge-focus', 'A.focusOpen()', L('Observação no FM', 'Scout in FM'), L('Cria um Recruitment Focus (missão de observação) no FM a partir desta pesquisa.', 'Creates a Recruitment Focus (scouting assignment) in FM from this search.')],
   }[kind];
   const off = st.ok ? L('O FM está aberto mas ainda não carregou um jogo.', 'FM is open but has not loaded a game yet.')
     : L('Precisa do plugin Tactical Bible Bridge dentro do FM (Definições › Integrações).', 'Needs the Tactical Bible Bridge plugin inside FM (Settings › Integrations).');
@@ -6194,10 +6316,32 @@ const A = {
   scoutTab(t) { scoutState().tab = t; save(); render(); },
   scoutOpen(id) { scoutState().open = id; render(); },
   scoutClose() { scoutState().open = null; render(); },
+  // ---- shortlist and scouting in FM (Tactical Bible Bridge)
+  async fmShortlist() {
+    const list = ST.shortlist || []; if (!list.length) return toast(L('A lista está vazia: use ☆ nos resultados.', 'The list is empty: use ☆ in the results.'));
+    try {
+      const r = await withBusy('bridge-sl', L('A juntar a lista à shortlist do FM', 'Adding the list to FM’s shortlist'), (prog) => FMB.pushShortlist(list, (t, p) => prog(p, t)));
+      toast(L(`${r.added.length} na shortlist do FM`, `${r.added.length} added to FM’s shortlist`) + (r.missing.length ? L(` · não encontrados: ${r.missing.join(', ')}`, ` · not found: ${r.missing.join(', ')}`) : ''));
+    } catch (e) { toast(String(e.message || e)); }
+  },
+  focusOpen() { if (!SCOUT.db) return; scoutState().focus = focusDefaults(scoutResults()); render(); },
+  focusClose() { scoutState().focus = null; render(); },
+  focusSet(k, v) { const d = scoutState().focus; if (!d) return; d[k] = v; if (k === 'ageMin' && d.ageMax < v) d.ageMax = v; if (k === 'ageMax' && d.ageMin > v) d.ageMin = v; if (k !== 'name') render(); },
+  focusArea(nat) { const d = scoutState().focus; if (!d) return; d.areas = d.areas.includes(nat) ? d.areas.filter(x => x !== nat) : [...d.areas, nat]; render(); },
+  async focusCreate() {
+    const d = scoutState().focus; if (!d || !d.areas.length) return;
+    const o = { name: d.name || 'Tactical Bible', ageMin: d.ageMin, ageMax: d.ageMax, caStars: d.caStars, paStars: d.paStars,
+      areas: d.areas.map(n => ({ id: FMB_IDS.focus.nation(n), label: SCOUT.nations[n] || '' })) };
+    try {
+      const made = await withBusy('bridge-focus', L('A criar a observação no FM', 'Creating the scouting assignment in FM'), (prog) => FMB.createFocus(o, (t) => prog(null, t)));
+      scoutState().focus = null; toast(L(`Recruitment Focus “${made.name}” criado no FM`, `Recruitment Focus “${made.name}” created in FM`));
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
   scoutStar(id) {
     ST.shortlist = ST.shortlist || []; const i = ST.shortlist.findIndex(x => x.id === id);
     if (i >= 0) ST.shortlist.splice(i, 1);
-    else { const p = SCOUT.db && SCOUT.db.players.find(x => x.id === id); if (p) ST.shortlist.push({ id: p.id, name: p.name, age: p.age, club: p.club, posRaw: p.posRaw, ca: p.ca, pa: p.pa, value: p.value, wage: p.wage, end: p.end, pos: p.pos, natPos: p.natPos, a: {}, pers: {}, hid: {} }); }
+    else { const p = SCOUT.db && SCOUT.db.players.find(x => x.id === id); if (p) ST.shortlist.push({ id: p.id, uniq: p.uniq, nat: p.nat, name: p.name, age: p.age, club: p.club, posRaw: p.posRaw, ca: p.ca, pa: p.pa, value: p.value, wage: p.wage, end: p.end, pos: p.pos, natPos: p.natPos, a: {}, pers: {}, hid: {} }); }
     save(); render();
   },
   scoutExport() {

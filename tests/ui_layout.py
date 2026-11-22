@@ -92,6 +92,10 @@ def main():
                         r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('.modal')"))
                         if r: problems[(w, mode, 'scout-card', None)] = r
                         pg.evaluate("A.scoutClose()")
+                        pg.evaluate("A.focusOpen()"); pg.wait_for_timeout(80)          # janela 'Observação no FM'
+                        r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('.modal')"))
+                        if r: problems[(w, mode, 'focus-dialog', None)] = r
+                        pg.evaluate("A.focusClose()")
                 # barra de topo (menu, estado e dados do jogo), nesta largura e neste modo
                 r = pg.evaluate(CHECK.replace("main = document.querySelector('main')", "main = document.querySelector('#nav')"))
                 if r: problems[(w, mode, 'topbar', None)] = r

@@ -145,10 +145,32 @@ const A = {
   scoutTab(t) { scoutState().tab = t; save(); render(); },
   scoutOpen(id) { scoutState().open = id; render(); },
   scoutClose() { scoutState().open = null; render(); },
+  // ---- shortlist and scouting in FM (Tactical Bible Bridge)
+  async fmShortlist() {
+    const list = ST.shortlist || []; if (!list.length) return toast(L('A lista está vazia: use ☆ nos resultados.', 'The list is empty: use ☆ in the results.'));
+    try {
+      const r = await withBusy('bridge-sl', L('A juntar a lista à shortlist do FM', 'Adding the list to FM’s shortlist'), (prog) => FMB.pushShortlist(list, (t, p) => prog(p, t)));
+      toast(L(`${r.added.length} na shortlist do FM`, `${r.added.length} added to FM’s shortlist`) + (r.missing.length ? L(` · não encontrados: ${r.missing.join(', ')}`, ` · not found: ${r.missing.join(', ')}`) : ''));
+    } catch (e) { toast(String(e.message || e)); }
+  },
+  focusOpen() { if (!SCOUT.db) return; scoutState().focus = focusDefaults(scoutResults()); render(); },
+  focusClose() { scoutState().focus = null; render(); },
+  focusSet(k, v) { const d = scoutState().focus; if (!d) return; d[k] = v; if (k === 'ageMin' && d.ageMax < v) d.ageMax = v; if (k === 'ageMax' && d.ageMin > v) d.ageMin = v; if (k !== 'name') render(); },
+  focusArea(nat) { const d = scoutState().focus; if (!d) return; d.areas = d.areas.includes(nat) ? d.areas.filter(x => x !== nat) : [...d.areas, nat]; render(); },
+  async focusCreate() {
+    const d = scoutState().focus; if (!d || !d.areas.length) return;
+    const o = { name: d.name || 'Tactical Bible', ageMin: d.ageMin, ageMax: d.ageMax, caStars: d.caStars, paStars: d.paStars,
+      areas: d.areas.map(n => ({ id: FMB_IDS.focus.nation(n), label: SCOUT.nations[n] || '' })) };
+    try {
+      const made = await withBusy('bridge-focus', L('A criar a observação no FM', 'Creating the scouting assignment in FM'), (prog) => FMB.createFocus(o, (t) => prog(null, t)));
+      scoutState().focus = null; toast(L(`Recruitment Focus “${made.name}” criado no FM`, `Recruitment Focus “${made.name}” created in FM`));
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
   scoutStar(id) {
     ST.shortlist = ST.shortlist || []; const i = ST.shortlist.findIndex(x => x.id === id);
     if (i >= 0) ST.shortlist.splice(i, 1);
-    else { const p = SCOUT.db && SCOUT.db.players.find(x => x.id === id); if (p) ST.shortlist.push({ id: p.id, name: p.name, age: p.age, club: p.club, posRaw: p.posRaw, ca: p.ca, pa: p.pa, value: p.value, wage: p.wage, end: p.end, pos: p.pos, natPos: p.natPos, a: {}, pers: {}, hid: {} }); }
+    else { const p = SCOUT.db && SCOUT.db.players.find(x => x.id === id); if (p) ST.shortlist.push({ id: p.id, uniq: p.uniq, nat: p.nat, name: p.name, age: p.age, club: p.club, posRaw: p.posRaw, ca: p.ca, pa: p.pa, value: p.value, wage: p.wage, end: p.end, pos: p.pos, natPos: p.natPos, a: {}, pers: {}, hid: {} }); }
     save(); render();
   },
   scoutExport() {

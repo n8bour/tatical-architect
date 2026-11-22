@@ -137,7 +137,7 @@ function vScout() {
   const open = S.open ? SCOUT.db.players.find(p => p.id === S.open) : null;
   const list = (ST.shortlist || []).map(x => SCOUT.db.players.find(p => p.id === x.id) || x);
   return `<div class="top"><div><h2>${L('Prospeção', 'Scouting')}</h2><p class="muted small" style="margin:0">${L(`${SCOUT.db.players.length.toLocaleString(LOCALE())} jogadores · ${esc(SCOUT.save)} · data do jogo ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimada)' : ''} · ${SCOUT.cached ? 'da cache' : 'lido em ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`, `${SCOUT.db.players.length.toLocaleString(LOCALE())} players · ${esc(SCOUT.save)} · game date ${SCOUT.date ? fmtDate(SCOUT.date) : '—'}${SCOUT.dateGuess ? ' (estimated)' : ''} · ${SCOUT.cached ? 'from cache' : 'read in ' + (SCOUT.ms / 1000).toFixed(1) + ' s'}`)}</p></div>
-    <div class="row">${DESKTOP ? `<button class="btn" data-busy="scout" onclick="A.scoutLoad(true)">${L('Actualizar do save', 'Refresh from save')}</button>` : ''}<button class="btn" onclick="A.scoutExport()">${L('Exportar CSV', 'Export CSV')}</button></div></div>
+    <div class="row">${DESKTOP ? `<button class="btn" data-busy="scout" onclick="A.scoutLoad(true)">${L('Actualizar do save', 'Refresh from save')}</button>` : ''}<button class="btn" onclick="A.scoutExport()">${L('Exportar CSV', 'Export CSV')}</button>${(ST.shortlist || []).length ? fmButton('shortlist') : ''}${fmButton('focus')}</div></div>
   <div class="plan-tabs" role="tablist" aria-label="${L('Pesquisas pré-definidas', 'Preset searches')}">${presets.map(p => `<button class="${S.preset === p.k ? 'on' : ''}" onclick="A.scoutPreset('${p.k}')" title="${esc(p.d)}" ${(p.needSquad && !ctx.squad.length) || (p.needMyClub && ctx.myRep == null) ? `disabled title="${esc(L('Carregue primeiro o seu plantel.', 'Load your squad first.'))}"` : ''}><span aria-hidden="true">${p.ic}</span> ${esc(p.n)}</button>`).join('')}</div>
   ${S.preset ? `<p class="small muted" style="margin:8px 0 0">${esc((presets.find(p => p.k === S.preset) || {}).d || '')}${S.weak ? ' ' + L(`Posição: ${S.weak}.`, `Position: ${S.weak}.`) : ''} ${L('Pode afinar com os filtros.', 'You can refine it with the filters.')}</p>` : ''}
   <div class="grid scout-grid" style="margin-top:12px">
@@ -149,5 +149,36 @@ function vScout() {
         : res.length ? scoutTable(res.slice(page * PAGE, page * PAGE + PAGE), extra) : `<p class="small muted">${L('Nenhum jogador com estes filtros. Alargue a pesquisa.', 'No players match these filters. Widen the search.')}</p>`}
     </div>
   </div>
-  ${open ? scoutCard(open) : ''}`;
+  ${open ? scoutCard(open) : ''}${S.focus ? focusDialog(res) : ''}`;
+}
+
+// ---- "Scout in FM": create a Recruitment Focus (scouting assignment) in FM from the current search
+// The countries come from the current results (where these players are from); FM's star filters are relative to the club.
+function focusAreas(res) {
+  const n = {}; res.forEach(p => { if (p.nat != null && SCOUT.nations[p.nat]) n[p.nat] = (n[p.nat] || 0) + 1; });
+  return Object.entries(n).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, c]) => ({ nat: +k, name: SCOUT.nations[k], count: c }));
+}
+function focusDefaults(res) {
+  const S = scoutState(), F = S.F, pre = scoutPresets(scoutCtx()).find(p => p.k === S.preset);
+  const ageMin = Math.max(15, +F.ageMin || 15), ageMax = Math.max(ageMin, +F.ageMax || (pre && /wonder/.test(pre.k) ? 19 : 30));
+  return { name: ((pre && pre.n) || L('Prospe\u00e7\u00e3o', 'Scouting')).slice(0, 25), ageMin, ageMax, caStars: 1, paStars: +F.paMin >= 140 ? 4 : 3,
+    areas: focusAreas(res).slice(0, 3).map(a => a.nat) };
+}
+function focusDialog(res) {
+  const S = scoutState(), d = S.focus, areas = focusAreas(res);
+  const stars = (k) => `<select onchange="A.focusSet('${k}', +this.value)" aria-label="${k}">${[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(v => `<option value="${v}" ${d[k] === v ? 'selected' : ''}>${'\u2605'.repeat(Math.floor(v))}${v % 1 ? '\u00bd' : ''} (${v})</option>`).join('')}</select>`;
+  return `<div class="modal-back" onclick="if(event.target===this)A.focusClose()"><div class="modal" role="dialog" aria-modal="true" aria-label="${L('Observa\u00e7\u00e3o no FM', 'Scout in FM')}" style="max-width:620px">
+    <div class="row" style="justify-content:space-between"><h3 style="margin:0">${L('Criar Recruitment Focus no FM', 'Create a Recruitment Focus in FM')}</h3><button class="btn sm" onclick="A.focusClose()" aria-label="${L('Fechar', 'Close')}">\u2715</button></div>
+    <p class="small muted">${L('Os teus olheiros passam a procurar jogadores assim nestes pa\u00edses. As estrelas do FM s\u00e3o relativas ao n\u00edvel do teu clube.', 'Your scouts start looking for players like these in these countries. FM\u2019s stars are relative to your club\u2019s level.')}</p>
+    <div class="grid g2">
+      <label class="f">${L('Nome (m\u00e1x. 25)', 'Name (max 25)')}<input type="text" maxlength="25" value="${esc(d.name)}" oninput="A.focusSet('name', this.value)"></label>
+      <div class="pair"><label class="f">${L('Idade m\u00ednima', 'Minimum age')}<input type="number" min="15" max="45" value="${d.ageMin}" onchange="A.focusSet('ageMin', +this.value)"></label><label class="f">${L('Idade m\u00e1xima', 'Maximum age')}<input type="number" min="15" max="45" value="${d.ageMax}" onchange="A.focusSet('ageMax', +this.value)"></label></div>
+      <label class="f">${L('Capacidade actual m\u00ednima', 'Minimum current ability')}${stars('caStars')}</label>
+      <label class="f">${L('Potencial m\u00ednimo', 'Minimum potential ability')}${stars('paStars')}</label>
+    </div>
+    <h4 style="margin-top:12px">${L('Pa\u00edses (de onde v\u00eam os resultados desta pesquisa)', 'Countries (where this search\u2019s results come from)')}</h4>
+    ${areas.length ? `<div class="chips" style="max-height:none">${areas.map(a => `<button class="chip pick ${d.areas.includes(a.nat) ? 'on' : ''}" onclick="A.focusArea(${a.nat})" aria-pressed="${d.areas.includes(a.nat)}">${esc(a.name)} \u00b7 ${a.count}</button>`).join('')}</div>`
+      : `<p class="small muted">${L('Sem resultados: ajuste a pesquisa primeiro.', 'No results: adjust the search first.')}</p>`}
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" onclick="A.focusClose()">${L('Cancelar', 'Cancel')}</button><button class="btn primary" data-busy="bridge-focus" ${d.areas.length ? '' : 'disabled'} onclick="A.focusCreate()">${L('Criar no FM', 'Create in FM')}</button></div>
+  </div></div>`;
 }

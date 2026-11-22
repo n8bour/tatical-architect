@@ -46,6 +46,17 @@ const FMB_IDS = {
       slotMove: 1449477207,      // move an instruction to another group/position (see bridge/README.md)
     },
   },
+  // ---- recruitment (decoded and verified from the bridge, see bridge/README.md)
+  search: { pairs: '825307168=98;1198877028=1;1719300978=1;1954115685=0', text: 1851878757, people: 1886547059, uniqueId: 1970170212 },
+  action: { ev: 44, pairs: (id) => `825307168=1;1198877028=1;1633904996=${id}`, shortlistAdd: 1097488485, shortlistRemove: 1500280650 },
+  focus: {
+    pairs: (c, id) => `825307168=85;1198877028=1;1348620377=${c.manager};1769566810=${c.team};1919314276=${id}`,
+    info: (c) => `825307168=97;1198877028=1;1348620377=${c.manager};1769566810=${c.team}`,
+    name: 1851878757, ageMin: 1394625906, ageMax: 929909872, ca: 1346584898, pa: 1347436866, level: 1298233430,
+    caStep: 1517250124, paStep: 1431517038, area: 1817143629, addArea: 0, areas: 1986161206, confirm: 55,
+    list: 1953983593, remove: 53, id: 1919314276,
+    nation: (natId) => 167772160 + natId,   // FM NationReference id = fmsave nation_id + 0x0A000000
+  },
   // FM position bits (low 20 bits) -> app slot base
   posBits: [[1, 'GK'], [2, 'SW'], [4, 'DR'], [8, 'DL'], [16, 'DC'], [32, 'WBR'], [64, 'WBL'], [128, 'DM'], [256, 'MR'], [512, 'ML'], [1024, 'MC'], [2048, 'AMR'], [4096, 'AML'], [8192, 'AMC'], [16384, 'ST']],
 };
@@ -281,6 +292,84 @@ const FMB = {
     if (need.size) done.push(L('Rotinas: o tempo acabou antes de abrir ', 'Routines: timed out before opening ') + [...need].map(k => k === S.kinds.attCorner ? L('o canto ofensivo', 'the attacking corner') : L('o canto defensivo', 'the defending corner')).join(L(' e ', ' and ')) + L(' no FM.', ' in FM.'));
     return done;
   },
+  // ---- recruitment: FM search, shortlist, recruitment focus (scout assignment)
+  /** FM person id for a player of the save: FM's own search by name, confirmed by fmsave's unique_id. null if not found. */
+  async findPerson(name, uniq) {
+    const S = FMB_IDS.search, sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    await FMB.ok(`WRITE FM.UI.SearchReference|${S.pairs}|${S.text} ${JSON.stringify(['System.String', name])}`);
+    for (let i = 0; i < 10; i++) {
+      await sleep(350);
+      const [list] = await FMB.read([['SearchReference', S.pairs, S.people]]);
+      const ids = FMB.items(list).map(x => FMB.pair(x, FMB_IDS.key.personId)).filter(Boolean);
+      if (!ids.length) continue;
+      if (!uniq) return ids.length === 1 ? ids[0] : null;
+      const uq = await FMB.read(ids.map(id => ['PersonReference', `825307168=28;1198877028=1;${FMB_IDS.key.personId}=${id}`, S.uniqueId]));
+      const k = uq.findIndex(v => String(v) === String(uniq));
+      return k >= 0 ? ids[k] : null;
+    }
+    return null;
+  },
+  shortlistAdd(c, person) {
+    const A = FMB_IDS.action, P = (id) => ({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.personId, 'SI.Core.DynamicNumber', String(id)]] });
+    return FMB.send(A.ev, 'ActionReference', A.pairs(A.shortlistAdd), { type: 'SI.Bindable.DynamicReference', entries: [
+      [1853189474, 'SI.Core.DynamicNumber', '1'], [2004054900, 'System.Collections.Generic.List`1', [['System.String', '']]],
+      [1214805357, 'SI.Bindable.DynamicReference', P(c.manager)], [FMB_IDS.key.personId, 'SI.Bindable.DynamicReference', P(person)],
+      [1685218636, 'System.Collections.Generic.List`1', [['SI.Bindable.DynamicReference', P(person)]]],
+      [1936223853, 'System.String', ''], [1954115685, 'SI.Core.DynamicNumber', '0'], [1818719336, 'SI.Core.DynamicNumber', '0']] });
+  },
+  /** Adds the app's shortlist to FM's shortlist. say(text) shows progress. Returns { added: [names], missing: [names] }. */
+  async pushShortlist(list, say = () => {}) {
+    const c = await FMB.context(), out = { added: [], missing: [] };
+    for (const [i, p] of list.entries()) {
+      say(`${i + 1}/${list.length} · ${p.name}`, i / list.length);
+      const person = await FMB.findPerson(p.name, p.uniq);
+      if (!person) { out.missing.push(p.name); continue; }
+      await FMB.shortlistAdd(c, person); out.added.push(p.name);
+    }
+    return out;
+  },
+  /** FM's recruitment focuses: [{ id, name }]. */
+  async focusList(c) {
+    const F = FMB_IDS.focus;
+    const [list] = await FMB.read([['ScoutingInfoReference', F.info(c), F.list]]);
+    const ids = FMB.items(list).map(x => FMB.pair(x, F.id)).filter(x => x != null);
+    const names = ids.length ? await FMB.read(ids.map(id => ['RecruitmentFocusItemReference', F.pairs(c, id), F.name])) : [];
+    return ids.map((id, k) => ({ id, name: names[k] || '' }));
+  },
+  /** Creates a recruitment focus (scout assignment) in FM. o: { name, ageMin, ageMax, caStars, paStars, areas: [{ id, label }] }.
+   *  Fills FM's "new focus" form in the game (any position) and confirms it. Returns the new focus { id, name }. */
+  async createFocus(o, say = () => {}) {
+    const c = await FMB.context(), F = FMB_IDS.focus, P = F.pairs(c, -1), sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const W = (prop, v) => FMB.ok(`WRITE FM.UI.RecruitmentFocusItemReference|${P}|${prop} ${JSON.stringify(v)}`);
+    const E = (ev, v) => FMB.send(ev, 'RecruitmentFocusItemReference', P, v);
+    const num = (n) => ({ type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.number, 'SI.Core.DynamicNumber', String(n)], [FMB_IDS.key.payload, 'System.String', String(n)]] });
+    const [areas] = await FMB.read([['RecruitmentFocusItemReference', P, F.areas]]);
+    if (FMB.items(areas).length) throw new Error(L('Há um Recruitment Focus a meio no FM (com áreas escolhidas): termine-o ou cancele-o primeiro.', 'There is a Recruitment Focus half-created in FM (with areas chosen): finish or cancel it first.'));
+    const before = new Set((await FMB.focusList(c)).map(f => f.id));
+    say(L('Idade e capacidade', 'Age and ability'));
+    await W(F.ageMin, num(o.ageMin)); await W(F.ageMax, num(o.ageMax));
+    const stepTo = async (prop, ev, stars) => {      // half-star steps: value = 10 + 2 × stars
+      const target = Math.round(10 + 2 * stars);
+      for (let i = 0; i < 14; i++) {
+        const [r] = await FMB.read([['RecruitmentFocusItemReference', P, prop]]);
+        const v = FMB.num(FMB.field(r, F.level), target); if (v === target) return;
+        await E(ev, ['SI.Core.DynamicNumber', v < target ? '1' : '0']); await sleep(200);
+      }
+    };
+    await stepTo(F.ca, F.caStep, o.caStars); await stepTo(F.pa, F.paStep, o.paStars);
+    say(L('Áreas', 'Areas'));
+    for (const a of o.areas) {
+      await W(F.area, { type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.payload, 'System.String', a.label],
+        [FMB_IDS.key.number, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [[FMB_IDS.key.personId, 'SI.Core.DynamicNumber', String(a.id)]] }]] });
+      await E(F.addArea, null); await sleep(250);
+    }
+    await W(F.name, ['System.String', String(o.name).slice(0, 25)]); await sleep(300);
+    say(L('A confirmar', 'Confirming'));
+    await E(F.confirm, null); await sleep(900);
+    const made = (await FMB.focusList(c)).find(f => !before.has(f.id));
+    if (!made) throw new Error(L('O FM não criou o Recruitment Focus.', 'FM did not create the Recruitment Focus.'));
+    return made;
+  },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */
   async applyXI(tactic, squad) {
     const c = await FMB.context(), K = FMB_IDS.key, pairs = FMB_IDS.tacticPairs(c);
@@ -333,6 +422,8 @@ function fmButton(kind) {
   const K = {
     xi: ['bridge', 'A.bridgeXI()', L('Colocar XI no FM', 'Place XI in FM'), L('Põe os jogadores do teu XI na tática activa do FM.', 'Puts your XI into the active tactic in FM.')],
     sp: ['bridge-sp', 'A.bridgeSetPieces()', L('Aplicar no FM', 'Apply in FM'), L('Aplica os marcadores e as rotinas de bolas paradas no FM. No FM, abra Táticas › Bolas paradas.', 'Applies the takers and set-piece routines in FM. In FM, open Tactics › Set Pieces.')],
+    shortlist: ['bridge-sl', 'A.fmShortlist()', L('Lista → FM', 'Shortlist → FM'), L('Junta os jogadores da tua lista à shortlist do FM.', 'Adds the players on your list to FM\'s shortlist.')],
+    focus: ['bridge-focus', 'A.focusOpen()', L('Observação no FM', 'Scout in FM'), L('Cria um Recruitment Focus (missão de observação) no FM a partir desta pesquisa.', 'Creates a Recruitment Focus (scouting assignment) in FM from this search.')],
   }[kind];
   const off = st.ok ? L('O FM está aberto mas ainda não carregou um jogo.', 'FM is open but has not loaded a game yet.')
     : L('Precisa do plugin Tactical Bible Bridge dentro do FM (Definições › Integrações).', 'Needs the Tactical Bible Bridge plugin inside FM (Settings › Integrations).');
