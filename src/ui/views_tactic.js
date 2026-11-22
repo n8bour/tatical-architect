@@ -92,7 +92,7 @@ function vImport() {
       <div class="drop" id="drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');A.fmf(event.dataTransfer.files[0])">
         <p><b>Arraste o .fmf para aqui</b> ou</p><label class="btn primary">Escolher ficheiro<input type="file" accept=".fmf" hidden onchange="A.fmf(this)"></label>
         <p class="small muted">Os ficheiros ficam em Documentos/Sports Interactive/Football Manager 27/tactics</p></div>
-      <div class="notice warn"><b>Limite do formato:</b> no FM27, o conteúdo da tática dentro do .fmf está <b>comprimido e cifrado</b> pelo jogo. Esta app não o decifra: para importar ou exportar .fmf use o <a href="#" onclick="A.go('lab');return false">Laboratório</a> (FM Tactics Lab). O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈1 minuto).</div>
+      <div class="notice warn"><b>Limite do formato:</b> no FM27, o conteúdo da tática dentro do .fmf está <b>comprimido e cifrado</b> pelo jogo. Esta app não o decifra. O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈1 minuto).</div>
       <h4>Outras opções</h4>
       <div class="row"><label class="btn">Importar tática JSON (desta app)<input type="file" accept=".json" hidden onchange="A.importJSON(this)"></label><button class="btn" onclick="A.tab('tactic','analyze')">Recriar manualmente →</button></div>
     </div>
@@ -104,7 +104,7 @@ function vImport() {
       <span>Outras assinaturas</span><b>${r.magic.length ? esc(r.magic.join(', ')) : '—'}</b>
       <span>Textos encontrados</span><b>${r.strings.length}</b></div>
       ${r.container && r.container.recognized ? `<div class="notice" style="margin-top:12px"><b>✓ Formato .fmf do FM27 reconhecido.</b> ${r.container.sections.length} secções (${r.container.sections.map(x => esc(x.name) + ' ' + x.len + 'B' + (x.kind === 'zstd' ? ' — índice zstd' : '')).join(', ')}) e ${r.container.blocks.length} ficheiros internos cifrados (${r.container.blocks.map(b => b.cipher + 'B').join(', ')}). O maior (${r.container.largest.cipher}B cifrados) é a tática.
-        <br><b>Resultado:</b> esta app não lê o conteúdo. Para importar a tática use o Laboratório (FM Tactics Lab), ou recrie-a no analisador a partir do nome do ficheiro.
+        <br><b>Resultado:</b> esta app não lê o conteúdo: recrie a tática no analisador a partir do nome do ficheiro.
         <div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.fmfApplyHints()">${L(`Criar “${esc(r.name.replace(/\.fmf$/i, ''))}” no analisador`, `Create “${esc(r.name.replace(/\.fmf$/i, ''))}” in the analyser`)}</button></div></div>` : ''}
       <h4 style="margin-top:12px">Texto legível</h4>
       ${r.decoded || r.matches.mentality.length || r.matches.formations.length ? `

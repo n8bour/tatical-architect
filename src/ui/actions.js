@@ -106,54 +106,6 @@ const A = {
   genUse(sim, tab) { const t = A.genTactic(); ST.tactic = t; ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(JSON.parse(JSON.stringify(t))); ST.sugg = null; save();
     if (sim) return A.simOpen(); if (tab === 'training') return A.go('training'); A.tab('tactic', tab || 'analyze'); toast('Tática gerada carregada e guardada'); },
   genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
-  labSet(k, v) { labState()[k] = v; save(); },
-  async labConnect() {
-    const LS = labState(); if (BUSY['lab-connect']) return; LS.busy = true; LS.err = ''; render();
-    const ports = [LS.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
-    busyStart('lab-connect', 'A procurar o Tactics Lab', { p: 0 });
-    for (const [i, p] of ports.entries()) {
-      LS.port = p; busyUpdate('lab-connect', { p: i / ports.length, detail: 'porta ' + p });
-      try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { LS.status = s; break; } } catch (e) { /* tenta a seguinte */ }
-    }
-    LS.busy = false; busyEnd('lab-connect');
-    if (!LS.status) { LS.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; LS.port = ports[0]; render(); return; }
-    save(); await A.labJobs();
-  },
-  async labJobs() { const LS = labState(); busyStart('lab-jobs', 'A ler as experiências do Tactics Lab'); try { const j = await labCall('GET', '/api/jobs?brief=1'); LS.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); LS.err = ''; } catch (e) { LS.err = e.message; LS.status = null; } busyEnd('lab-jobs'); render(); },
-  async labOpen(id) { const LS = labState(); try { LS.job = await withBusy('lab-open', 'A abrir a experiência', () => labCall('GET', '/api/jobs/' + id, null, 15000)); LS.err = ''; } catch (e) { LS.err = e.message; } render(); },
-  async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
-  async labMore(id) {
-    const LS = labState(), n = LS.more || 100; if (BUSY['lab-more']) return;
-    busyStart('lab-more', L(`A pedir mais ${n} jogos ao motor do FM27`, `Asking the FM27 engine for ${n} more matches`), { detail: L('a preparar as táticas A e B', 'preparing tactics A and B') });
-    try {
-      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
-      const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
-      const used = ((pkg.provenance && pkg.provenance.seeds) || []); const start = used.length ? Math.max(...used) + 1 : 1;
-      const seeds = Array.from({ length: n }, (_, i) => start + i);
-      const body = { scenario: sc.B, seeds, event_details: false, name: `${(pkg.summary && pkg.summary.name) || 'Experiência'} · +${n}` };
-      if (sc.A) body.reference = sc.A;
-      const r = await labCall('POST', '/api/run', body, 15000);
-      busyEnd('lab-more'); toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
-    } catch (e) { busyEnd('lab-more'); toast(e.message); LS.err = e.message; render(); }
-  },
-  async labFmf(id, g) {
-    if (BUSY['lab-fmf']) return;
-    busyStart('lab-fmf', L(`A exportar o .fmf da tática ${g}`, `Exporting tactic ${g}’s .fmf`), { detail: L('o próprio jogo gera e verifica o ficheiro', 'the game itself writes and verifies the file'), slow: L('o motor do FM27 está a serializar e a reler a tática — até 45 s', 'the FM27 engine is serialising and re-reading the tactic — up to 45 s'), slowAfter: 8 });
-    try {
-      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
-      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error(L('Tática ' + g + ' indisponível', 'Tactic ' + g + ' unavailable'));
-      const r = await labCall('POST', '/api/export-fmf', { side: 0, scenario: sc, name: `${(pkg.summary && pkg.summary.name) || 'Tatica'} ${g}`.slice(0, 90) }, 60000);
-      const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
-      toast('.fmf exportado e verificado pelo jogo — importe-o no FM27');
-    } catch (e) { toast(e.message); } finally { busyEnd('lab-fmf'); }
-  },
-  async labCatalog() {
-    busyStart('lab-cat', 'A exportar o catálogo do motor');
-    try { const cat = await labCall('GET', '/api/catalog', null, 8000), def = await labCall('GET', '/api/defaults', null, 8000);
-      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); } finally { busyEnd('lab-cat'); }
-  },
-  labImport(input) { const f = input.files[0]; if (!f) return; f.text().then(t => { try { ingestJSON(JSON.parse(t), f.name); } catch (e) { toast('JSON inválido'); } }); },
   lang(l) {
     ST.lang = LANG = l;
     // o relatório do gerador guarda as razões no idioma em que foi feito: recalcula-as no novo idioma

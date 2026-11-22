@@ -42,11 +42,9 @@ function T(s) {
 }
 // mensagens com partes variáveis que não vêm de L() (erros devolvidos pela parte nativa da app)
 const EN_RX = [
-  [/^O Tactics Lab não responde na porta (\d+): ([\s\S]*)$/, 'Tactics Lab is not responding on port $1: $2'],
   [/^Não consegui correr o fmsave\. ([\s\S]*)$/, 'Could not run fmsave. $1'],
   [/^Não consegui copiar o save: ([\s\S]*)$/, 'Could not copy the save: $1'],
   [/^Save não encontrado: ([\s\S]*)$/, 'Save not found: $1'],
-  [/^Resposta inválida do Tactics Lab$/, 'Invalid response from Tactics Lab'],
   [/^Caminho inválido$/, 'Invalid path'], [/^Método inválido$/, 'Invalid method'], [/^Link inválido$/, 'Invalid link'],
 ];
 const TR_ATTRS = ['title', 'placeholder', 'aria-label'];

@@ -403,11 +403,9 @@ function T(s) {
 }
 // mensagens com partes variáveis que não vêm de L() (erros devolvidos pela parte nativa da app)
 const EN_RX = [
-  [/^O Tactics Lab não responde na porta (\d+): ([\s\S]*)$/, 'Tactics Lab is not responding on port $1: $2'],
   [/^Não consegui correr o fmsave\. ([\s\S]*)$/, 'Could not run fmsave. $1'],
   [/^Não consegui copiar o save: ([\s\S]*)$/, 'Could not copy the save: $1'],
   [/^Save não encontrado: ([\s\S]*)$/, 'Save not found: $1'],
-  [/^Resposta inválida do Tactics Lab$/, 'Invalid response from Tactics Lab'],
   [/^Caminho inválido$/, 'Invalid path'], [/^Método inválido$/, 'Invalid method'], [/^Link inválido$/, 'Invalid link'],
 ];
 const TR_ATTRS = ['title', 'placeholder', 'aria-label'];
@@ -696,7 +694,6 @@ const ROLE_BY_ID = Object.fromEntries(ROLES.map(r => [r.id, r]));
 // Casa exacta: no FM26/27 alguns papéis só existem na casa central ('C': DM, MC, AMC, ST)
 // ou só nas deslocadas ('S': DML/DMR, MCL/MCR, AMCL/AMCR, STL/STR) da mesma linha.
 // Fontes: jogo (relato do utilizador) e guias FM26 — o Box-to-Box Midfielder só em DM deslocado.
-// Com o Tactics Lab ligado, a disponibilidade pode ser confirmada pelo catálogo do motor.
 const ROLE_SLOT = { b2b: 'S' };
 ROLES.forEach(r => { if (ROLE_SLOT[r.id]) r.slot = ROLE_SLOT[r.id]; });
 
@@ -2982,111 +2979,6 @@ function enrichFromScout(players, text) {
 }
 
 ;
-// ---- core/lab.js
-// ============================================================
-// Laboratório: análise das experiências do FM Tactics Lab
-// (github.com/lqf0624/fm-tactics-lab, MIT). Formato lido do código
-// do servidor (fm27_tactics_server.py):
-//   job = { id, name, status, completed, total, mode: 'single'|'comparison',
-//           experiment_type?: 'save_opponents'|'setpiece_episode',
-//           schedule?: { variant: { group, tested_side, opponent, venue } },
-//           metrics: { variant|group: { n, wins, draws, losses, win_rate, win_interval, goals_for, goals_against, points } },
-//           runs: [ { variant, seed, result: { score: [casa, fora] },
-//                     statistics: { teams: [ { xg, shots, possession, passes, completed_passes, ... }, {...} ] } } ] }
-// No modo livre a equipa testada é a 0; 'A' = referência, 'B' = tática nova.
-// ============================================================
-
-const T95 = [0, 12.71, 4.30, 3.18, 2.78, 2.57, 2.45, 2.36, 2.31, 2.26, 2.23, 2.20, 2.18, 2.16, 2.14, 2.13, 2.12, 2.11, 2.10, 2.09, 2.09, 2.08, 2.07, 2.07, 2.06, 2.06, 2.06, 2.05, 2.05, 2.05, 2.04];
-const tcrit = (df) => df <= 0 ? NaN : df < T95.length ? T95[df] : 1.96 + 2.4 / df;
-function meanCI(xs) {
-  const n = xs.length; if (!n) return null;
-  const m = xs.reduce((a, b) => a + b, 0) / n;
-  if (n < 2) return { n, mean: m, sd: null, lo: null, hi: null };
-  const sd = Math.sqrt(xs.reduce((a, x) => a + (x - m) * (x - m), 0) / (n - 1));
-  const h = tcrit(n - 1) * sd / Math.sqrt(n);
-  return { n, mean: m, sd, lo: m - h, hi: m + h };
-}
-// Wilson para taxas (vitórias)
-function wilson(k, n) {
-  if (!n) return null; const z = 1.959963984540054, p = k / n, den = 1 + z * z / n;
-  const c = (p + z * z / (2 * n)) / den, h = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den;
-  return { p, lo: Math.max(0, c - h), hi: Math.min(1, c + h) };
-}
-
-// orienta cada jogo para a equipa testada: devolve {gf, ga, xg, xga, shots, shotsA, poss, pass}
-function orientRun(job, run) {
-  const sched = job.schedule && job.schedule[run.variant];
-  const side = sched && sched.tested_side != null ? sched.tested_side : 0;
-  const sc = (run.result && run.result.score) || [0, 0];
-  const st = (run.statistics && run.statistics.teams) || [];
-  const me = st[side] || {}, op = st[1 - side] || {};
-  const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
-  return {
-    group: sched ? sched.group : run.variant, seed: run.seed, opponent: sched ? sched.opponent_key || sched.opponent : null, venue: sched ? sched.venue : null,
-    gf: sc[side], ga: sc[1 - side], xg: num(me.xg), xga: num(op.xg), shots: num(me.shots), shotsA: num(op.shots),
-    poss: num(me.possession), pass: me.passes ? (me.completed_passes || 0) / me.passes : null,
-  };
-}
-
-function summarize(rows) {
-  const n = rows.length; if (!n) return null;
-  const avg = (k) => { const v = rows.map(r => r[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-  const w = rows.filter(r => r.gf > r.ga).length, d = rows.filter(r => r.gf === r.ga).length;
-  return { n, w, d, l: n - w - d, win: wilson(w, n), pts: (3 * w + d) / n, gf: avg('gf'), ga: avg('ga'), xg: avg('xg'), xga: avg('xga'),
-    shots: avg('shots'), shotsA: avg('shotsA'), poss: avg('poss'), pass: avg('pass'),
-    gd: meanCI(rows.map(r => r.gf - r.ga)), xgd: rows.every(r => r.xg != null && r.xga != null) ? meanCI(rows.map(r => r.xg - r.xga)) : null };
-}
-
-// emparelha A e B pela mesma semente (e mesmo adversário/campo, no modo save)
-function pairedDiff(rows) {
-  const key = (r) => [r.seed, r.opponent || '', r.venue || ''].join('|');
-  const A = new Map(), B = new Map();
-  rows.forEach(r => { if (r.group === 'A') A.set(key(r), r); else if (r.group === 'B') B.set(key(r), r); });
-  const pairs = [...A.keys()].filter(k => B.has(k)).map(k => [A.get(k), B.get(k)]);
-  if (!pairs.length) return null;
-  const dGD = meanCI(pairs.map(([a, b]) => (b.gf - b.ga) - (a.gf - a.ga)));
-  const hasXG = pairs.every(([a, b]) => a.xg != null && b.xg != null && a.xga != null && b.xga != null);
-  const dXG = hasXG ? meanCI(pairs.map(([a, b]) => (b.xg - b.xga) - (a.xg - a.xga))) : null;
-  const dPts = meanCI(pairs.map(([a, b]) => ((b.gf > b.ga ? 3 : b.gf === b.ga ? 1 : 0) - (a.gf > a.ga ? 3 : a.gf === a.ga ? 1 : 0))));
-  // o xG tem muito menos ruído do que os golos: é a métrica principal do veredicto
-  const main = dXG || dGD, unit = dXG ? 'xG' : L('golos', 'goals');
-  let verdict, tone;
-  if (!main || main.n < 6 || main.lo == null) { verdict = L('Poucos jogos para concluir. Corre pelo menos 30 por tática.', 'Too few matches to conclude. Run at least 30 per tactic.'); tone = 'info'; }
-  else if (main.lo > 0) { verdict = L(`B é melhor do que A: +${main.mean.toFixed(2)} ${unit} de saldo por jogo (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`, `B is better than A: +${main.mean.toFixed(2)} ${unit} difference per match (95%: ${main.lo.toFixed(2)} to ${main.hi.toFixed(2)}).`); tone = 'good'; }
-  else if (main.hi < 0) { verdict = L(`A é melhor do que B: ${main.mean.toFixed(2)} ${unit} de saldo por jogo com B (95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`, `A is better than B: ${main.mean.toFixed(2)} ${unit} difference per match with B (95%: ${main.lo.toFixed(2)} to ${main.hi.toFixed(2)}).`); tone = 'crit'; }
-  else { verdict = L(`Sem diferença clara (${main.mean >= 0 ? '+' : ''}${main.mean.toFixed(2)} ${unit}; 95%: ${main.lo.toFixed(2)} a ${main.hi.toFixed(2)}).`, `No clear difference (${main.mean >= 0 ? '+' : ''}${main.mean.toFixed(2)} ${unit}; 95%: ${main.lo.toFixed(2)} to ${main.hi.toFixed(2)}).`); tone = 'warn'; }
-  // jogos necessários para separar uma diferença do tamanho observada (mín. 0,15) com 95%
-  let needN = null;
-  if (main && main.sd) { const target = Math.max(0.15, Math.abs(main.mean)); needN = Math.ceil(Math.pow(1.96 * main.sd / target, 2)); }
-  return { n: pairs.length, dGD, dXG, dPts, verdict, tone, needN, unit };
-}
-
-function analyzeJob(job) {
-  const runs = (job.runs || []).filter(r => r && r.result && Array.isArray(r.result.score));
-  const rows = runs.map(r => orientRun(job, r));
-  const groups = [...new Set(rows.map(r => r.group))].sort();
-  const per = Object.fromEntries(groups.map(g => [g, summarize(rows.filter(r => r.group === g))]));
-  const comparison = groups.includes('A') && groups.includes('B') ? pairedDiff(rows) : null;
-  // por adversário (modo save)
-  let byOpp = null;
-  if (job.schedule) {
-    const opps = [...new Set(rows.map(r => r.opponent).filter(Boolean))];
-    byOpp = opps.map(o => ({ key: o, name: (Object.values(job.schedule).find(s => (s.opponent_key || s.opponent) === o) || {}).opponent || o,
-      A: summarize(rows.filter(r => r.opponent === o && r.group === 'A')), B: summarize(rows.filter(r => r.opponent === o && r.group === 'B')) }));
-  }
-  const names = job.variant_names || {};
-  return { id: job.id, name: job.name || job.id, status: job.status, completed: job.completed, total: job.total, mode: job.mode, type: job.experiment_type || 'free', per, comparison, byOpp, names, rows };
-}
-
-// pacote de exportação (/api/jobs/{id}/export) ou o próprio job
-function jobFromAny(d) {
-  if (!d || typeof d !== 'object') return null;
-  if (d.summary && Array.isArray(d.summary.runs)) return Object.assign({}, d.summary, { _scenarios: d.scenarios || null });
-  if (Array.isArray(d.runs) && (d.metrics || d.status)) return d;
-  return null;
-}
-
-;
 // ---- core/sim_model.js
 // ============================================================
 // Campo animado: cada jogador tem uma posição por fase do jogo,
@@ -3379,11 +3271,8 @@ addEN({
   "Situações de jogo": "Game states",
   "Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.": "Press F9 in FM27 and then “Load the latest F9” — or turn on automatic loading in Squad.",
   "Exportar catálogo do motor (diagnóstico)": "Export the engine catalogue (diagnostics)",
-  "Ligado ao Tactics Lab": "Connected to Tactics Lab",
   "Desligado": "Disconnected",
   "Actualizar": "Refresh",
-  "Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.": "Tactics Lab not found. Open it first (with Steam open) and check the port in the address it shows.",
-  "Esta experiência não tem a tática B exportável.": "This experiment has no exportable tactic B.",
   "Plano aplicado à tática": "Plan applied to the tactic",
   "Escolha o contexto e carregue em": "Pick the context and press",
   "Nenhum atributo pede instruções individuais.": "No attribute calls for player instructions.",
@@ -3394,7 +3283,6 @@ addEN({
   "Falta instalar o leitor de saves — veja Plantel.": "The save reader still needs installing — see Squad.",
   "Grave o jogo no FM27: a app lê o save sozinha.": "Save the game in FM27: the app reads the save by itself.",
   "Carregue F9 no ecrã do plantel no FM27.": "Press F9 on the squad screen in FM27.",
-  "Ainda não há experiências no Tactics Lab.": "There are no experiments in Tactics Lab yet.",
   "Correr mais": "Run more",
   "Não consegui montar o XI.": "Could not build the XI.",
   "Modelos disponíveis": "Available templates",
@@ -3419,10 +3307,8 @@ addEN({
   "Defesa": "Defending",
   "Ler o save agora": "Read the save now",
   "Sem plantel": "No squad",
-  "pelo jogo. Esta app não o decifra: para importar ou exportar .fmf use o": "by the game. This app does not decrypt it: to import or export .fmf files use the",
-  "(FM Tactics Lab). O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈# minuto).": "(FM Tactics Lab). The inspector confirms the format and shows its structure; you can also recreate the tactic in the analyser (≈# minute).",
-  "esta app não lê o conteúdo. Para importar a tática use o Laboratório (FM Tactics Lab), ou recrie-a no analisador a partir do nome do ficheiro.": "this app does not read the content. To import the tactic use the Lab (FM Tactics Lab), or recreate it in the analyser starting from the file name.",
-  "Laboratório": "Lab",
+  "pelo jogo. Esta app não o decifra. O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈# minuto).": "by the game. This app does not decrypt it. The inspector confirms the format and shows its structure; you can also recreate the tactic in the analyser (≈# minute).",
+  "esta app não lê o conteúdo: recrie a tática no analisador a partir do nome do ficheiro.": "this app does not read the content: recreate the tactic in the analyser starting from the file name.",
   "Na": "In the",
   "ou": "or",
   "Disponível na": "Available in the",
@@ -3457,7 +3343,6 @@ addEN({
   "(MIT) é descarregado sozinho na primeira leitura.": "(MIT) downloads itself on the first read.",
   "(Randal S. Olson, MIT — lê uma cópia do save, nunca o altera nem lê a memória do jogo), ou do F# do FM View Exporter. A app não gera .fmf (o FM# cifra-os): as táticas voltam ao jogo pela Ficha para o FM#.": "(Randal S. Olson, MIT — reads a copy of the save, never changes it and never reads the game’s memory), or from the FM View Exporter’s F#. The app does not create .fmf files (FM# encrypts them): tactics go back into the game via the FM27 Sheet.",
   "(Windows + Steam): descarregue o": "(Windows + Steam): download",
-  "(Windows) a app liga-se ao Tactics Lab, lista as experiências, corre mais jogos e exporta .fmf. No browser, importe o JSON exportado de uma experiência.": "(Windows) the app connects to Tactics Lab, lists experiments, runs more matches and exports .fmf. In the browser, import the JSON exported from an experiment.",
   "(alteração) e corra #–# jogos com “comparar”.": "(change) and run #–# matches with “compare”.",
   "(cruzar)": "(cross)",
   "(instala-se uma vez com": "(install it once with",
@@ -3472,18 +3357,15 @@ addEN({
   ". Depois, F# no ecrã do plantel exporta-o e a app carrega-o sozinha. F# no plantel de outro clube entra como adversário.": ". Then F# on the squad screen exports it and the app loads it by itself. F# on another club’s squad brings it in as the opponent.",
   ". Depois, F# no ecrã do plantel exporta-o. F# no plantel de outro clube entra como adversário.": ". Then F# on the squad screen exports it. F# on another club’s squad brings it in as the opponent.",
   ".fmf exportado e verificado pelo jogo — importe-o no FM#": ".fmf exported and verified by the game — import it into FM#",
-  "A abrir a experiência": "Opening the experiment",
   "A carregar a exportação F#": "Loading the F# export",
   "A exportar o .fmf da tática #": "Exporting the .fmf of tactic #",
   "A exportar o catálogo do motor": "Exporting the engine catalogue",
   "A gerar a tática": "Generating the tactic",
-  "A ler as experiências do Tactics Lab": "Reading Tactics Lab experiments",
   "A ler o save T.fm": "Reading save T.fm",
   "A ler o save T.fm — #% — # MB · lê uma cópia, o save não é alterado": "Reading save T.fm — #% — # MB · reads a copy, the save is not changed",
   "A minha equipa": "My team",
   "A pedir mais # jogos ao motor do FM#": "Asking the FM# engine for # more matches",
   "A perder ou empatado contra bloco baixo nos últimos #–# min.": "Losing or drawing against a low block in the last #–# min.",
-  "A procurar o Tactics Lab": "Looking for Tactics Lab",
   "A tua tática tal como está no jogo (screenshots de #/#), já com Winger/Wing-Back nos lados certos.": "Your tactic as it is in the game (screenshots from #/#), already with the Winger/Wing-Back on the right sides.",
   "A · referência": "A · reference",
   "A âncora da rest-defence. Em quase todas as táticas pelo menos um destes \"seguros\".": "The anchor of the rest-defence. Almost every tactic has at least one of these \"safe\" players.",
@@ -3491,7 +3373,6 @@ addEN({
   "Abre espaço central para AM/SS.": "Opens central space for the AM/SS.",
   "Abre para o corredor (ex-Mezzala/Carrilero na posse) dando largura a partir do meio.": "Moves out to the flank (the former Mezzala/Carrilero in possession), giving width from midfield.",
   "Abrir": "Open",
-  "Abrir Laboratório": "Open Lab",
   "Abrir fmsave online": "Open fmsave online",
   "Abrir no analisador": "Open in the analyser",
   "Abrir no campo animado completo": "Open in the full animated pitch",
@@ -3723,7 +3604,6 @@ addEN({
   "Desarmes mais agressivos sobre esse jogador.": "Harder tackles on that player.",
   "Desarmes mais agressivos.": "Harder tackles.",
   "Desarmes mais cautelosos.": "More careful tackles.",
-  "Descarregar o Tactics Lab": "Download Tactics Lab",
   "Descarregar o plugin": "Download the plugin",
   "Desde o FM#, cada jogador tem um papel com bola (IP) e outro sem bola (OOP), e a equipa tem uma formação para cada fase. Não existem duties nem fluidez: o comportamento vem do papel + instruções. O jogo avisa se a distância entre a posição IP e OOP de um jogador é demasiado grande — isso cria buracos nas transições.": "Since FM#, every player has an in-possession role (IP) and an out-of-possession role (OOP), and the team has a formation for each phase. There are no duties or fluidity: behaviour comes from the role + instructions. The game warns you if the distance between a player’s IP and OOP positions is too large — that creates holes in transitions.",
   "Desenvolvimento individual do XI": "Individual development of the XI",
@@ -3768,8 +3648,6 @@ addEN({
   "Excelente contra um médio ofensivo/falso #. Precisa de um Covering ao lado.": "Excellent against an attacking midfielder/false #. Needs a Covering partner.",
   "Exige subir os avançados e médios — mais espaço atrás.": "It means pushing strikers and midfielders up — more space in behind.",
   "Experimente as instruções": "Try the instructions",
-  "Experiência concluída no motor do FM#": "Experiment finished on the FM# engine",
-  "Experiências": "Experiments",
   "Exportar JSON": "Export JSON",
   "Exportar textos (.txt)": "Export texts (.txt)",
   "Exportar tudo": "Export everything",
@@ -3843,9 +3721,7 @@ addEN({
   "Idioma": "Language",
   "Importar": "Import",
   "Importar JSON": "Import JSON",
-  "Importar experiência (.json)": "Import experiment (.json)",
   "Importar tática JSON (desta app)": "Import tactic JSON (from this app)",
-  "Importe o JSON de uma experiência.": "Import the JSON of an experiment.",
   "Imprimir/PDF": "Print/PDF",
   "In Possession / Out of Possession — com e sem bola.": "In Possession / Out of Possession — with and without the ball.",
   "Individual Development com Role Training no papel exacto da tática; recrutar para o papel.": "Individual Development with Role Training in the tactic’s exact role; recruit for the role.",
@@ -3884,8 +3760,6 @@ addEN({
   "Jovens a desenvolver (≤ #) — ganham prioridade no XI": "Youngsters to develop (≤ #) — get priority in the XI",
   "Jovens: minutos > tudo. Se não joga, empréstimo a um clube que use papel parecido.": "Youngsters: minutes above everything. If he does not play, loan him to a club that uses a similar role.",
   "Keep Ball in Play mantém o ritmo mas desperdiça uma arma se fores forte no ar.": "Keep Ball in Play keeps the tempo but wastes a weapon if you are strong in the air.",
-  "Laboratório": "Lab",
-  "Laboratório — motor do FM#": "Lab — FM# engine",
   "Lados diferentes não são um defeito: lateral seguro (IFB) num lado e ala ofensivo (WB/AWB) no outro é das estruturas mais estáveis. Faça corresponder o lado ofensivo ao seu melhor jogador.": "Different sides are not a flaw: a safe full-back (IFB) on one side and an attacking wing-back (WB/AWB) on the other is one of the most stable structures. Put the attacking side on your best player’s flank.",
   "Lançamentos longos": "Long throws",
   "Largo dificulta a reacção à perda (counter-press). Estreito facilita o fecho do adversário ao meio.": "Wide makes reacting to a turnover harder (counter-press). Narrow makes it easier for the opponent to close the middle.",
@@ -3913,8 +3787,6 @@ addEN({
   "Ligação": "Connection",
   "Ligação directa": "Direct connection",
   "Ligue a leitura do save ou instale o plugin do F# — veja Plantel.": "Turn on save reading or install the F# plugin — see Squad.",
-  "Ligue-se ao Tactics Lab e escolha uma experiência à esquerda.": "Connect to Tactics Lab and pick an experiment on the left.",
-  "Ligue-se para ver as experiências.": "Connect to see the experiments.",
   "Limite do formato:": "Format limit:",
   "Limpar": "Clear",
   "Limpar XI": "Clear XI",
@@ -4162,7 +4034,6 @@ addEN({
   "Sem corredores (IF/CHM/SS) a área fica vazia.": "Without runners (IF/CHM/SS) the box stays empty.",
   "Sem dados do pé preferido o efeito do canto não é indicado. Exportações com a coluna do pé (FM View Exporter, fmsave) mostram-no.": "Without preferred-foot data the corner’s swing is not shown. Exports with the foot column (FM View Exporter, fmsave) show it.",
   "Sem efeito": "No effect",
-  "Sem experiência aberta": "No experiment open",
   "Sem plantel": "No squad",
   "Semana com # jogos: Recuperação + Match Preparation; sem sessões pesadas.": "A week with # matches: Recovery + Match Preparation; no heavy sessions.",
   "Semana-tipo sugerida": "Suggested typical week",
@@ -4200,7 +4071,6 @@ addEN({
   "Tenta passes de ruptura.": "Tries defence-splitting passes.",
   "Testa todos os pares de formações, escolhe o papel de cada posição com regras de equilíbrio (rest-defence, largura, área, criadores, outlets) e o XI exacto pelo algoritmo húngaro.": "Tests every pair of formations, picks each position’s role with balance rules (rest-defence, width, box, creators, outlets) and the exact XI with the Hungarian algorithm.",
   "Testa táticas com o motor de jogo original através do": "Tests tactics with the original match engine through",
-  "Testar no motor do FM# — FM Tactics Lab": "Test on the FM# engine — FM Tactics Lab",
   "Teste pressão alta": "High press test",
   "Teu XI: #": "Your XI: #",
   "Texto legível": "Readable text",
@@ -4349,7 +4219,6 @@ addEN({
   "outlet": "outlet",
   "pares de jogos.": "pairs of matches.",
   "parte da ala e entra para organizar": "starts wide and comes inside to organise",
-  "pelo jogo (blocos com nonce e tag de autenticação, padrão AES-GCM). Nenhuma ferramenta externa consegue ler formação, papéis ou instruções sem a chave do jogo. O inspector confirma o formato e mostra a estrutura; a análise faz-se recriando a tática no analisador (≈# minuto).": "by the game (blocks with a nonce and an authentication tag, the AES-GCM pattern). This app does not decrypt it; to import or export .fmf files use the Lab (FM Tactics Lab). The inspector confirms the format and shows its structure; you can also recreate the tactic in the analyser (≈# minute).",
   "plugin encontrado": "plugin found",
   "plugin não encontrado": "plugin not found",
   "posiciona-se alto para varrer bolas nas costas": "positions himself high to sweep balls in behind",
@@ -4507,12 +4376,12 @@ const ST = {
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
   saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'auto',
   auto: { on: false, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 45 },   // carregamento automático (app instalada)
-  lastSave: null, gen: null, lab: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
+  lastSave: null, gen: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
 const DESKTOP = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, lab: ST.lab ? { port: ST.lab.port, more: ST.lab.more } : null, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [], sqMode: ST.sqMode, sqSort: ST.sqSort, bridge: ST.bridge || null })); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ tactic: ST.tactic, squad: ST.squad, opp: ST.opp, myClub: ST.myClub, saved: ST.saved, theme: ST.theme, auto: ST.auto, tabs: ST.tabs, gen: ST.gen, ui: ST.ui, lang: ST.lang, sheetNames: ST.sheetNames, planK: ST.planK, scout: ST.scout ? { F: ST.scout.F, preset: ST.scout.preset, tab: ST.scout.tab, weak: ST.scout.weak } : null, shortlist: ST.shortlist || [], sqMode: ST.sqMode, sqSort: ST.sqSort, bridge: ST.bridge || null })); } catch (e) {}
 }
 
 function load() {
@@ -4545,7 +4414,6 @@ function load() {
     ST.saved = ST.saved.filter(t => !isCenas(t));
     if (isCenas(ST.tactic)) { ST.tactic = newTactic(); }
     if (d.ui) ST.ui = { collapsed: d.ui.collapsed || {}, navMini: !!d.ui.navMini };
-    if (d.lab) ST.lab = { port: d.lab.port || 8765, more: d.lab.more || 100, status: null, jobs: [], job: null, err: '', busy: false };
     [ST.tactic, ...ST.saved].forEach(t => { if (t && t.ti && t.ti.loe > 2) t.ti.loe = 2; if (t && t.ti && t.ti.short_gk > 1) t.ti.short_gk = 1; });
   } catch (e) {}
 }
@@ -5093,7 +4961,7 @@ function vGen() {
         <div class="table-wrap" style="margin-top:10px;max-height:none"><table><thead><tr><th>Pos</th><th>Jogador</th><th>In Possession</th><th>Out of Possession</th><th>Adequação</th></tr></thead><tbody>
         ${t.slots.map(s => { const p = pm[s.pid]; return `<tr><td><b>${esc(s.ipCode)}</b>${s.oopCode !== s.ipCode ? ` <span class="muted small">→ ${esc(s.oopCode)}</span>` : ''}</td><td>${p ? esc(p.name) : '—'}${p && g.youth.includes(p.id) ? ' <span class="chip new">jovem</span>' : ''}${p && g.star === p.id ? ' <span class="chip new">estrela</span>' : ''}</td><td>${esc(roleName(ROLE_BY_ID[s.ip]))}</td><td>${esc(roleName(ROLE_BY_ID[s.oop]))}</td><td>${fitBadge(p ? slotScore(p, t, s) : null)}</td></tr>`; }).join('')}
         </tbody></table></div>`)}
-      ${sec(3, L('Sinergia entre papéis — todas as fases', 'Role synergy — every phase'), synergyPanel(t, ps, { labHint: true }))}
+      ${sec(3, L('Sinergia entre papéis — todas as fases', 'Role synergy — every phase'), synergyPanel(t, ps))}
       ${sec(4, 'Instruções de equipa', FM_SECTIONS.map(([n, keys]) => `<h4 style="margin:10px 0 4px">${esc(n)}</h4><table><tbody>${keys.map(k => { const d = TI_BY_KEY[k], v = tiVal(t, k), ch = v !== d.def;
           return `<tr class="${ch ? '' : 'dim'}"><td style="width:34%">${esc(d.n)}</td><td style="width:22%">${ch ? `<b>${esc(d.opts[v])}</b>` : esc(d.opts[v])}</td><td class="small muted">${esc(r.reasons[k] || '')}</td></tr>`; }).join('')}</tbody></table>`).join(''))}
       ${sec(5, 'Instruções individuais', pis.length ? `<table><tbody>${pis.map(x => `<tr><td><b>${esc(x.s.ipCode)}</b> ${esc(x.p.name)}</td><td>${x.rec.map(r2 => `<span class="chip" title="${esc(r2.why)}">${esc(r2.pi)}</span>`).join('')}</td><td class="small muted">${esc(x.rec[0].why)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">Nenhum atributo pede instruções individuais.</p>')}
@@ -5149,7 +5017,6 @@ function synergyPanel(t, players, opts = {}) {
     ${rep.links.length ? `<details class="small" style="margin-top:10px"><summary>${L('Ligações principais', 'Main links')} (${rep.links.length})</summary><ul class="clean">${rep.links.map(l => `<li><span class="chip">${esc(PH[l.phase])}</span> ${esc(l.why)} <span class="muted">(${Math.round(l.v * 100)})</span></li>`).join('')}</ul></details>` : ''}
     ${byPhase.length ? `<h4 style="margin:12px 0 4px">${L('O que está a falhar entre papéis', 'What is not working between roles')}</h4>${byPhase.map(([ph, list]) => `<div class="small muted" style="margin:8px 0 2px;text-transform:uppercase;letter-spacing:.05em">${esc(PH[ph])}</div>${list.map(i => `<div class="finding"><div class="sev warn">!</div><div><b class="small">${esc(i.t)}</b><div class="small" style="color:var(--accent)">→ ${esc(i.fix)}</div></div></div>`).join('')}`).join('')}`
       : `<p class="small" style="margin-top:10px">${L('Os papéis encaixam em todas as fases. 👍', 'The roles fit together in every phase. 👍')}</p>`}
-    ${opts.labHint ? `<p class="small muted" style="margin-top:10px">${L('A sinergia é um modelo de estrutura e atributos. Para confirmar no motor do FM27, compare no Laboratório (Tactics Lab) esta tática com a anterior: xG criado e xG sofrido.', 'Synergy is a model of structure and attributes. To confirm it on the FM27 engine, compare this tactic with the previous one in the Lab (Tactics Lab): xG created and xG conceded.')}</p>` : ''}
   </div>`;
 }
 
@@ -5498,7 +5365,7 @@ function vImport() {
       <div class="drop" id="drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');A.fmf(event.dataTransfer.files[0])">
         <p><b>Arraste o .fmf para aqui</b> ou</p><label class="btn primary">Escolher ficheiro<input type="file" accept=".fmf" hidden onchange="A.fmf(this)"></label>
         <p class="small muted">Os ficheiros ficam em Documentos/Sports Interactive/Football Manager 27/tactics</p></div>
-      <div class="notice warn"><b>Limite do formato:</b> no FM27, o conteúdo da tática dentro do .fmf está <b>comprimido e cifrado</b> pelo jogo. Esta app não o decifra: para importar ou exportar .fmf use o <a href="#" onclick="A.go('lab');return false">Laboratório</a> (FM Tactics Lab). O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈1 minuto).</div>
+      <div class="notice warn"><b>Limite do formato:</b> no FM27, o conteúdo da tática dentro do .fmf está <b>comprimido e cifrado</b> pelo jogo. Esta app não o decifra. O inspector confirma o formato e mostra a estrutura; também pode recriar a tática no analisador (≈1 minuto).</div>
       <h4>Outras opções</h4>
       <div class="row"><label class="btn">Importar tática JSON (desta app)<input type="file" accept=".json" hidden onchange="A.importJSON(this)"></label><button class="btn" onclick="A.tab('tactic','analyze')">Recriar manualmente →</button></div>
     </div>
@@ -5510,7 +5377,7 @@ function vImport() {
       <span>Outras assinaturas</span><b>${r.magic.length ? esc(r.magic.join(', ')) : '—'}</b>
       <span>Textos encontrados</span><b>${r.strings.length}</b></div>
       ${r.container && r.container.recognized ? `<div class="notice" style="margin-top:12px"><b>✓ Formato .fmf do FM27 reconhecido.</b> ${r.container.sections.length} secções (${r.container.sections.map(x => esc(x.name) + ' ' + x.len + 'B' + (x.kind === 'zstd' ? ' — índice zstd' : '')).join(', ')}) e ${r.container.blocks.length} ficheiros internos cifrados (${r.container.blocks.map(b => b.cipher + 'B').join(', ')}). O maior (${r.container.largest.cipher}B cifrados) é a tática.
-        <br><b>Resultado:</b> esta app não lê o conteúdo. Para importar a tática use o Laboratório (FM Tactics Lab), ou recrie-a no analisador a partir do nome do ficheiro.
+        <br><b>Resultado:</b> esta app não lê o conteúdo: recrie a tática no analisador a partir do nome do ficheiro.
         <div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.fmfApplyHints()">${L(`Criar “${esc(r.name.replace(/\.fmf$/i, ''))}” no analisador`, `Create “${esc(r.name.replace(/\.fmf$/i, ''))}” in the analyser`)}</button></div></div>` : ''}
       <h4 style="margin-top:12px">Texto legível</h4>
       ${r.decoded || r.matches.mentality.length || r.matches.formations.length ? `
@@ -5750,7 +5617,6 @@ const LINKS = {
   fmsave: 'https://github.com/rhiever/fmsave',
   fmsaveWeb: 'https://rhiever.github.io/fmsave/app/',
   uv: 'https://docs.astral.sh/uv/getting-started/installation/',
-  lab: 'https://github.com/lqf0624/fm-tactics-lab/releases',
   bridge: 'https://github.com/n8bour/tatical-architect/releases',
 };
 // compact: versão curta (Plantel); completa nas Definições
@@ -5773,10 +5639,6 @@ function integrationsHTML(compact) {
      ${DESKTOP && !f9 ? '<div class="notice small">Ainda não encontrei a pasta do plugin (Documentos › Sports Interactive › FM View Exporter). Instale-o e carregue F9 uma vez no FM.</div>' : ''}
      ${DESKTOP && !compact ? `<label class="f">Pasta personalizada (opcional)<input type="text" value="${esc(ST.auto.dir)}" placeholder="ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter" onchange="A.autoDir(this.value)"></label><div id="dirs" class="grid" style="gap:4px"></div>` : ''}`,
     `<a class="btn sm" href="${LINKS.fmve}" target="_blank" rel="noopener">Descarregar o plugin</a>${DESKTOP ? `<label class="row small"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar cada F9 automaticamente</label><button class="btn sm" data-busy="f9" onclick="A.autoNow()">Carregar o último F9</button>` : ''}`);
-  const labCard = compact ? '' : card('Testar no motor do FM27 — FM Tactics Lab',
-    DESKTOP ? pill(!!(ST.lab && ST.lab.status), 'ligado', 'não ligado') : pill(false, '', 'só na app instalada'),
-    `<p class="small">${L(`<b>Requer</b> o <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> aberto, com o Steam aberto na conta que tem o FM27. Corre jogos com o motor original e exporta .fmf verificados pelo jogo.`, `<b>Requires</b> <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> open, with Steam open on the account that owns FM27. It runs matches on the original engine and exports .fmf files verified by the game.`)}</p>`,
-    `<a class="btn sm" href="${LINKS.lab}" target="_blank" rel="noopener">Descarregar o Tactics Lab</a><button class="btn sm" onclick="A.go('lab')">Abrir Laboratório</button>`);
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
@@ -5786,7 +5648,7 @@ function integrationsHTML(compact) {
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
     DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>${fb.ok && fb.ready ? `<button class="btn primary sm" data-busy="bridge" onclick="A.bridgeXI()">${L('Colocar o meu XI no FM', 'Place my XI in FM')}</button>` : ''}` : '');
-  return fmsaveCard + f9Card + labCard + bridgeCard;
+  return fmsaveCard + f9Card + bridgeCard;
 }
 function vSettings() {
   if (DESKTOP) fmbRefresh('settings');
@@ -5814,91 +5676,6 @@ function vSettings() {
       <p class="small"><b>De onde vêm os dados:</b> do save, através do <b>fmsave</b> (Randal S. Olson, MIT — lê uma cópia do save, nunca o altera nem lê a memória do jogo), ou do F9 do FM View Exporter. A app não gera .fmf (o FM27 cifra-os): as táticas voltam ao jogo pela Ficha para o FM27.</p>
       <p class="small muted">v${VERSION} · não afiliado à Sports Interactive/SEGA.</p>
     </div>
-  </div>`;
-}
-
-;
-// ---- ui/views_lab.js
-// ============================================================
-// Laboratório — ligação ao FM Tactics Lab (motor original do FM27)
-// ============================================================
-function labState() { if (!ST.lab) ST.lab = { port: 8765, status: null, jobs: [], job: null, err: '', busy: false }; return ST.lab; }
-async function labCall(method, path, body, timeoutMs) {
-  const LS = labState();
-  const r = await window.__TAURI__.core.invoke('lab_request', { port: LS.port, method, path, body: body == null ? null : JSON.stringify(body), timeoutMs: timeoutMs || 4000 });
-  let data = r.body; try { data = JSON.parse(r.body); } catch (e) {}
-  if (r.status >= 400 || r.status === 0) throw new Error((data && data.error) || ('HTTP ' + r.status));
-  return data;
-}
-let LAB_POLL = 0;
-function labPoll() {
-  clearTimeout(LAB_POLL); const LS = labState();
-  if (!LS.job || !['queued', 'running'].includes(LS.job.status)) { busyEnd('lab-job'); return; }
-  busyStart('lab-job', L('Motor do FM27: ', 'FM27 engine: ') + (LS.job.name || L('experiência', 'experiment')), { p: (LS.job.completed || 0) / Math.max(1, LS.job.total || 1),
-    detail: `${LS.job.completed || 0}/${LS.job.total || 0} jogos${LS.job.eta_seconds ? ' · faltam ~' + Math.ceil(LS.job.eta_seconds / 60) + ' min' : ''}` });
-  if (ST.view !== 'lab') return;
-  LAB_POLL = setTimeout(async () => { try { LS.job = await labCall('GET', '/api/jobs/' + LS.job.id);
-    const it = LS.jobs.find(j => j.id === LS.job.id); if (it) Object.assign(it, { status: LS.job.status, completed: LS.job.completed, total: LS.job.total });
-    if (!['queued', 'running'].includes(LS.job.status)) toast('Experiência concluída no motor do FM27');
-    render(); labPoll(); } catch (e) { LS.err = e.message; render(); } }, 3000);
-}
-const pct = (x) => x == null ? '—' : (x * 100).toFixed(0) + '%';
-const f2 = (x) => x == null ? '—' : x.toFixed(2);
-function ciBar(ci, unit) {
-  if (!ci || ci.lo == null) return '<span class="muted small">—</span>';
-  const span = Math.max(1, Math.abs(ci.lo), Math.abs(ci.hi)), X = (v) => 50 + v / span * 46;
-  const col = ci.lo > 0 ? 'var(--good)' : ci.hi < 0 ? 'var(--crit)' : 'var(--warn)';
-  return `<div class="cibar" title="95%: ${f2(ci.lo)} a ${f2(ci.hi)} ${unit}"><i class="zero"></i><b style="left:${X(ci.lo)}%;width:${X(ci.hi) - X(ci.lo)}%;background:${col}"></b><em style="left:${X(ci.mean)}%"></em></div>
-    <div class="small"><b>${ci.mean >= 0 ? '+' : ''}${f2(ci.mean)}</b> ${unit} <span class="muted">(95%: ${f2(ci.lo)} a ${f2(ci.hi)})</span></div>`;
-}
-function variantCard(label, s, name) {
-  if (!s) return '';
-  return `<div class="panel lab-var"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${label === 'A' ? 'A · referência' : label === 'B' ? 'B · nova' : esc(label)}</h3><span class="muted small">${esc(name || '')}</span></div>
-    <div class="kpis">
-      <div><span>Jogos</span><b>${s.n}</b></div><div><span>V-E-D</span><b>${s.w}-${s.d}-${s.l}</b></div>
-      <div><span>Vitórias</span><b>${pct(s.win && s.win.p)}</b><em>${s.win ? pct(s.win.lo) + '–' + pct(s.win.hi) : ''}</em></div>
-      <div><span>Pontos/jogo</span><b>${f2(s.pts)}</b></div>
-      <div><span>Golos</span><b>${f2(s.gf)} : ${f2(s.ga)}</b></div><div><span>xG</span><b>${f2(s.xg)} : ${f2(s.xga)}</b></div>
-      <div><span>Remates</span><b>${s.shots == null ? '—' : s.shots.toFixed(1)} : ${s.shotsA == null ? '—' : s.shotsA.toFixed(1)}</b></div><div><span>Posse</span><b>${s.poss == null ? '—' : s.poss.toFixed(0) + '%'}</b></div>
-    </div></div>`;
-}
-function vLabResults(job) {
-  const a = analyzeJob(job), LS = labState(), running = ['queued', 'running'].includes(job.status);
-  const groups = Object.keys(a.per);
-  const free = !job.experiment_type || job.experiment_type === 'free';
-  return `<div class="panel"><div class="row" style="justify-content:space-between;align-items:flex-start">
-      <div><h2 style="margin:0">${esc(a.name)}</h2><p class="small muted" style="margin:.2em 0 0"><span>${a.type === 'save_opponents' ? 'Contra adversários reais do save' : a.mode === 'comparison' ? 'Comparação A/B com as mesmas sementes' : 'Tática única'}</span> · ${L(`${a.completed || 0}/${a.total || a.rows.length} jogos`, `${a.completed || 0}/${a.total || a.rows.length} matches`)} · <span>estado:</span> <span>${esc(job.status || 'importado')}</span></p></div>
-      <div class="row">${DESKTOP && LS.status ? `${running ? `<button class="btn" onclick="A.labCancel('${esc(job.id)}')">Cancelar</button>` : ''}
-        ${free && !running && job.id ? `${selectHTML([[50, L('+50 jogos', '+50 matches')], [100, L('+100 jogos', '+100 matches')], [200, L('+200 jogos', '+200 matches')]], LS.more || 100, "A.labSet('more',+this.value)")}<button class="btn primary" data-busy="lab-more" onclick="A.labMore('${esc(job.id)}')">Correr mais</button>` : ''}
-        ${job.id ? groups.filter(g => g === 'A' || g === 'B').map(g => `<button class="btn" data-busy="lab-fmf" onclick="A.labFmf('${esc(job.id)}','${g}')">.fmf ${g}</button>`).join('') : ''}` : ''}</div></div>
-    ${running ? `<div class="progress"><i style="width:${(job.completed || 0) / Math.max(1, job.total || 1) * 100}%"></i></div><p class="small muted">A correr no motor do FM27… ${job.matches_per_minute ? job.matches_per_minute + ' jogos/min' : ''}${job.eta_seconds ? ' · faltam ~' + Math.ceil(job.eta_seconds / 60) + ' min' : ''}</p>` : ''}
-  </div>
-  ${a.comparison ? `<div class="panel verdict ${a.comparison.tone}"><h3 style="margin:0 0 6px">Veredicto (${a.comparison.n} pares de jogos com a mesma semente)</h3><p style="margin:0 0 10px">${esc(a.comparison.verdict)}</p>
-      <div class="grid g3"><div><span class="small muted">Saldo de xG por jogo (B − A)</span>${ciBar(a.comparison.dXG, 'xG')}</div><div><span class="small muted">Saldo de golos por jogo (B − A)</span>${ciBar(a.comparison.dGD, 'golos')}</div><div><span class="small muted">Pontos por jogo (B − A)</span>${ciBar(a.comparison.dPts, 'pts')}</div></div>
-      ${a.comparison.needN && a.comparison.tone === 'warn' ? `<p class="small" style="margin:10px 0 0">Para separar uma diferença deste tamanho são precisos ~<b>${a.comparison.needN}</b> pares de jogos${a.comparison.needN > a.comparison.n ? ` (faltam ${a.comparison.needN - a.comparison.n})` : ''}.</p>` : ''}</div>` : ''}
-  <div class="grid g2 lab-vars">${groups.map(g => variantCard(g, a.per[g], (a.names && a.names[g]) || '')).join('')}</div>
-  ${a.byOpp && a.byOpp.length ? `<div class="panel"><h3>Por adversário</h3><div class="table-wrap" style="max-height:none"><table><thead><tr><th>Adversário</th>${groups.map(g => `<th>${g}: pts/jogo</th><th>${g}: xG saldo</th>`).join('')}</tr></thead><tbody>
-      ${a.byOpp.map(o => `<tr><td>${esc(o.name)}</td>${groups.map(g => `<td>${o[g] ? f2(o[g].pts) : '—'}</td><td>${o[g] && o[g].xgd ? f2(o[g].xgd.mean) : '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>` : ''}`;
-}
-function vLab() {
-  const LS = labState();
-  const howto = `<ol class="clean small"><li>Abra o <b>FM27 Tactics Lab</b> (o Steam tem de estar aberto com a conta do FM27).</li><li>Lá, carregue o save ou monte as equipas, defina a tática <b>A</b> (referência) e <b>B</b> (alteração) e corra 30–100 jogos com “comparar”.</li><li>Aqui aparecem os resultados com intervalo de confiança e veredicto; pode correr mais jogos ou exportar o .fmf da vencedora.</li></ol>`;
-  const left = DESKTOP ? `<div class="panel grid">
-      <h3>Ligação</h3>
-      <div class="row"><span class="dot ${LS.status ? 'ok' : ''}"></span><b>${LS.status ? 'Ligado ao Tactics Lab' : 'Desligado'}</b>${LS.status ? `<span class="small muted">${L(`motor ${esc(LS.status.engine || '')} · ${LS.status.roles || '?'} papéis`, `engine ${esc(LS.status.engine || '')} · ${LS.status.roles || '?'} roles`)}</span>` : ''}</div>
-      ${LS.err ? `<div class="notice warn small">${esc(LS.err)}</div>` : ''}
-      <div class="row"><label class="f" style="flex:1">Porta<input type="number" value="${LS.port}" min="1024" max="65535" onchange="A.labSet('port',+this.value)"></label><button class="btn primary" data-busy="lab-connect" onclick="A.labConnect()">${LS.status ? 'Actualizar' : 'Ligar'}</button></div>
-      ${LS.status ? `<button class="btn sm" data-busy="lab-cat" onclick="A.labCatalog()">Exportar catálogo do motor (diagnóstico)</button>` : ''}
-    </div>
-    <div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Experiências</h3>${LS.status ? '<button class="btn sm" onclick="A.labJobs()">↻</button>' : ''}</div>
-      ${LS.jobs.length ? LS.jobs.map(j => { const st = { complete: L('concluída', 'finished'), running: L('a correr', 'running'), queued: L('em fila', 'queued'), error: L('erro', 'error'), cancelled: L('cancelada', 'cancelled') }[j.status] || j.status;
-        return `<button class="jobitem ${LS.job && LS.job.id === j.id ? 'on' : ''}" onclick="A.labOpen('${esc(j.id)}')"><b>${esc(j.name || j.id)}</b><span class="st ${esc(j.status)}">${esc(st)}</span><span class="small">${j.completed || 0}/${j.total || 0} jogos</span><div class="small muted">${j.created ? new Date(j.created * 1000).toLocaleString('pt-PT') : ''}</div></button>`; }).join('') : `<p class="small muted">${LS.status ? 'Ainda não há experiências no Tactics Lab.' : 'Ligue-se para ver as experiências.'}</p>`}
-    </div>` : `<div class="panel"><h3>Ligação directa</h3><p class="small">Na <b>app instalada</b> (Windows) a app liga-se ao Tactics Lab, lista as experiências, corre mais jogos e exporta .fmf. No browser, importe o JSON exportado de uma experiência.</p></div>`;
-  return `<div class="top"><div><h2>Laboratório — motor do FM27</h2><p class="muted small" style="margin:0">Testa táticas com o motor de jogo original através do <a href="https://github.com/lqf0624/fm-tactics-lab" target="_blank" rel="noopener">FM Tactics Lab</a> (MIT) e decide com estatística, não com palpites.</p></div>
-    <label class="btn">Importar experiência (.json)<input type="file" accept=".json" hidden onchange="A.labImport(this)"></label></div>
-  <div class="grid" style="grid-template-columns:minmax(280px,340px) 1fr;gap:16px;align-items:start">
-    <div class="grid">${left}<div class="panel"><h3>Como usar</h3>${howto}</div></div>
-    <div class="grid">${LS.job ? vLabResults(LS.job) : `<div class="panel empty"><h3>Sem experiência aberta</h3><p>${DESKTOP ? 'Ligue-se ao Tactics Lab e escolha uma experiência à esquerda' : 'Importe o JSON de uma experiência'}.</p></div>`}</div>
   </div>`;
 }
 
@@ -6279,54 +6056,6 @@ const A = {
   genUse(sim, tab) { const t = A.genTactic(); ST.tactic = t; ST.saved = ST.saved.filter(x => x.name !== t.name); ST.saved.unshift(JSON.parse(JSON.stringify(t))); ST.sugg = null; save();
     if (sim) return A.simOpen(); if (tab === 'training') return A.go('training'); A.tab('tactic', tab || 'analyze'); toast('Tática gerada carregada e guardada'); },
   genCopy() { const txt = sheetText(A.genTactic()); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Tática copiada — pronta para colar no fórum/Discord'), () => download('tatica-gerada.txt', txt, 'text/plain')); },
-  labSet(k, v) { labState()[k] = v; save(); },
-  async labConnect() {
-    const LS = labState(); if (BUSY['lab-connect']) return; LS.busy = true; LS.err = ''; render();
-    const ports = [LS.port, ...Array.from({ length: 16 }, (_, i) => 8765 + i)].filter((p, i, a) => a.indexOf(p) === i);
-    busyStart('lab-connect', 'A procurar o Tactics Lab', { p: 0 });
-    for (const [i, p] of ports.entries()) {
-      LS.port = p; busyUpdate('lab-connect', { p: i / ports.length, detail: 'porta ' + p });
-      try { const s = await labCall('GET', '/api/status', null, 400); if (s && s.engine) { LS.status = s; break; } } catch (e) { /* tenta a seguinte */ }
-    }
-    LS.busy = false; busyEnd('lab-connect');
-    if (!LS.status) { LS.err = 'Não encontrei o Tactics Lab. Abra-o primeiro (com o Steam aberto) e confirme a porta no endereço que ele mostra.'; LS.port = ports[0]; render(); return; }
-    save(); await A.labJobs();
-  },
-  async labJobs() { const LS = labState(); busyStart('lab-jobs', 'A ler as experiências do Tactics Lab'); try { const j = await labCall('GET', '/api/jobs?brief=1'); LS.jobs = (Array.isArray(j) ? j : []).sort((a, b) => (b.created || 0) - (a.created || 0)); LS.err = ''; } catch (e) { LS.err = e.message; LS.status = null; } busyEnd('lab-jobs'); render(); },
-  async labOpen(id) { const LS = labState(); try { LS.job = await withBusy('lab-open', 'A abrir a experiência', () => labCall('GET', '/api/jobs/' + id, null, 15000)); LS.err = ''; } catch (e) { LS.err = e.message; } render(); },
-  async labCancel(id) { try { await labCall('POST', '/api/cancel', { id }); toast('Cancelamento pedido'); setTimeout(() => A.labOpen(id), 800); } catch (e) { toast(e.message); } },
-  async labMore(id) {
-    const LS = labState(), n = LS.more || 100; if (BUSY['lab-more']) return;
-    busyStart('lab-more', L(`A pedir mais ${n} jogos ao motor do FM27`, `Asking the FM27 engine for ${n} more matches`), { detail: L('a preparar as táticas A e B', 'preparing tactics A and B') });
-    try {
-      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
-      const sc = pkg.scenarios || {}; if (!sc.B) throw new Error('Esta experiência não tem a tática B exportável.');
-      const used = ((pkg.provenance && pkg.provenance.seeds) || []); const start = used.length ? Math.max(...used) + 1 : 1;
-      const seeds = Array.from({ length: n }, (_, i) => start + i);
-      const body = { scenario: sc.B, seeds, event_details: false, name: `${(pkg.summary && pkg.summary.name) || 'Experiência'} · +${n}` };
-      if (sc.A) body.reference = sc.A;
-      const r = await labCall('POST', '/api/run', body, 15000);
-      busyEnd('lab-more'); toast(`${n} jogos em fila no motor do FM27`); await A.labJobs(); await A.labOpen(r.id);
-    } catch (e) { busyEnd('lab-more'); toast(e.message); LS.err = e.message; render(); }
-  },
-  async labFmf(id, g) {
-    if (BUSY['lab-fmf']) return;
-    busyStart('lab-fmf', L(`A exportar o .fmf da tática ${g}`, `Exporting tactic ${g}’s .fmf`), { detail: L('o próprio jogo gera e verifica o ficheiro', 'the game itself writes and verifies the file'), slow: L('o motor do FM27 está a serializar e a reler a tática — até 45 s', 'the FM27 engine is serialising and re-reading the tactic — up to 45 s'), slowAfter: 8 });
-    try {
-      const pkg = await labCall('GET', '/api/jobs/' + id + '/export', null, 8000);
-      const sc = pkg.scenarios && pkg.scenarios[g]; if (!sc) throw new Error(L('Tática ' + g + ' indisponível', 'Tactic ' + g + ' unavailable'));
-      const r = await labCall('POST', '/api/export-fmf', { side: 0, scenario: sc, name: `${(pkg.summary && pkg.summary.name) || 'Tatica'} ${g}`.slice(0, 90) }, 60000);
-      const bin = Uint8Array.from(atob(r.file_base64), c => c.charCodeAt(0));
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bin], { type: 'application/octet-stream' })); a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
-      toast('.fmf exportado e verificado pelo jogo — importe-o no FM27');
-    } catch (e) { toast(e.message); } finally { busyEnd('lab-fmf'); }
-  },
-  async labCatalog() {
-    busyStart('lab-cat', 'A exportar o catálogo do motor');
-    try { const cat = await labCall('GET', '/api/catalog', null, 8000), def = await labCall('GET', '/api/defaults', null, 8000);
-      download('tactics-lab-catalogo.json', JSON.stringify({ catalog: cat, defaults: def }, null, 1)); toast('Catálogo exportado'); } catch (e) { toast(e.message); } finally { busyEnd('lab-cat'); }
-  },
-  labImport(input) { const f = input.files[0]; if (!f) return; f.text().then(t => { try { ingestJSON(JSON.parse(t), f.name); } catch (e) { toast('JSON inválido'); } }); },
   lang(l) {
     ST.lang = LANG = l;
     // o relatório do gerador guarda as razões no idioma em que foi feito: recalcula-as no novo idioma
@@ -6474,7 +6203,6 @@ const NAV = [
   ['team', 'A minha equipa', '☰'],
   ['scout', 'Prospeção', '🔭'],
   ['tactic', 'Tática', '◎'],
-  ['lab', 'Laboratório', '⚗'],
   ['training', 'Treino', '◷'],
   ['bible', 'Bíblia', '◆'],
   ['settings', 'Definições', '⚙'],
@@ -6517,7 +6245,6 @@ function render(scrollTop) {
   else if (v === 'team') body = tabsHTML('team') + (tab === 'squad' ? vSquad() : tab === 'gen' ? vGen() : tab === 'xi' ? vXI() : vOpp());
   else if (v === 'tactic') body = tabsHTML('tactic') + (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
-  else if (v === 'lab') body = vLab();
   else if (v === 'scout') body = vScout();
   else if (v === 'bible') body = tabsHTML('bible') + (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
@@ -6530,7 +6257,6 @@ function render(scrollTop) {
   document.documentElement.lang = LANG;
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
-  if (v === 'lab') labPoll();
   if (v === 'bible') initClips(); else stopClips();
 }
 
@@ -6607,8 +6333,6 @@ function decoratePanels(scope) {
 
 // ---------- ficheiros: rota única para tudo o que entra ----------
 function ingestJSON(d, name) {
-  const job = jobFromAny(d);
-  if (job) { labState().job = job; ST.view = 'lab'; render(true); toast(L('Experiência importada: ', 'Experiment imported: ') + (job.name || job.id)); return; }
   if (d.kind === 'fm27tb-tactic' && d.tactic) { ST.tactic = d.tactic; save(); A.go('tactic', 'analyze'); toast('Tática importada'); }
   else if (d.kind === 'fm27tb-all') { Object.assign(ST, { tactic: d.tactic || ST.tactic, squad: d.squad || ST.squad, opp: d.opp || ST.opp, saved: d.saved || [], myClub: d.myClub || ST.myClub }); save(); render(true); toast('Dados restaurados'); }
   else if (Array.isArray(d) || Array.isArray(d.players)) {

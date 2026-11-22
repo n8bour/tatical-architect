@@ -20,7 +20,7 @@ MODES = ['normal', 'menu recolhido', 'painéis fechados']
 if os.environ.get('LAYOUT_QUICK'): WIDTHS, MODES = [1024, 1366, 1920], ['normal']   # passagem rápida (ex.: segunda língua no CI)
 VIEWS = [('home', None), ('team', 'squad'), ('team', 'gen'), ('team', 'xi'), ('team', 'opp'),
          ('scout', None), ('tactic', 'analyze'), ('tactic', 'sim'), ('tactic', 'plans'), ('tactic', 'setpieces'), ('tactic', 'sheet'), ('tactic', 'import'),
-         ('lab', None), ('training', None), ('bible', 'roles'), ('bible', 'ti'), ('bible', 'concepts'), ('bible', 'btraining'), ('settings', None)]
+         ('training', None), ('bible', 'roles'), ('bible', 'ti'), ('bible', 'concepts'), ('bible', 'btraining'), ('settings', None)]
 
 CHECK = r"""() => {
   const out = [], R = e => e.getBoundingClientRect(), main = document.querySelector('main');

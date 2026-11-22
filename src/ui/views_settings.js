@@ -12,7 +12,6 @@ const LINKS = {
   fmsave: 'https://github.com/rhiever/fmsave',
   fmsaveWeb: 'https://rhiever.github.io/fmsave/app/',
   uv: 'https://docs.astral.sh/uv/getting-started/installation/',
-  lab: 'https://github.com/lqf0624/fm-tactics-lab/releases',
   bridge: 'https://github.com/n8bour/tatical-architect/releases',
 };
 // compact: versão curta (Plantel); completa nas Definições
@@ -35,10 +34,6 @@ function integrationsHTML(compact) {
      ${DESKTOP && !f9 ? '<div class="notice small">Ainda não encontrei a pasta do plugin (Documentos › Sports Interactive › FM View Exporter). Instale-o e carregue F9 uma vez no FM.</div>' : ''}
      ${DESKTOP && !compact ? `<label class="f">Pasta personalizada (opcional)<input type="text" value="${esc(ST.auto.dir)}" placeholder="ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter" onchange="A.autoDir(this.value)"></label><div id="dirs" class="grid" style="gap:4px"></div>` : ''}`,
     `<a class="btn sm" href="${LINKS.fmve}" target="_blank" rel="noopener">Descarregar o plugin</a>${DESKTOP ? `<label class="row small"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar cada F9 automaticamente</label><button class="btn sm" data-busy="f9" onclick="A.autoNow()">Carregar o último F9</button>` : ''}`);
-  const labCard = compact ? '' : card('Testar no motor do FM27 — FM Tactics Lab',
-    DESKTOP ? pill(!!(ST.lab && ST.lab.status), 'ligado', 'não ligado') : pill(false, '', 'só na app instalada'),
-    `<p class="small">${L(`<b>Requer</b> o <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> aberto, com o Steam aberto na conta que tem o FM27. Corre jogos com o motor original e exporta .fmf verificados pelo jogo.`, `<b>Requires</b> <a href="${LINKS.lab}" target="_blank" rel="noopener">FM27 Tactics Lab</a> open, with Steam open on the account that owns FM27. It runs matches on the original engine and exports .fmf files verified by the game.`)}</p>`,
-    `<a class="btn sm" href="${LINKS.lab}" target="_blank" rel="noopener">Descarregar o Tactics Lab</a><button class="btn sm" onclick="A.go('lab')">Abrir Laboratório</button>`);
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
@@ -48,7 +43,7 @@ function integrationsHTML(compact) {
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
     DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>${fb.ok && fb.ready ? `<button class="btn primary sm" data-busy="bridge" onclick="A.bridgeXI()">${L('Colocar o meu XI no FM', 'Place my XI in FM')}</button>` : ''}` : '');
-  return fmsaveCard + f9Card + labCard + bridgeCard;
+  return fmsaveCard + f9Card + bridgeCard;
 }
 function vSettings() {
   if (DESKTOP) fmbRefresh('settings');

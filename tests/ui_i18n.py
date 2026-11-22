@@ -32,7 +32,7 @@ with sync_playwright() as p:
         pg = b.new_page(viewport={'width': 1600, 'height': 1000}); pg.on('pageerror', lambda e: errors.append(str(e)))
         if desktop:
             pg.add_init_script("""window.__TAURI__={core:{invoke:async(c,a)=>{ if(c==='export_dirs')return [['C:/x/FM View Exporter',false]]; if(c==='latest_save')return {path:'C:/x/T.fm',name:'T.fm',modified:5,size:104857600};
-              if(c==='lab_request'){ if(a.path==='/api/status')return {status:200,body:'{"engine":"original_native","roles":79}'}; if(a.path.startsWith('/api/jobs?'))return {status:200,body:'[{"id":"j1","name":"Test","status":"running","completed":40,"total":200}]'}; return {status:404,body:'{}'}; } return null; }}};""")
+              return null; }}};""")
         pg.goto(U.APP); pg.wait_for_timeout(200)
         pg.evaluate("() => { ST.lang = LANG = 'en'; render(); }"); [texts.add(x) for x in pg.evaluate(GRAB)]
         pg.evaluate(SETUP); pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", U.RIVAL)
@@ -49,7 +49,6 @@ with sync_playwright() as p:
                 for i in range(6): pg.evaluate(f"A.simPhase({i})"); [texts.add(x) for x in pg.evaluate(GRAB)]
         pg.evaluate("() => { ST.openClips = {}; ROLES.forEach(r => ST.openClips['role:' + r.id] = 1); SIM_TI.forEach(k => ST.openClips['ti:' + k] = 1); }")
         for t in ('roles', 'ti'): pg.evaluate(f"A.go('bible','{t}')"); pg.wait_for_timeout(200); [texts.add(x) for x in pg.evaluate(GRAB)]
-        pg.evaluate("j => { ST.openClips = {}; labState().job = j; A.go('lab'); }", json.load(open(os.path.join(HERE, 'fixtures', 'job_effect.json')))); [texts.add(x) for x in pg.evaluate(GRAB)]
         if not desktop:
             src = ''.join(open(f, encoding='utf8').read() for f in glob.glob(os.path.join(HERE, '..', 'src', 'ui', '*.js')))
             lits = sorted({m.group(1)[1:-1] for m in re.finditer(r"(?:toast|busyStart|confirm|withBusy|T)\(\s*(?:'[^']*',\s*)?('(?:[^'\\]|\\.)*')", src)})
@@ -63,19 +62,11 @@ with sync_playwright() as p:
     pg.add_init_script("""window.__TOASTS = []; window.__TAURI__ = { core: { invoke: async (c, a) => {
         if (c === 'export_dirs') return []; if (c === 'latest_save') return { path: 'C:/x/T.fm', name: 'T.fm', modified: 9, size: 1e8 };
         if (c === 'export_save') throw 'Não consegui correr o fmsave. uvx: program not found | fmsave: program not found';
-        if (c === 'latest_export') return null;
-        if (c === 'lab_request') { if (a.path === '/api/status' && a.port === 8790) return { status: 200, body: '{"engine":"original_native","roles":79}' };
-          if (a.path.startsWith('/api/jobs/j1/export')) return { status: 200, body: '{"summary":{"name":"x"},"scenarios":{"A":{}}}' };
-          if (a.port === 8790) return { status: 200, body: '[]' };
-          throw 'O Tactics Lab não responde na porta ' + a.port + ': connection refused'; }
+        if (c === 'latest_export') return null;
         return null; } } };""")
     pg.goto(U.APP); pg.wait_for_timeout(200)
     pg.evaluate("() => { ST.lang = LANG = 'en'; const o = toast; toast = (m) => { o(m); window.__TOASTS.push(document.getElementById('toast').textContent); }; render(); }")
     grab = lambda: [texts.add(x) for x in pg.evaluate(GRAB) + pg.evaluate("window.__TOASTS")]
-    pg.evaluate("A.go('lab')"); pg.click('button[data-busy="lab-connect"]'); pg.wait_for_function("!BUSY['lab-connect']", timeout=30000); grab()
-    pg.evaluate("() => { labState().port = 8790; labState().status = { engine: 'x' }; A.labJobs(); }"); pg.wait_for_timeout(200); grab()
-    pg.evaluate("() => { labState().port = 8790; A.labMore('j1'); }"); pg.wait_for_timeout(400); grab()
-    pg.evaluate("() => { labState().port = 8000; A.labFmf('zz', 'B'); }"); pg.wait_for_timeout(400); grab()
     pg.evaluate("() => { ST.auto.save = true; A.saveNow(); }"); pg.wait_for_timeout(600); pg.evaluate("A.tab('team','squad')"); grab(); pg.evaluate("A.go('settings')"); grab()
     pg.evaluate("() => { ingestJSON({ foo: 1 }, 'x.json'); ingestSquadText('nada aqui', 'vazio.csv'); A.autoXI(); A.resetTI(); A.saveTactic(); A.sampleSquad(); A.applyAllPIs(); }"); pg.wait_for_timeout(200); grab()
     pg.evaluate("() => { A.tab('team','opp'); }"); pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", U.RIVAL); pg.evaluate("() => { render(); A.applyPlan('all'); }"); grab()

@@ -68,7 +68,7 @@ def collect(lang):
             if desktop:
                 pg.add_init_script("""window.__TAURI__={core:{invoke:async(c,a)=>{ if(c==='export_dirs')return [['C:/x',true]]; if(c==='latest_save')return {path:'C:/x/T.fm',name:'T.fm',modified:5,size:1e8};
                   if(c==='export_save') throw 'Não consegui correr o fmsave. uvx: UnsupportedGameError';
-                  if(c==='lab_request'){ if(a.path==='/api/status')return {status:200,body:'{"engine":"original_native","roles":79}'}; if(a.path.startsWith('/api/jobs?'))return {status:200,body:'[{"id":"j1","name":"T","status":"running","completed":4,"total":20}]'}; throw 'O Tactics Lab não responde na porta 8765: x'; } return null; }}};""")
+                  return null; }}};""")
             pg.goto(U.APP); pg.wait_for_timeout(150)
             g = lambda: [texts.add(x) for x in pg.evaluate(GRAB, lang)]
             pg.evaluate(f"() => {{ ST.lang = LANG = '{lang}'; render(); }}"); g()
@@ -76,7 +76,7 @@ def collect(lang):
             pg.evaluate("t => { ingestSquadText(t, 'Career.fm (save)'); }", SQ); pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", U.RIVAL)
             pg.evaluate("() => { ST.myClub = 'My Club'; autoPickXI(ST.tactic, players()); genOpts(); A.genRun(); }"); pg.wait_for_timeout(900)
             pg.evaluate("t => A.scoutIngest(t, { save: 'db.csv' })", DB); pg.wait_for_function("SCOUT.db", timeout=20000)
-            if desktop: pg.evaluate("() => { ST.auto.save = true; ST.auto.saveErr = 'Não consegui correr o fmsave. uvx: UnsupportedGameError'; ST.lastSave = { name: 'T.fm', size: 1e8 }; ST.f9Found = true; labState().status = { engine: 'x', roles: 79 }; render(); }")
+            if desktop: pg.evaluate("() => { ST.auto.save = true; ST.auto.saveErr = 'Não consegui correr o fmsave. uvx: UnsupportedGameError'; ST.lastSave = { name: 'T.fm', size: 1e8 }; ST.f9Found = true; render(); }")
             for v, t in U.VIEWS:
                 pg.evaluate(f"A.go('{v}'{', ' + repr(t) if t else ''})"); pg.wait_for_timeout(50); g()
                 if (v, t) == ('team', 'squad'):
@@ -93,7 +93,6 @@ def collect(lang):
                     pg.evaluate("A.scoutTab('list')"); g(); pg.evaluate("A.scoutTab('results')")
             pg.evaluate("() => { ST.openClips = {}; ROLES.slice(0, 20).forEach(r => ST.openClips['role:' + r.id] = 1); SIM_TI.forEach(k => ST.openClips['ti:' + k] = 1); }")
             for t in ('roles', 'ti', 'concepts', 'btraining'): pg.evaluate(f"A.go('bible','{t}')"); pg.wait_for_timeout(120); g()
-            pg.evaluate("j => { ST.openClips = {}; labState().job = j; A.go('lab'); }", json.load(open(os.path.join(U.HERE, 'fixtures', 'job_effect.json')))); g()
             pg.evaluate("() => { busyStart('x', L('A ler o save ', 'Reading save ') + 'T.fm', { p: .4, detail: L('lê uma cópia, o save não é alterado', 'reads a copy, the save is not changed') }); }"); g(); pg.evaluate("busyEnd('x')")
             pg.close()
         b.close()

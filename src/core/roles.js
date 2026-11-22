@@ -270,6 +270,5 @@ const ROLE_BY_ID = Object.fromEntries(ROLES.map(r => [r.id, r]));
 // Casa exacta: no FM26/27 alguns papéis só existem na casa central ('C': DM, MC, AMC, ST)
 // ou só nas deslocadas ('S': DML/DMR, MCL/MCR, AMCL/AMCR, STL/STR) da mesma linha.
 // Fontes: jogo (relato do utilizador) e guias FM26 — o Box-to-Box Midfielder só em DM deslocado.
-// Com o Tactics Lab ligado, a disponibilidade pode ser confirmada pelo catálogo do motor.
 const ROLE_SLOT = { b2b: 'S' };
 ROLES.forEach(r => { if (ROLE_SLOT[r.id]) r.slot = ROLE_SLOT[r.id]; });

@@ -160,34 +160,6 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
   if(bad) process.exitCode=1;
 }
 
-// 16. laboratório: análise das experiências do Tactics Lab (efeito conhecido)
-{
-  const c7={console,Math}; vm.createContext(c7);
-  vm.runInContext(fs.readFileSync(require('path').join(__dirname,'..','src','i18n','i18n.js'),'utf8')+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','lab.js'),'utf8')+';this.LB={analyzeJob,jobFromAny};',c7);
-  const L=c7.LB, rd=f=>JSON.parse(fs.readFileSync(require('path').join(__dirname,'fixtures',f),'utf8'));
-  let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
-  const e=L.analyzeJob(rd('job_effect.json')), z=L.analyzeJob(rd('job_null.json')), f=L.analyzeJob(rd('job_few.json'));
-  chk(e.comparison && e.comparison.n===80,'pares');
-  chk(e.comparison.tone==='good' && e.comparison.dXG.lo>0,'efeito real detectado: '+JSON.stringify(e.comparison.dXG));
-  chk(Math.abs(e.comparison.dXG.mean-0.39)<0.15,'tamanho do efeito ~0.39 (0.30 a favor + 0.09 a menos contra): '+e.comparison.dXG.mean.toFixed(3));
-  chk(z.comparison.tone!=='good' && z.comparison.tone!=='crit','sem efeito → inconclusivo: '+z.comparison.verdict);
-  chk(z.comparison.dXG.lo<0 && z.comparison.dXG.hi>0,'IC do nulo contém 0');
-  chk(f.comparison.n===12 && f.comparison.dXG.lo!=null,'poucos jogos ainda calcula');
-  chk(e.per.A.n===80 && e.per.B.n===80 && e.per.B.win.lo<=e.per.B.win.p,'resumo por variante');
-  const pkg=L.jobFromAny(rd('pkg.json')); chk(pkg && pkg.runs.length===160 && pkg._scenarios.B,'pacote de exportação');
-  // modo save: equipa testada no lado 1 nos jogos fora
-  const s={id:'s',status:'complete',mode:'comparison',experiment_type:'save_opponents',schedule:{
-    'A_0_H':{group:'A',tested_side:0,opponent:'Rival',opponent_key:'r1',venue:'H'},'B_0_H':{group:'B',tested_side:0,opponent:'Rival',opponent_key:'r1',venue:'H'},
-    'A_0_A':{group:'A',tested_side:1,opponent:'Rival',opponent_key:'r1',venue:'A'},'B_0_A':{group:'B',tested_side:1,opponent:'Rival',opponent_key:'r1',venue:'A'}},
-    runs:[{variant:'A_0_H',seed:1,result:{score:[1,0]},statistics:{teams:[{xg:1.2},{xg:0.5}]}},{variant:'B_0_H',seed:1,result:{score:[2,0]},statistics:{teams:[{xg:1.8},{xg:0.4}]}},
-          {variant:'A_0_A',seed:1,result:{score:[0,1]},statistics:{teams:[{xg:0.6},{xg:1.1}]}},{variant:'B_0_A',seed:1,result:{score:[1,3]},statistics:{teams:[{xg:1.0},{xg:2.0}]}}]};
-  const sa=L.analyzeJob(s);
-  chk(sa.per.A.w===2 && sa.per.B.w===2,'orientação fora (lado 1): A ganhou 1-0 e 1-0; B ganhou 2-0 e 3-1 → '+JSON.stringify([sa.per.A.w,sa.per.B.w]));
-  chk(sa.comparison.n===2 && sa.byOpp.length===1,'pares e por adversário no modo save');
-  console.log('laboratório: efeito',e.comparison.dXG.mean.toFixed(2),'xG ['+e.comparison.dXG.lo.toFixed(2)+', '+e.comparison.dXG.hi.toFixed(2)+'] |',z.comparison.verdict);
-  if(bad) process.exitCode=1;
-}
-
 // 17. disponibilidade por casa exacta (FM26/27): modelos e demonstrações só usam papéis válidos naquela casa
 {
   const c8={console,Math}; vm.createContext(c8);

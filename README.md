@@ -33,7 +33,6 @@ To take the tactic into the game, use **Tactic › FM27 sheet**. The sheet follo
 | My team › **Squad** | The player table has three views: **Roles** (best roles in and out of possession), **Ability and contract** (CA, PA, chance of reaching PA, value, wage, contract end, status) and **Personality and hidden** (professionalism, ambition, pressure, loyalty, temperament, adaptability, consistency, important matches, injury proneness, versatility). Every column is sortable and each player opens the full profile. This data comes from the save read by fmsave; F9 and other CSVs only bring what the view exports |
 | My team › Best XI | Suitability per position, better alternative role, **player instructions recommended by attributes**, backup and successor (≤ 21 years old), and 9 systems ranked for the squad |
 | My team › Opponent | 9 units compared with your XI, the 3 most dangerous players with opposition instructions and an applicable adjustment plan |
-| **Lab** | Connection to [FM Tactics Lab](https://github.com/lqf0624/fm-tactics-lab) (MIT), which runs the **original FM27 match engine** on your PC. Lists the experiments and shows each one with proper statistics: A and B compared match by match with the same seed, xG difference, goals and points with 95% confidence intervals, a verdict and how many more matches are needed when it's not yet conclusive. Buttons to **run more matches** (continues the seeds) and **export the `.fmf`** of the tactic, generated and verified by the game itself and ready to import into FM27. In the browser, it imports an experiment's JSON |
 | Tactic › Analyse | In- and out-of-possession formation, roles, instructions and diagnosis (rest-defence, width, box, pressing, transitions, FM27 complexity, suitability) |
 | Tactic › Animated pitch | 6 phases of play with each role's movement, plus the effect of the instructions in real time |
 | Tactic › **Match situations** | Plan B/C from the current tactic and squad, in five scenarios: **We need goals**, **Hold the result**, **Away against stronger sides**, **Away against an equal side** and **At home against weaker sides** (low block). Each plan says what changes and why, using the players' attributes: mentality, team instructions, roles, player instructions (added and removed), Tactical Tweaks, substitutions from the bench and opposition instructions for their three most dangerous players. Role changes are tested against synergy: in an attacking plan they're only made if they don't weaken the attack, and in a defensive plan only if they don't weaken the defence. The impact shows attacking commitment and defensive security (intensity) and synergy per phase (coherence). You can save the plan as a tactic, use it right away or copy it as text |
@@ -59,16 +58,9 @@ Duration: about 6 to 8 minutes the first time and 2 to 3 minutes afterwards, tha
 
 **Locally** (requires Node, Rust and the Visual Studio C++ Build Tools): run `npm run app:build`.
 
-## Lab (FM27 engine)
-1. Install and open **FM27 Tactics Lab**. Steam must be open with the account that owns FM27.
-2. In **Lab**, click **Connect**. The app finds the local server by itself (port 8765 by default).
-3. In Tactics Lab, set up A (baseline) and B (change) or load the save, and run the comparison. In our app you see the verdict, can **run more matches** and **export the `.fmf`** of the winner.
-
-The connection goes through the app's native side, because the Tactics Lab server rejects requests from other pages. It only talks to `127.0.0.1` and only uses `/api/` paths.
-
 ## Language
 The app opens in **English** by default. Portuguese is chosen with the **EN/PT** selector at the bottom of the menu, and the choice is remembered.
-- **Full translation:** covers the interface, the Bible (descriptions and tips for the 77 roles, instructions, concepts, training) and the messages from the diagnosis, generator, opponent report, set pieces and Lab.
+- **Full translation:** covers the interface, the Bible (descriptions and tips for the 77 roles, instructions, concepts, training) and the messages from the diagnosis, generator, opponent report, and set pieces.
 - **Generator:** when switching language, the report's reasons are recalculated in the new language.
 - **FM names in Portuguese:** with the app in Portuguese, roles, instructions and their options, mentalities, player and opposition instructions, Tactical Tweaks and training areas appear with Portuguese names, also inside sentences. For roles, 34 names are **confirmed in the Portuguese FM26**, from tactics published by Salão de Jogos, and are marked with ✓ in `src/i18n/pt_terms.js`. The rest follow the game's same naming pattern. FM27 may have occasional differences.
 - **FM27 sheet in Portuguese:** by default it keeps the names as they appear in the English game, so the tactic can be recreated without mistakes. The **Português** button shows it with translated names.
@@ -80,7 +72,7 @@ The app opens in **English** by default. Portuguese is chosen with the **EN/PT**
 - **Icon-only menu:** « button at the top of the menu or **Ctrl+B**. In narrow windows (e.g. 1366 at 125% scaling) the menu switches to icons automatically.
 - **Game data always at hand:** the "Game data" panel in the sidebar has the **📥 Read the save now** and **Latest F9** buttons, and shows how long ago the squad was read. The same buttons appear at the top of Squad, in step 1 of Home and on screens that need the squad. Shortcut: **Ctrl+Shift+L**. In the browser, the button opens the squad file.
 - **Drag and drop** any file onto the window.
-- **Activity always visible:** anything that takes time shows it's working. A thin bar appears at the top of the window and a card in the sidebar shows what's happening, the elapsed time and, when known, the percentage. The card never covers content. That task's buttons show a spinner and are locked until it finishes. It's hooked up to save reading (with a notice when the first read takes a while), F9, large files, the Generator (pair-by-pair progress), `.fmf` analysis and the Lab (finding the server, opening experiments, exporting `.fmf` and matches running in the engine).
+- **Activity always visible:** anything that takes time shows it's working. A thin bar appears at the top of the window and a card in the sidebar shows what's happening, the elapsed time and, when known, the percentage. The card never covers content. That task's buttons show a spinner and are locked until it finishes. It's hooked up to save reading (with a notice when the first read takes a while), F9, large files, the Generator (pair-by-pair progress) and `.fmf` analysis.
 - **UI tests on GitHub:** `ui_layout.py` runs fully in English and in a quick pass in Portuguese. `ui_busy.py` checks the activity indicators and `ui_i18n.py` the language coverage.
 - **Layout gate:** `tests/ui_layout.py` goes through the 17 screens at 6 widths and 3 modes (normal, collapsed menu, closed panels) with a 62-player squad with long names. It runs on GitHub in parallel with every build (10-minute limit), and the Release is not published if it finds overlaps or errors.
 
@@ -89,13 +81,13 @@ The app opens in **English** by default. Portuguese is chosen with the **EN/PT**
 - **Confirmed:**
   - The Box-To-Box Midfielder and the Box-To-Box Playmaker don't exist in central midfield, only in the DM line.
   - The Box-To-Box Midfielder only exists in the offset DM (DML/DMR).
-- **Full validation:** the FM27 engine catalogue (Tactics Lab › Lab › "Export engine catalogue") provides the exact list of roles per position. The app has the hook ready (`ROLE_AVAIL_ENGINE`) to apply that list to all 77 roles.
+- **Full validation:** the app has a hook (`ROLE_AVAIL_ENGINE`) to apply an exact per-position role list to all 77 roles, if one becomes available.
 
 ## Limitations
 
 - **Save reading.** Reading is done by [fmsave](https://github.com/rhiever/fmsave) (MIT, by Randal S. Olson), always on a **copy** of the save. It never changes the save, doesn't read the game's memory and doesn't need FM open. fmsave marks some FM27 fields as "unconfirmed". The app only uses name, age, club, positions and attributes.
 - **Reading the game's memory, like FMPT Chief Analyst.** Not needed: the save has the same data and doesn't break with every patch.
-- **`.fmf`:** our app doesn't decode `.fmf` by itself. With Tactics Lab open, the Lab exports `.fmf` files generated and verified by the game. Without it, the tactic goes back into the game via the Sheet.
+- **`.fmf`:** FM27 encrypts the tactic inside `.fmf`, so the app doesn't read or write it. The tactic goes back into the game via the Sheet (and the XI via the optional bridge).
 - **Attribute weights.** Roles marked EST use estimated weights. They can be adjusted in `src/core/roles.js`.
 - **Animated pitch.** It's a model of each role's and instruction's intent, not the FM match engine.
 
@@ -103,11 +95,11 @@ The app opens in **English** by default. Portuguese is chosen with the **EN/PT**
 
 ```
 src/i18n/   i18n.js (L/T/translateDOM) · en_dict.js (PT→EN dictionary)
-src/core/   roles.js · tactics_data.js · engine.js · insights.js (PIs, opponent, set pieces) · generator.js (generator) · lab.js (Tactics Lab statistics) · sim_model.js
+src/core/   roles.js · tactics_data.js · engine.js · insights.js (PIs, opponent, set pieces) · generator.js (generator) · sim_model.js
 src/ui/     state.js · components.js · sim_view.js · views_*.js · actions.js · main.js
 build.mjs   bundles everything into app/index.html (single file)
 tests/      npm test — engine, simulator (473 scenarios), insights, real .fmf and FM View Exporter CSV
-src-tauri/  native window: latest save (.fm) → fmsave → squad; latest F9 export; local HTTP bridge to Tactics Lab
+src-tauri/  native window: latest save (.fm) → fmsave → squad; latest F9 export; local TCP client for the optional in-game bridge plugin
 ```
 
 Not affiliated with Sports Interactive or SEGA.
