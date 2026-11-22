@@ -40,7 +40,7 @@ function vSetPieces() {
       ${row('Capitão', r.caps[0], r.caps[0] ? a(r.caps[0], ['ldr', 'det']) : '')}
       ${row('Vice-capitão', r.caps[1], r.caps[1] ? a(r.caps[1], ['ldr', 'det']) : '')}
     </tbody></table>
-    <p class="small muted">Sem dados do pé preferido o efeito do canto não é indicado. Exportações com a coluna do pé (FM View Exporter, fmsave) mostram-no.</p></div>
+    <p class="small muted">${L('Sem dados do pé preferido o efeito do canto não é indicado. O plantel lido do save (fmsave) tem o pé.', 'Without preferred-foot data the corner swing isn’t shown. The squad read from the save (fmsave) has it.')}</p></div>
     <div class="panel"><h3>Ideias para os cantos e livres</h3>
       ${r.tips.map((tp, i) => { const d = tp.ti && TI_BY_KEY[tp.ti], on = d && tiVal(ST.tactic, tp.ti) === tp.v;
         return `<div class="finding"><div class="sev ${on ? 'good' : 'info'}">${on ? '✓' : i + 1}</div><div><span class="small">${esc(tp.t)}</span>${d && !on ? `<div><button class="btn sm" style="margin-top:4px" onclick="A.applySpTip(${i})">${esc(d.n)} → ${esc(d.opts[tp.v])}</button></div>` : ''}</div></div>`; }).join('') || '<p class="muted small">Nada a destacar.</p>'}

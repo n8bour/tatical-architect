@@ -66,7 +66,7 @@ def collect(lang):
         for desktop in (False, True):
             pg = b.new_page(viewport={'width': 1500, 'height': 950}); pg.on('pageerror', lambda e: errs.append(str(e)))
             if desktop:
-                pg.add_init_script("""window.__TAURI__={core:{invoke:async(c,a)=>{ if(c==='export_dirs')return [['C:/x',true]]; if(c==='latest_save')return {path:'C:/x/T.fm',name:'T.fm',modified:5,size:1e8};
+                pg.add_init_script("""window.__TAURI__={core:{invoke:async(c,a)=>{ if(c==='latest_save')return {path:'C:/x/T.fm',name:'T.fm',modified:5,size:1e8};
                   if(c==='export_save') throw 'Não consegui correr o fmsave. uvx: UnsupportedGameError';
                   if(c==='plugin_status')return {fm_dir:'C:/Games/Football Manager 27',bepinex:true,installed:true,up_to_date:false,version:'0.4.1'}; return null; }}};""")
             pg.goto(U.APP); pg.wait_for_timeout(150)
@@ -76,7 +76,7 @@ def collect(lang):
             pg.evaluate("t => { ingestSquadText(t, 'Career.fm (save)'); }", SQ); pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", U.RIVAL)
             pg.evaluate("() => { ST.myClub = 'My Club'; autoPickXI(ST.tactic, players()); genOpts(); A.genRun(); }"); pg.wait_for_timeout(900)
             pg.evaluate("t => A.scoutIngest(t, { save: 'db.csv' })", DB); pg.wait_for_function("SCOUT.db", timeout=20000)
-            if desktop: pg.evaluate("() => { ST.auto.save = true; ST.auto.saveErr = 'Não consegui correr o fmsave. uvx: UnsupportedGameError'; ST.lastSave = { name: 'T.fm', size: 1e8 }; ST.f9Found = true; render(); }")
+            if desktop: pg.evaluate("() => { ST.auto.save = true; ST.auto.saveErr = 'Não consegui correr o fmsave. uvx: UnsupportedGameError'; ST.lastSave = { name: 'T.fm', size: 1e8 }; render(); }")
             for v, t in U.VIEWS:
                 pg.evaluate(f"A.go('{v}'{', ' + repr(t) if t else ''})"); pg.wait_for_timeout(50); g()
                 if (v, t) == ('team', 'squad'):

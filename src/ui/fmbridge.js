@@ -46,6 +46,9 @@ const FMB_IDS = {
       slotMove: 1449477207,      // move an instruction to another group/position (see bridge/README.md)
     },
   },
+  // ---- next opponent (verified FM27: TeamReference props; fixture keys)
+  team: { pairs: (id) => `825307168=28;1198877028=1;1685218662=${id}`, nextFixture: 1852130921, players: 926359584, name: 1851878757 },
+  fixture: { opp: 1717663572, us: 1718119764, date: 1717859429 },
   // ---- recruitment (decoded and verified from the bridge, see bridge/README.md)
   search: { pairs: '825307168=98;1198877028=1;1719300978=1;1954115685=0', text: 1851878757, people: 1886547059, uniqueId: 1970170212 },
   action: { ev: 44, pairs: (id) => `825307168=1;1198877028=1;1633904996=${id}`, shortlistAdd: 1097488485, shortlistRemove: 1500280650 },
@@ -291,6 +294,19 @@ const FMB = {
     }
     if (need.size) done.push(L('Rotinas: o tempo acabou antes de abrir ', 'Routines: timed out before opening ') + [...need].map(k => k === S.kinds.attCorner ? L('o canto ofensivo', 'the attacking corner') : L('o canto defensivo', 'the defending corner')).join(L(' e ', ' and ')) + L(' no FM.', ' in FM.'));
     return done;
+  },
+  // FM display strings come as "\u0001<formatting>\u0002<text>\u0001": keep the text
+  text(v) { return typeof v === 'string' ? v.split('\u0002').pop().replace(/\u0001/g, '').trim() : ''; },
+  /** Next match of the managed team: { team, name, uniqs: [fmsave unique_id of each opponent player] } or null. */
+  async nextOpponent() {
+    const c = await FMB.context(), T = FMB_IDS.team, X = FMB_IDS.fixture;
+    const [fx] = await FMB.read([['TeamReference', T.pairs(c.team), T.nextFixture]]);
+    const p = FMB.pair(fx, X.opp), q = FMB.pair(fx, X.us), opp = p && p !== c.team ? p : q && q !== c.team ? q : 0;
+    if (!opp) return null;
+    const [name, list] = await FMB.read([['TeamReference', T.pairs(opp), T.name], ['TeamReference', T.pairs(opp), T.players]]);
+    const persons = FMB.items(list).map(x => FMB.pair(x, FMB_IDS.key.personId)).filter(Boolean);
+    const uq = await FMB.read(persons.map(id => ['PersonReference', `825307168=28;1198877028=1;${FMB_IDS.key.personId}=${id}`, FMB_IDS.search.uniqueId]));
+    return { team: opp, name: FMB.text(name), uniqs: uq.map(v => v == null ? '' : String(v)).filter(Boolean) };
   },
   // ---- recruitment: FM search, shortlist, recruitment focus (scout assignment)
   /** FM person id for a player of the save: FM's own search by name, confirmed by fmsave's unique_id. null if not found. */

@@ -120,7 +120,7 @@ const A = {
   squadOpen(id) { ST.squadOpen = id; render(); },
   squadClose() { ST.squadOpen = null; render(); },
   // ---------- prospeção ----------
-  async scoutLoad() {
+  async scoutLoad(opts = {}) {
     if (BUSY.scout) return; SCOUT.err = '';
     try {
       const info = await window.__TAURI__.core.invoke('latest_save', { customDir: ST.auto.saveDir || null });
@@ -129,7 +129,7 @@ const A = {
       await withBusy('scout', L('A ler todos os jogadores de ', 'Reading every player in ') + info.name, async (prog) => {
         prog(null, L('o fmsave está a ler o save (sobre uma cópia)', 'fmsave is reading the save (from a copy)'));
         const r = await window.__TAURI__.core.invoke('export_save_db', { path: info.path });
-        await A.scoutIngest(r.players, { nations: r.nations, info: r.info, save: r.save, cached: r.cached, prog, t0 });
+        await A.scoutIngest(r.players, { nations: r.nations, info: r.info, save: r.save, cached: r.cached, prog, t0, stay: opts.stay });
       }, { slow: L('a primeira leitura da base de dados inteira pode demorar 1–3 minutos', 'the first read of the whole database can take 1–3 minutes'), slowAfter: 15 });
     } catch (e) { SCOUT.err = String((e && e.message) || e); toast(L('Não consegui ler a base de dados', 'Could not read the database')); }
     render();
@@ -140,7 +140,7 @@ const A = {
     SCOUT.db = db; SCOUT.nations = parseNations(o.nations || ''); SCOUT._val = null; SCOUT.cache = null; SCOUT.cacheKey = '';
     const d = o.info ? gameDateFromInfo(o.info) : null; SCOUT.date = d || inferGameDate(db.players); SCOUT.dateGuess = !d;
     SCOUT.save = o.save || L('ficheiro', 'file'); SCOUT.cached = !!o.cached; SCOUT.ms = performance.now() - t0;
-    const S = scoutState(); S.open = null; ST.view = 'scout'; save(); render();
+    const S = scoutState(); S.open = null; if (!o.stay) ST.view = 'scout'; save(); render();
     toast(L(`${db.players.length.toLocaleString(LOCALE())} jogadores carregados`, `${db.players.length.toLocaleString(LOCALE())} players loaded`));
   },
   scoutPreset(k) {
@@ -206,10 +206,27 @@ const A = {
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
   clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
+  /** Next opponent from the running FM (bridge): FM gives the fixture and the opponent's players (unique_id), the save
+   *  database gives their attributes. silent: background check, only acts if the opponent changed. */
+  async oppFromFM(silent) {
+    if (!DESKTOP || BUSY['bridge-opp'] || BUSY.scout) return;
+    const st = FMB.state || {}; if (!(st.ok && st.ready)) { if (!silent) toast(L('Abra o FM27 com o plugin (Definições › Integrações).', 'Open FM27 with the plugin (Settings › Integrations).')); return; }
+    try {
+      const nx = await withBusy('bridge-opp', L('A procurar o próximo adversário no FM', 'Finding the next opponent in FM'), () => FMB.nextOpponent());
+      if (!nx) { if (!silent) toast(L('O FM não tem um próximo jogo marcado.', 'FM has no next match scheduled.')); return; }
+      if (silent && ST.opp.fmTeam === nx.team && oppPlayers().length) return;
+      if (!SCOUT.db) await A.scoutLoad({ stay: true });
+      if (!SCOUT.db) return;
+      const by = new Map(SCOUT.db.players.filter(p => p.uniq).map(p => [String(p.uniq), p]));
+      const ps = nx.uniqs.map(u => by.get(u)).filter(Boolean).map(p => ({ ...p, club: nx.name, meta: { ...(p.meta || {}), club: nx.name } }));
+      if (ps.length < 11) throw new Error(L(`Só encontrei ${ps.length} jogadores do ${nx.name} no save: grave o jogo e volte a tentar.`, `Only found ${ps.length} ${nx.name} players in the save: save the game and try again.`));
+      ST.opp = { ...EMPTY_SQUAD(), players: ps, source: nx.name + L(' (próximo jogo, do FM)', ' (next match, from FM)'), at: new Date().toISOString(), fmTeam: nx.team };
+      ST._oppRep = null; save();
+      toast(L(`Próximo adversário: ${nx.name} (${ps.length} jogadores)`, `Next opponent: ${nx.name} (${ps.length} players)`));
+    } catch (e) { if (!silent) toast(String(e.message || e)); }
+    render();
+  },
   setMyClub(v) { ST.myClub = v || null; save(); render(); },
-  autoToggle() { ST.auto.on = !ST.auto.on; save(); render(); if (ST.auto.on) desktopPoll(true); },
-  autoDir(v) { ST.auto.dir = v.trim(); ST.auto.mtime = 0; save(); desktopPoll(true); },
-  autoNow() { ST.auto.mtime = 0; desktopPoll(true); },
   saveNow() { savePoll(true); },
   pickFile() { const i = document.createElement('input'); i.type = 'file'; i.accept = '.csv,.tsv,.txt,.html,.htm,.json,.fmf'; i.onchange = () => { if (i.files[0]) ingestFile(i.files[0]); }; i.click(); },
   saveToggle() { ST.auto.save = !ST.auto.save; save(); render(); if (ST.auto.save) savePoll(); },

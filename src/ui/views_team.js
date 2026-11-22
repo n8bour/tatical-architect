@@ -11,7 +11,7 @@ function vSquad() {
       ${integrationsHTML(true)}
       <p class="small muted">Também aceita CSV/JSON do fmsave, FMPT Chief Analyst, FMLibreEditor, HTML com tabela e texto colado — basta arrastar para a janela.</p>
     </div>
-    <div class="panel"><textarea id="sqtext" placeholder="Arraste para aqui o CSV do plantel (fmsave ou F9 do FM View Exporter), ou cole o conteúdo…" ondragover="event.preventDefault()" ondrop="event.preventDefault();A.squadFile({files:event.dataTransfer.files})"></textarea>
+    <div class="panel"><textarea id="sqtext" placeholder="${L('Arraste para aqui o CSV do plantel (fmsave), ou cole o conteúdo…', 'Drag the squad CSV (fmsave) here, or paste its content…')}" ondragover="event.preventDefault()" ondrop="event.preventDefault();A.squadFile({files:event.dataTransfer.files})"></textarea>
       <div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.squadText()">Ler texto</button>
       <label class="btn">Escolher ficheiro<input type="file" accept=".html,.htm,.txt,.csv,.tsv,.json" hidden onchange="A.squadFile(this)"></label>
       <label class="btn">Carregar como adversário<input type="file" accept=".html,.htm,.txt,.csv,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
@@ -77,15 +77,16 @@ function vXI() {
 // ---------- Relatório do adversário ----------
 function vOpp() {
   const op = oppPlayers();
+  if (DESKTOP && !FMB.oppTried && FMB.state && FMB.state.ok && FMB.state.ready) { FMB.oppTried = true; setTimeout(() => A.oppFromFM(true), 0); }
   if (!op.length) return `<div class="grid g2"><div class="panel"><h2>Relatório do adversário</h2>
       <p>Carrega o plantel do próximo adversário e a app compara setor a setor com o teu XI, diz quem são os perigosos e propõe ajustes à tua tática.</p>
-      <ol class="clean small"><li>No FM27, abre o plantel do adversário (com a mesma vista de atributos).</li><li>Carrega em <b>F9</b>. ${DESKTOP && ST.auto.on ? 'A app reconhece que é outro clube e carrega-o aqui sozinha.' : 'Arrasta o CSV para esta janela — se o clube for diferente do teu, entra como adversário.'}</li></ol>
-      <label class="btn primary">Escolher ficheiro do adversário<input type="file" accept=".csv,.html,.htm,.txt,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
+      ${DESKTOP ? `<p class="small">${L('Com o FM27 aberto (plugin em Definições › Integrações), a app descobre o teu próximo jogo e lê o plantel do adversário do save.', 'With FM27 open (plugin in Settings › Integrations), the app finds your next match and reads the opponent’s squad from the save.')}</p><div class="row"><button class="btn primary" data-busy="bridge-opp" onclick="A.oppFromFM()">${L('Próximo adversário do FM', 'Next opponent from FM')}</button></div>` : ''}
+      <p class="small muted" style="margin-top:10px">${L('Ou escolha um ficheiro (CSV/HTML) com o plantel deles.', 'Or choose a file (CSV/HTML) with their squad.')}</p><label class="btn">Escolher ficheiro do adversário<input type="file" accept=".csv,.html,.htm,.txt,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
       <div class="panel"><h3>O que vais ver</h3><ul class="clean small"><li>Velocidade e jogo aéreo dos centrais deles contra os teus avançados.</li><li>Laterais, criação no meio-campo, pressão, extremos, finalização e ataque aéreo.</li><li>Os 3 jogadores mais perigosos e as instruções de adversário a usar.</li><li>Um plano de ajustes que aplicas à tua tática com um clique e vês no campo animado.</li></ul></div></div>`;
   const rep = opponentReport(ST.tactic, players(), op); ST._oppRep = rep;
   const pct = (v) => v == null ? 0 : Math.max(0, Math.min(100, (v - 1) / 19 * 100));
   return `<div class="top"><div><h2><span>Relatório:</span> ${esc(rep.club || ST.opp.source)}</h2><p class="muted small" style="margin:0">${op.length} jogadores · onze provável escolhido pelos atributos (4-2-3-1). ${players().length ? 'O traço vertical é o teu XI.' : 'Carrega o teu plantel para comparar.'}</p></div>
-    <div class="row"><button class="btn" onclick="A.clearOpp()">Trocar adversário</button></div></div>
+    <div class="row">${DESKTOP ? `<button class="btn" data-busy="bridge-opp" onclick="A.oppFromFM()">${L('Actualizar do FM', 'Update from FM')}</button>` : ''}<button class="btn" onclick="A.clearOpp()">Trocar adversário</button></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Setor a setor</h3>
       ${rep.sectors.map(s => `<div class="oppbar"><span>${esc(s.n)}</span><div class="t"><i style="width:${pct(s.tv)}%;background:${s.tv >= 14 ? 'var(--crit)' : s.tv <= 10.5 ? 'var(--good)' : 'var(--warn)'}"></i>${s.uv != null ? `<em style="left:${pct(s.uv)}%" title="Teu XI: ${s.uv.toFixed(1)}"></em>` : ''}</div><b>${s.tv != null ? s.tv.toFixed(1) : '—'}</b></div>`).join('')}

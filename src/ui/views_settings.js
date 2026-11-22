@@ -4,11 +4,10 @@
 // erros do fmsave traduzidos para o que o utilizador precisa de saber
 function saveErrText(err) {
   const e = String(err || '');
-  if (/UnsupportedGameError|unsupported|unverified/i.test(e)) return L('O fmsave ainda não lê o plantel nesta versão do FM27 (o jogo foi actualizado). A app usa sempre o fmsave mais recente: assim que sair uma versão que a suporte, volta a funcionar sozinha. Entretanto use o F9 ou o fmsave online.', 'fmsave cannot read the squad in this FM27 build yet (the game was updated). The app always uses the latest fmsave: as soon as a version supporting it is released, it works again on its own. Meanwhile, use F9 or fmsave online.') + ' (' + T(e).slice(0, 160) + ')';
+  if (/UnsupportedGameError|unsupported|unverified/i.test(e)) return L('O fmsave ainda não lê o plantel nesta versão do FM27 (o jogo foi actualizado). A app usa sempre o fmsave mais recente: assim que sair uma versão que a suporte, volta a funcionar sozinha. Entretanto use o fmsave online.', 'fmsave cannot read the squad in this FM27 build yet (the game was updated). The app always uses the latest fmsave: as soon as a version supporting it is released, it works again on its own. Meanwhile, use fmsave online.') + ' (' + T(e).slice(0, 160) + ')';
   return e;
 }
 const LINKS = {
-  fmve: 'https://github.com/ElectroHugin/FM-View-Exporter/releases',
   fmsave: 'https://github.com/rhiever/fmsave',
   fmsaveWeb: 'https://rhiever.github.io/fmsave/app/',
   uv: 'https://docs.astral.sh/uv/getting-started/installation/',
@@ -16,7 +15,7 @@ const LINKS = {
 };
 // compact: versão curta (Plantel); completa nas Definições
 function integrationsHTML(compact) {
-  const f9 = ST.f9Found, save = ST.auto.save, err = ST.auto.saveErr;
+  const save = ST.auto.save, err = ST.auto.saveErr;
   const pill = (ok, txtOk, txtNo) => `<span class="pill ${ok ? 'ok' : 'no'}">${ok ? txtOk : txtNo}</span>`;
   const card = (title, pills, body, actions) => `<div class="integ"><div class="integ-h"><b>${title}</b><span class="row" style="gap:6px">${pills}</span></div>${body}<div class="row" style="margin-top:8px">${actions}</div></div>`;
   const fmsaveCard = card('Ler o save (.fm) — fmsave',
@@ -28,12 +27,6 @@ function integrationsHTML(compact) {
      ${err && DESKTOP ? `<div class="notice warn small">${esc(saveErrText(err))}</div>` : ''}
      <p class="small muted">${L('A app usa sempre a versão mais recente do fmsave (verifica o PyPI a cada leitura; sem internet, usa a que já tem). Se instalou o fmsave com pip, actualize com', 'The app always uses the latest fmsave (it checks PyPI on every read; offline, it uses the one you already have). If you installed fmsave with pip, update it with')} <code>python -m pip install --upgrade fmsave</code>.</p>`,
     DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">📥 ${L('Ler o save agora', 'Read the save now')}</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
-  const f9Card = card('F9 no jogo — FM View Exporter',
-    DESKTOP ? pill(f9, 'plugin encontrado', 'plugin não encontrado') + (f9 ? pill(ST.auto.on, 'automático', 'manual') : '') : '',
-    `<p class="small"><b>Requer</b> o plugin gratuito <a href="${LINKS.fmve}" target="_blank" rel="noopener">FM View Exporter</a> (Windows + Steam): descarregue o <code>setup.exe</code>, clique Install, e no FM importe a vista <code>FM27-PlayerAnalyzer-Squad-Standard.fmf</code>. Depois, F9 no ecrã do plantel exporta-o${DESKTOP ? ' e a app carrega-o sozinha' : ''}. F9 no plantel de outro clube entra como adversário.</p>
-     ${DESKTOP && !f9 ? '<div class="notice small">Ainda não encontrei a pasta do plugin (Documentos › Sports Interactive › FM View Exporter). Instale-o e carregue F9 uma vez no FM.</div>' : ''}
-     ${DESKTOP && !compact ? `<label class="f">Pasta personalizada (opcional)<input type="text" value="${esc(ST.auto.dir)}" placeholder="ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter" onchange="A.autoDir(this.value)"></label><div id="dirs" class="grid" style="gap:4px"></div>` : ''}`,
-    `<a class="btn sm" href="${LINKS.fmve}" target="_blank" rel="noopener">Descarregar o plugin</a>${DESKTOP ? `<label class="row small"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar cada F9 automaticamente</label><button class="btn sm" data-busy="f9" onclick="A.autoNow()">Carregar o último F9</button>` : ''}`);
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
   const plug = DESKTOP && !compact ? pluginHTML() : '';
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
@@ -44,16 +37,11 @@ function integrationsHTML(compact) {
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
     DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>` : '');
-  return fmsaveCard + f9Card + bridgeCard;
+  return fmsaveCard + bridgeCard;
 }
 function vSettings() {
   if (DESKTOP) fmbRefresh('settings');
   if (DESKTOP && !FMB.pluginChecked) { FMB.pluginChecked = true; A.pluginCheck(); }
-  if (DESKTOP) setTimeout(async () => {
-    const el = document.getElementById('dirs'); if (!el) return;
-    const ds = await desktopDirs(); const uniq = []; ds.forEach(([p, ok]) => { if (!uniq.some(u => u[0] === p)) uniq.push([p, ok]); });
-    el.innerHTML = uniq.map(([p, ok]) => `<div class="small"><span class="dot ${ok ? 'ok' : ''}"></span><code>${esc(p)}</code>${ok ? L(' — encontrada', ' — found') : ''}</div>`).join('');
-  }, 0);
   return `<div class="top"><div><h2>Definições</h2></div></div>
   <div class="grid g2">
     <div class="panel grid">
@@ -70,7 +58,7 @@ function vSettings() {
       <div class="row"><button class="btn" onclick="A.exportAll()">Exportar tudo</button><label class="btn">Restaurar<input type="file" accept=".json" hidden onchange="A.importJSON(this)"></label><button class="btn" onclick="A.wipe()">Apagar tudo</button></div>
       <h3>Sobre</h3>
       <p class="small">Papéis e instruções seguem o sistema IP/OOP do FM26 com as novidades confirmadas do FM27. As pontuações (0–100) são médias ponderadas dos atributos-chave (peso 2) e preferidos (peso 1), ajustadas pela posição — uma segunda opinião transparente, não as estrelas do jogo.</p>
-      <p class="small"><b>De onde vêm os dados:</b> do save, através do <b>fmsave</b> (Randal S. Olson, MIT — lê uma cópia do save, nunca o altera nem lê a memória do jogo), ou do F9 do FM View Exporter. A app não gera .fmf (o FM27 cifra-os): as táticas voltam ao jogo pela Ficha para o FM27.</p>
+      <p class="small">${L('<b>De onde vêm os dados:</b> do save, através do <b>fmsave</b> (Randal S. Olson, MIT — lê uma cópia do save, nunca o altera nem lê a memória do jogo), e do FM aberto através do plugin opcional (próximo adversário, aplicar no jogo). A app não gera .fmf (o FM27 cifra-os).', '<b>Where the data comes from:</b> the save, through <b>fmsave</b> (Randal S. Olson, MIT — reads a copy of the save, never changes it or reads the game’s memory), and the running FM through the optional plugin (next opponent, applying in the game). The app doesn’t create .fmf files (FM27 encrypts them).')}</p>
       <p class="small muted">v${VERSION} · não afiliado à Sports Interactive/SEGA.</p>
     </div>
   </div>`;

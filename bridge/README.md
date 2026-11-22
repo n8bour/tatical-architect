@@ -114,3 +114,9 @@ Shooting Range 1, Attacking Third 2 (the full tab list, with Wide 3, Deep 4, Mid
   toggle event `879773492` {`1265792339` in/out of possession, `1349481321` position bits, `1330991441` slot} ·
   tactic `1750627946` · confirm event `55` (null). List: `ScoutingInfoReference|825307168=97;…|1953983593` (focus refs);
   delete: event `53` on `ScoutingInfoReference` with the id. Create/list/delete verified (`bridge/dev/_focus*.mjs`).
+
+### Next opponent (verified FM27, used by My team › Opponent › Next opponent from FM)
+`TeamReference|825307168=28;<session>;1685218662=<my team>` property `1852130921` = next fixture (`1668247142` = the previous
+one) → `FixtureReference` whose `1717663572` / `1718119764` are the two teams (`1717859429` the date). Opponent's players:
+`TeamReference|…=<their team>` property `926359584` (list of `PersonReference`; `1400137537` is the staff). Each player's
+`PersonReference` `1970170212` = fmsave `unique_id` → the save database gives the attributes (52/52 matched for RB Salzburg).

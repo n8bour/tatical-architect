@@ -4822,14 +4822,15 @@ function vHome() {
   if (ps.length >= 11) { if (!ST.sugg) ST.sugg = suggestTactics(ps); const s0 = ST.sugg[0]; sugg = `<div class="panel"><h3>Sistema que melhor serve o plantel</h3><p><b>${esc(s0.tp.n)}</b> — pontuação ${s0.total} (XI ${s0.xiAvg}, estilo ${s0.fit}, profundidade ${s0.depth}).</p><div class="row"><button class="btn" onclick="A.tab('team','xi')">Ver ranking completo</button><button class="btn" onclick="A.useSuggestion(0)">Abrir no analisador</button></div></div>`; }
   let oppBox = '';
   if (op.length) { const rep = opponentReport(t, ps, op); ST._oppRep = rep; oppBox = `<div class="panel"><h3><span>Próximo adversário:</span> ${esc(rep.club || '')}</h3>${rep.plan.slice(0, 2).map(x => `<p class="small">• <b>${esc(TI_BY_KEY[x.ti].n)} → ${esc(TI_BY_KEY[x.ti].opts[x.v])}</b>: ${esc(x.why)}</p>`).join('') || '<p class="small muted">Sem ajustes necessários.</p>'}<button class="btn" onclick="A.tab('team','opp')">Ver relatório</button></div>`; }
-  return `<div class="top"><div><h1>Olá! Vamos preparar o próximo jogo.</h1><p class="muted">Três passos. Tudo corre neste computador${DESKTOP ? ' e o plantel actualiza sozinho quando carrega F9 no FM' : ''}.</p></div></div>
+  if (DESKTOP && !FMB.oppTried && SCOUT.db && FMB.state && FMB.state.ok && FMB.state.ready) { FMB.oppTried = true; setTimeout(() => A.oppFromFM(true), 0); }
+  return `<div class="top"><div><h1>Olá! Vamos preparar o próximo jogo.</h1><p class="muted">${DESKTOP ? L('Três passos. Tudo corre neste computador: o plantel vem do save e, com o FM aberto, o próximo adversário vem do jogo.', 'Three steps. Everything runs on this computer: the squad comes from your save and, with FM open, the next opponent comes from the game.') : 'Três passos. Tudo corre neste computador.'}</p></div></div>
   <div class="grid g3">
-    ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${L(`${ps.length} jogadores`, `${ps.length} players`)}</b>${ST.myClub ? ' · ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.save ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Plantel.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : ST.f9Found ? (ST.auto.on ? 'Carregue F9 no ecrã do plantel no FM27.' : 'Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.') : 'Ligue a leitura do save ou instale o plugin do F9 — veja Plantel.') : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
+    ${step(1, ps.length > 0, 'Plantel', ps.length ? `<b>${L(`${ps.length} jogadores`, `${ps.length} players`)}</b>${ST.myClub ? ' · ' + esc(ST.myClub) : ''}<br><span class="muted">${esc(ST.squad.source)}</span>` : (DESKTOP ? (ST.auto.save ? (ST.auto.saveErr ? 'Falta instalar o leitor de saves — veja Plantel.' : 'Grave o jogo no FM27: a app lê o save sozinha.') : L('Carregue em “Ler o save agora” (ou ligue a leitura automática em Plantel).', 'Press “Read the save now” (or turn on automatic reading in Squad).')) : 'Leia o save com o fmsave online e arraste o CSV para aqui — ou experimente com o exemplo.'),
       ps.length ? `<button class="btn" onclick="A.tab('team','xi')">Ver melhor XI</button>` : dataButtons() + `<button class="btn" onclick="A.tab('team','squad')">Como carregar</button>` + `<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>`)}
     ${step(2, true, 'Tática', `<div class="score-ring" style="gap:12px">${ring(au.overall, 64)}<div><b>${esc(tName(t))}</b><br><span class="muted">${esc(t.ipForm)} → ${esc(t.oopForm)} · ${esc(t.ment)}</span></div></div>`,
       (ps.length >= 11 ? `<button class="btn primary" onclick="A.tab('team','gen')">Gerar tática para o plantel</button>` : '') + `<button class="btn ${ps.length >= 11 ? '' : 'primary'}" onclick="A.tab('tactic','analyze')">Analisar</button><button class="btn" onclick="A.simOpen()">▶ Ver em campo</button>`)}
-    ${step(3, op.length > 0, 'Adversário', op.length ? `<b>${esc(ST._oppRep && ST._oppRep.club || ST.opp.source)}</b> carregado` : 'No FM27, abra o plantel do adversário e carregue <b>F9</b>. A app reconhece que é outro clube.',
-      `<button class="btn ${op.length ? '' : 'primary'}" onclick="A.tab('team','opp')">${op.length ? 'Ver relatório' : 'Como carregar'}</button>`)}
+    ${step(3, op.length > 0, 'Adversário', op.length ? `<b>${esc(ST._oppRep && ST._oppRep.club || ST.opp.source)}</b> carregado` : (DESKTOP ? L('Com o FM aberto, a app descobre o próximo jogo e lê o plantel do adversário do save.', 'With FM open, the app finds your next match and reads the opponent’s squad from the save.') : L('Carregue o plantel do adversário (CSV/HTML).', 'Load the opponent’s squad (CSV/HTML).')),
+      (DESKTOP ? `<button class="btn ${op.length ? '' : 'primary'}" data-busy="bridge-opp" onclick="A.oppFromFM()">${L('Próximo adversário do FM', 'Next opponent from FM')}</button>` : '') + `<button class="btn ${op.length || DESKTOP ? '' : 'primary'}" onclick="A.tab('team','opp')">${op.length ? 'Ver relatório' : 'Como carregar'}</button>`)}
   </div>
   <div class="grid g2" style="margin-top:16px">
     <div class="panel"><h3>O que corrigir primeiro</h3>${top.length ? top.map(f => `<div class="finding"><div class="sev ${f.sev}">${f.sev === 'crit' ? '!' : '▲'}</div><div><b>${esc(f.title)}</b><span class="small">${esc(f.text)}</span>${f.fix ? `<div class="fix">→ ${esc(f.fix)}</div>` : ''}</div></div>`).join('') : '<p class="muted">Nada grave na tática. 👍</p>'}
@@ -4854,7 +4855,7 @@ function vSquad() {
       ${integrationsHTML(true)}
       <p class="small muted">Também aceita CSV/JSON do fmsave, FMPT Chief Analyst, FMLibreEditor, HTML com tabela e texto colado — basta arrastar para a janela.</p>
     </div>
-    <div class="panel"><textarea id="sqtext" placeholder="Arraste para aqui o CSV do plantel (fmsave ou F9 do FM View Exporter), ou cole o conteúdo…" ondragover="event.preventDefault()" ondrop="event.preventDefault();A.squadFile({files:event.dataTransfer.files})"></textarea>
+    <div class="panel"><textarea id="sqtext" placeholder="${L('Arraste para aqui o CSV do plantel (fmsave), ou cole o conteúdo…', 'Drag the squad CSV (fmsave) here, or paste its content…')}" ondragover="event.preventDefault()" ondrop="event.preventDefault();A.squadFile({files:event.dataTransfer.files})"></textarea>
       <div class="row" style="margin-top:8px"><button class="btn primary" onclick="A.squadText()">Ler texto</button>
       <label class="btn">Escolher ficheiro<input type="file" accept=".html,.htm,.txt,.csv,.tsv,.json" hidden onchange="A.squadFile(this)"></label>
       <label class="btn">Carregar como adversário<input type="file" accept=".html,.htm,.txt,.csv,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
@@ -4920,15 +4921,16 @@ function vXI() {
 // ---------- Relatório do adversário ----------
 function vOpp() {
   const op = oppPlayers();
+  if (DESKTOP && !FMB.oppTried && FMB.state && FMB.state.ok && FMB.state.ready) { FMB.oppTried = true; setTimeout(() => A.oppFromFM(true), 0); }
   if (!op.length) return `<div class="grid g2"><div class="panel"><h2>Relatório do adversário</h2>
       <p>Carrega o plantel do próximo adversário e a app compara setor a setor com o teu XI, diz quem são os perigosos e propõe ajustes à tua tática.</p>
-      <ol class="clean small"><li>No FM27, abre o plantel do adversário (com a mesma vista de atributos).</li><li>Carrega em <b>F9</b>. ${DESKTOP && ST.auto.on ? 'A app reconhece que é outro clube e carrega-o aqui sozinha.' : 'Arrasta o CSV para esta janela — se o clube for diferente do teu, entra como adversário.'}</li></ol>
-      <label class="btn primary">Escolher ficheiro do adversário<input type="file" accept=".csv,.html,.htm,.txt,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
+      ${DESKTOP ? `<p class="small">${L('Com o FM27 aberto (plugin em Definições › Integrações), a app descobre o teu próximo jogo e lê o plantel do adversário do save.', 'With FM27 open (plugin in Settings › Integrations), the app finds your next match and reads the opponent’s squad from the save.')}</p><div class="row"><button class="btn primary" data-busy="bridge-opp" onclick="A.oppFromFM()">${L('Próximo adversário do FM', 'Next opponent from FM')}</button></div>` : ''}
+      <p class="small muted" style="margin-top:10px">${L('Ou escolha um ficheiro (CSV/HTML) com o plantel deles.', 'Or choose a file (CSV/HTML) with their squad.')}</p><label class="btn">Escolher ficheiro do adversário<input type="file" accept=".csv,.html,.htm,.txt,.tsv" hidden onchange="A.squadFile(this,'opp')"></label></div>
       <div class="panel"><h3>O que vais ver</h3><ul class="clean small"><li>Velocidade e jogo aéreo dos centrais deles contra os teus avançados.</li><li>Laterais, criação no meio-campo, pressão, extremos, finalização e ataque aéreo.</li><li>Os 3 jogadores mais perigosos e as instruções de adversário a usar.</li><li>Um plano de ajustes que aplicas à tua tática com um clique e vês no campo animado.</li></ul></div></div>`;
   const rep = opponentReport(ST.tactic, players(), op); ST._oppRep = rep;
   const pct = (v) => v == null ? 0 : Math.max(0, Math.min(100, (v - 1) / 19 * 100));
   return `<div class="top"><div><h2><span>Relatório:</span> ${esc(rep.club || ST.opp.source)}</h2><p class="muted small" style="margin:0">${op.length} jogadores · onze provável escolhido pelos atributos (4-2-3-1). ${players().length ? 'O traço vertical é o teu XI.' : 'Carrega o teu plantel para comparar.'}</p></div>
-    <div class="row"><button class="btn" onclick="A.clearOpp()">Trocar adversário</button></div></div>
+    <div class="row">${DESKTOP ? `<button class="btn" data-busy="bridge-opp" onclick="A.oppFromFM()">${L('Actualizar do FM', 'Update from FM')}</button>` : ''}<button class="btn" onclick="A.clearOpp()">Trocar adversário</button></div></div>
   <div class="grid g2">
     <div class="panel"><h3>Setor a setor</h3>
       ${rep.sectors.map(s => `<div class="oppbar"><span>${esc(s.n)}</span><div class="t"><i style="width:${pct(s.tv)}%;background:${s.tv >= 14 ? 'var(--crit)' : s.tv <= 10.5 ? 'var(--good)' : 'var(--warn)'}"></i>${s.uv != null ? `<em style="left:${pct(s.uv)}%" title="Teu XI: ${s.uv.toFixed(1)}"></em>` : ''}</div><b>${s.tv != null ? s.tv.toFixed(1) : '—'}</b></div>`).join('')}
@@ -5297,7 +5299,7 @@ function squadTable(ps) {
   const th = (k, label) => `<th><button class="th-sort ${S.k === k ? 'on' : ''}" onclick="A.sqSort('${k}')">${label}${S.k === k ? (S.dir === 'asc' ? ' ▲' : ' ▼') : ''}</button></th>`;
   const badge = (v, inv) => v == null ? '<span class="muted">—</span>' : `<b class="v v${inv ? (v <= 6 ? 4 : v <= 10 ? 3 : v <= 14 ? 2 : 1) : (v >= 16 ? 4 : v >= 13 ? 3 : v >= 10 ? 2 : 1)}">${v}</b>`;
   const tabs = `<div class="seg" role="tablist" aria-label="${L('Colunas', 'Columns')}">${[['roles', L('Papéis', 'Roles')], ['ability', L('Habilidade e contrato', 'Ability and contract')], ['pers', L('Personalidade e ocultos', 'Personality and hidden')]].map(([k, n]) => `<button class="${mode === k ? 'on' : ''}" onclick="A.sqMode('${k}')" aria-pressed="${mode === k}">${n}</button>`).join('')}</div>`;
-  const note = (mode === 'ability' && !rich) || (mode === 'pers' && !richP) ? `<div class="notice small" style="margin:8px 0">${L('Estes dados vêm do save: leia o plantel com “Ler o save agora” (fmsave) para ver CA/PA, personalidade, atributos ocultos, contrato e valor. O F9 e outros CSV só trazem o que a vista exportar.', 'This data comes from the save: read the squad with “Read the save now” (fmsave) to see CA/PA, personality, hidden attributes, contract and value. F9 and other CSVs only include what the view exports.')}</div>` : '';
+  const note = (mode === 'ability' && !rich) || (mode === 'pers' && !richP) ? `<div class="notice small" style="margin:8px 0">${L('Estes dados vêm do save: leia o plantel com “Ler o save agora” (fmsave) para ver CA/PA, personalidade, atributos ocultos, contrato e valor. Outros CSV só trazem o que tiverem.', 'This data comes from the save: read the squad with “Read the save now” (fmsave) to see CA/PA, personality, hidden attributes, contract and value. Other CSVs only include what they contain.')}</div>` : '';
   let head, row;
   if (mode === 'ability') {
     head = `${th('ca', 'CA')}${th('pa', 'PA')}${th('lk', L('Prob. PA', 'PA chance'))}${th('value', L('Valor', 'Value'))}${th('wage', L('Salário', 'Wage'))}${th('end', L('Contrato até', 'Contract until'))}<th>${L('Estatuto', 'Status')}</th>`;
@@ -5546,7 +5548,7 @@ function vSetPieces() {
       ${row('Capitão', r.caps[0], r.caps[0] ? a(r.caps[0], ['ldr', 'det']) : '')}
       ${row('Vice-capitão', r.caps[1], r.caps[1] ? a(r.caps[1], ['ldr', 'det']) : '')}
     </tbody></table>
-    <p class="small muted">Sem dados do pé preferido o efeito do canto não é indicado. Exportações com a coluna do pé (FM View Exporter, fmsave) mostram-no.</p></div>
+    <p class="small muted">${L('Sem dados do pé preferido o efeito do canto não é indicado. O plantel lido do save (fmsave) tem o pé.', 'Without preferred-foot data the corner swing isn’t shown. The squad read from the save (fmsave) has it.')}</p></div>
     <div class="panel"><h3>Ideias para os cantos e livres</h3>
       ${r.tips.map((tp, i) => { const d = tp.ti && TI_BY_KEY[tp.ti], on = d && tiVal(ST.tactic, tp.ti) === tp.v;
         return `<div class="finding"><div class="sev ${on ? 'good' : 'info'}">${on ? '✓' : i + 1}</div><div><span class="small">${esc(tp.t)}</span>${d && !on ? `<div><button class="btn sm" style="margin-top:4px" onclick="A.applySpTip(${i})">${esc(d.n)} → ${esc(d.opts[tp.v])}</button></div>` : ''}</div></div>`; }).join('') || '<p class="muted small">Nada a destacar.</p>'}
@@ -5660,11 +5662,10 @@ function vBTraining() {
 // erros do fmsave traduzidos para o que o utilizador precisa de saber
 function saveErrText(err) {
   const e = String(err || '');
-  if (/UnsupportedGameError|unsupported|unverified/i.test(e)) return L('O fmsave ainda não lê o plantel nesta versão do FM27 (o jogo foi actualizado). A app usa sempre o fmsave mais recente: assim que sair uma versão que a suporte, volta a funcionar sozinha. Entretanto use o F9 ou o fmsave online.', 'fmsave cannot read the squad in this FM27 build yet (the game was updated). The app always uses the latest fmsave: as soon as a version supporting it is released, it works again on its own. Meanwhile, use F9 or fmsave online.') + ' (' + T(e).slice(0, 160) + ')';
+  if (/UnsupportedGameError|unsupported|unverified/i.test(e)) return L('O fmsave ainda não lê o plantel nesta versão do FM27 (o jogo foi actualizado). A app usa sempre o fmsave mais recente: assim que sair uma versão que a suporte, volta a funcionar sozinha. Entretanto use o fmsave online.', 'fmsave cannot read the squad in this FM27 build yet (the game was updated). The app always uses the latest fmsave: as soon as a version supporting it is released, it works again on its own. Meanwhile, use fmsave online.') + ' (' + T(e).slice(0, 160) + ')';
   return e;
 }
 const LINKS = {
-  fmve: 'https://github.com/ElectroHugin/FM-View-Exporter/releases',
   fmsave: 'https://github.com/rhiever/fmsave',
   fmsaveWeb: 'https://rhiever.github.io/fmsave/app/',
   uv: 'https://docs.astral.sh/uv/getting-started/installation/',
@@ -5672,7 +5673,7 @@ const LINKS = {
 };
 // compact: versão curta (Plantel); completa nas Definições
 function integrationsHTML(compact) {
-  const f9 = ST.f9Found, save = ST.auto.save, err = ST.auto.saveErr;
+  const save = ST.auto.save, err = ST.auto.saveErr;
   const pill = (ok, txtOk, txtNo) => `<span class="pill ${ok ? 'ok' : 'no'}">${ok ? txtOk : txtNo}</span>`;
   const card = (title, pills, body, actions) => `<div class="integ"><div class="integ-h"><b>${title}</b><span class="row" style="gap:6px">${pills}</span></div>${body}<div class="row" style="margin-top:8px">${actions}</div></div>`;
   const fmsaveCard = card('Ler o save (.fm) — fmsave',
@@ -5684,12 +5685,6 @@ function integrationsHTML(compact) {
      ${err && DESKTOP ? `<div class="notice warn small">${esc(saveErrText(err))}</div>` : ''}
      <p class="small muted">${L('A app usa sempre a versão mais recente do fmsave (verifica o PyPI a cada leitura; sem internet, usa a que já tem). Se instalou o fmsave com pip, actualize com', 'The app always uses the latest fmsave (it checks PyPI on every read; offline, it uses the one you already have). If you installed fmsave with pip, update it with')} <code>python -m pip install --upgrade fmsave</code>.</p>`,
     DESKTOP ? `<label class="row small"><input type="checkbox" ${save ? 'checked' : ''} onchange="A.saveToggle()"> Ler automaticamente sempre que o FM grava</label><button class="btn primary sm" data-busy="save" onclick="A.saveNow()">📥 ${L('Ler o save agora', 'Read the save now')}</button>` : `<a class="btn sm" href="${LINKS.fmsaveWeb}" target="_blank" rel="noopener">Abrir fmsave online</a>`);
-  const f9Card = card('F9 no jogo — FM View Exporter',
-    DESKTOP ? pill(f9, 'plugin encontrado', 'plugin não encontrado') + (f9 ? pill(ST.auto.on, 'automático', 'manual') : '') : '',
-    `<p class="small"><b>Requer</b> o plugin gratuito <a href="${LINKS.fmve}" target="_blank" rel="noopener">FM View Exporter</a> (Windows + Steam): descarregue o <code>setup.exe</code>, clique Install, e no FM importe a vista <code>FM27-PlayerAnalyzer-Squad-Standard.fmf</code>. Depois, F9 no ecrã do plantel exporta-o${DESKTOP ? ' e a app carrega-o sozinha' : ''}. F9 no plantel de outro clube entra como adversário.</p>
-     ${DESKTOP && !f9 ? '<div class="notice small">Ainda não encontrei a pasta do plugin (Documentos › Sports Interactive › FM View Exporter). Instale-o e carregue F9 uma vez no FM.</div>' : ''}
-     ${DESKTOP && !compact ? `<label class="f">Pasta personalizada (opcional)<input type="text" value="${esc(ST.auto.dir)}" placeholder="ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter" onchange="A.autoDir(this.value)"></label><div id="dirs" class="grid" style="gap:4px"></div>` : ''}`,
-    `<a class="btn sm" href="${LINKS.fmve}" target="_blank" rel="noopener">Descarregar o plugin</a>${DESKTOP ? `<label class="row small"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar cada F9 automaticamente</label><button class="btn sm" data-busy="f9" onclick="A.autoNow()">Carregar o último F9</button>` : ''}`);
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
   const plug = DESKTOP && !compact ? pluginHTML() : '';
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
@@ -5700,16 +5695,11 @@ function integrationsHTML(compact) {
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
      ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
     DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>` : '');
-  return fmsaveCard + f9Card + bridgeCard;
+  return fmsaveCard + bridgeCard;
 }
 function vSettings() {
   if (DESKTOP) fmbRefresh('settings');
   if (DESKTOP && !FMB.pluginChecked) { FMB.pluginChecked = true; A.pluginCheck(); }
-  if (DESKTOP) setTimeout(async () => {
-    const el = document.getElementById('dirs'); if (!el) return;
-    const ds = await desktopDirs(); const uniq = []; ds.forEach(([p, ok]) => { if (!uniq.some(u => u[0] === p)) uniq.push([p, ok]); });
-    el.innerHTML = uniq.map(([p, ok]) => `<div class="small"><span class="dot ${ok ? 'ok' : ''}"></span><code>${esc(p)}</code>${ok ? L(' — encontrada', ' — found') : ''}</div>`).join('');
-  }, 0);
   return `<div class="top"><div><h2>Definições</h2></div></div>
   <div class="grid g2">
     <div class="panel grid">
@@ -5726,7 +5716,7 @@ function vSettings() {
       <div class="row"><button class="btn" onclick="A.exportAll()">Exportar tudo</button><label class="btn">Restaurar<input type="file" accept=".json" hidden onchange="A.importJSON(this)"></label><button class="btn" onclick="A.wipe()">Apagar tudo</button></div>
       <h3>Sobre</h3>
       <p class="small">Papéis e instruções seguem o sistema IP/OOP do FM26 com as novidades confirmadas do FM27. As pontuações (0–100) são médias ponderadas dos atributos-chave (peso 2) e preferidos (peso 1), ajustadas pela posição — uma segunda opinião transparente, não as estrelas do jogo.</p>
-      <p class="small"><b>De onde vêm os dados:</b> do save, através do <b>fmsave</b> (Randal S. Olson, MIT — lê uma cópia do save, nunca o altera nem lê a memória do jogo), ou do F9 do FM View Exporter. A app não gera .fmf (o FM27 cifra-os): as táticas voltam ao jogo pela Ficha para o FM27.</p>
+      <p class="small">${L('<b>De onde vêm os dados:</b> do save, através do <b>fmsave</b> (Randal S. Olson, MIT — lê uma cópia do save, nunca o altera nem lê a memória do jogo), e do FM aberto através do plugin opcional (próximo adversário, aplicar no jogo). A app não gera .fmf (o FM27 cifra-os).', '<b>Where the data comes from:</b> the save, through <b>fmsave</b> (Randal S. Olson, MIT — reads a copy of the save, never changes it or reads the game’s memory), and the running FM through the optional plugin (next opponent, applying in the game). The app doesn’t create .fmf files (FM27 encrypts them).')}</p>
       <p class="small muted">v${VERSION} · não afiliado à Sports Interactive/SEGA.</p>
     </div>
   </div>`;
@@ -5797,6 +5787,9 @@ const FMB_IDS = {
       slotMove: 1449477207,      // move an instruction to another group/position (see bridge/README.md)
     },
   },
+  // ---- next opponent (verified FM27: TeamReference props; fixture keys)
+  team: { pairs: (id) => `825307168=28;1198877028=1;1685218662=${id}`, nextFixture: 1852130921, players: 926359584, name: 1851878757 },
+  fixture: { opp: 1717663572, us: 1718119764, date: 1717859429 },
   // ---- recruitment (decoded and verified from the bridge, see bridge/README.md)
   search: { pairs: '825307168=98;1198877028=1;1719300978=1;1954115685=0', text: 1851878757, people: 1886547059, uniqueId: 1970170212 },
   action: { ev: 44, pairs: (id) => `825307168=1;1198877028=1;1633904996=${id}`, shortlistAdd: 1097488485, shortlistRemove: 1500280650 },
@@ -6042,6 +6035,19 @@ const FMB = {
     }
     if (need.size) done.push(L('Rotinas: o tempo acabou antes de abrir ', 'Routines: timed out before opening ') + [...need].map(k => k === S.kinds.attCorner ? L('o canto ofensivo', 'the attacking corner') : L('o canto defensivo', 'the defending corner')).join(L(' e ', ' and ')) + L(' no FM.', ' in FM.'));
     return done;
+  },
+  // FM display strings come as "\u0001<formatting>\u0002<text>\u0001": keep the text
+  text(v) { return typeof v === 'string' ? v.split('\u0002').pop().replace(/\u0001/g, '').trim() : ''; },
+  /** Next match of the managed team: { team, name, uniqs: [fmsave unique_id of each opponent player] } or null. */
+  async nextOpponent() {
+    const c = await FMB.context(), T = FMB_IDS.team, X = FMB_IDS.fixture;
+    const [fx] = await FMB.read([['TeamReference', T.pairs(c.team), T.nextFixture]]);
+    const p = FMB.pair(fx, X.opp), q = FMB.pair(fx, X.us), opp = p && p !== c.team ? p : q && q !== c.team ? q : 0;
+    if (!opp) return null;
+    const [name, list] = await FMB.read([['TeamReference', T.pairs(opp), T.name], ['TeamReference', T.pairs(opp), T.players]]);
+    const persons = FMB.items(list).map(x => FMB.pair(x, FMB_IDS.key.personId)).filter(Boolean);
+    const uq = await FMB.read(persons.map(id => ['PersonReference', `825307168=28;1198877028=1;${FMB_IDS.key.personId}=${id}`, FMB_IDS.search.uniqueId]));
+    return { team: opp, name: FMB.text(name), uniqs: uq.map(v => v == null ? '' : String(v)).filter(Boolean) };
   },
   // ---- recruitment: FM search, shortlist, recruitment focus (scout assignment)
   /** FM person id for a player of the save: FM's own search by name, confirmed by fmsave's unique_id. null if not found. */
@@ -6311,7 +6317,7 @@ const A = {
   squadOpen(id) { ST.squadOpen = id; render(); },
   squadClose() { ST.squadOpen = null; render(); },
   // ---------- prospeção ----------
-  async scoutLoad() {
+  async scoutLoad(opts = {}) {
     if (BUSY.scout) return; SCOUT.err = '';
     try {
       const info = await window.__TAURI__.core.invoke('latest_save', { customDir: ST.auto.saveDir || null });
@@ -6320,7 +6326,7 @@ const A = {
       await withBusy('scout', L('A ler todos os jogadores de ', 'Reading every player in ') + info.name, async (prog) => {
         prog(null, L('o fmsave está a ler o save (sobre uma cópia)', 'fmsave is reading the save (from a copy)'));
         const r = await window.__TAURI__.core.invoke('export_save_db', { path: info.path });
-        await A.scoutIngest(r.players, { nations: r.nations, info: r.info, save: r.save, cached: r.cached, prog, t0 });
+        await A.scoutIngest(r.players, { nations: r.nations, info: r.info, save: r.save, cached: r.cached, prog, t0, stay: opts.stay });
       }, { slow: L('a primeira leitura da base de dados inteira pode demorar 1–3 minutos', 'the first read of the whole database can take 1–3 minutes'), slowAfter: 15 });
     } catch (e) { SCOUT.err = String((e && e.message) || e); toast(L('Não consegui ler a base de dados', 'Could not read the database')); }
     render();
@@ -6331,7 +6337,7 @@ const A = {
     SCOUT.db = db; SCOUT.nations = parseNations(o.nations || ''); SCOUT._val = null; SCOUT.cache = null; SCOUT.cacheKey = '';
     const d = o.info ? gameDateFromInfo(o.info) : null; SCOUT.date = d || inferGameDate(db.players); SCOUT.dateGuess = !d;
     SCOUT.save = o.save || L('ficheiro', 'file'); SCOUT.cached = !!o.cached; SCOUT.ms = performance.now() - t0;
-    const S = scoutState(); S.open = null; ST.view = 'scout'; save(); render();
+    const S = scoutState(); S.open = null; if (!o.stay) ST.view = 'scout'; save(); render();
     toast(L(`${db.players.length.toLocaleString(LOCALE())} jogadores carregados`, `${db.players.length.toLocaleString(LOCALE())} players loaded`));
   },
   scoutPreset(k) {
@@ -6397,10 +6403,27 @@ const A = {
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
   clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
+  /** Next opponent from the running FM (bridge): FM gives the fixture and the opponent's players (unique_id), the save
+   *  database gives their attributes. silent: background check, only acts if the opponent changed. */
+  async oppFromFM(silent) {
+    if (!DESKTOP || BUSY['bridge-opp'] || BUSY.scout) return;
+    const st = FMB.state || {}; if (!(st.ok && st.ready)) { if (!silent) toast(L('Abra o FM27 com o plugin (Definições › Integrações).', 'Open FM27 with the plugin (Settings › Integrations).')); return; }
+    try {
+      const nx = await withBusy('bridge-opp', L('A procurar o próximo adversário no FM', 'Finding the next opponent in FM'), () => FMB.nextOpponent());
+      if (!nx) { if (!silent) toast(L('O FM não tem um próximo jogo marcado.', 'FM has no next match scheduled.')); return; }
+      if (silent && ST.opp.fmTeam === nx.team && oppPlayers().length) return;
+      if (!SCOUT.db) await A.scoutLoad({ stay: true });
+      if (!SCOUT.db) return;
+      const by = new Map(SCOUT.db.players.filter(p => p.uniq).map(p => [String(p.uniq), p]));
+      const ps = nx.uniqs.map(u => by.get(u)).filter(Boolean).map(p => ({ ...p, club: nx.name, meta: { ...(p.meta || {}), club: nx.name } }));
+      if (ps.length < 11) throw new Error(L(`Só encontrei ${ps.length} jogadores do ${nx.name} no save: grave o jogo e volte a tentar.`, `Only found ${ps.length} ${nx.name} players in the save: save the game and try again.`));
+      ST.opp = { ...EMPTY_SQUAD(), players: ps, source: nx.name + L(' (próximo jogo, do FM)', ' (next match, from FM)'), at: new Date().toISOString(), fmTeam: nx.team };
+      ST._oppRep = null; save();
+      toast(L(`Próximo adversário: ${nx.name} (${ps.length} jogadores)`, `Next opponent: ${nx.name} (${ps.length} players)`));
+    } catch (e) { if (!silent) toast(String(e.message || e)); }
+    render();
+  },
   setMyClub(v) { ST.myClub = v || null; save(); render(); },
-  autoToggle() { ST.auto.on = !ST.auto.on; save(); render(); if (ST.auto.on) desktopPoll(true); },
-  autoDir(v) { ST.auto.dir = v.trim(); ST.auto.mtime = 0; save(); desktopPoll(true); },
-  autoNow() { ST.auto.mtime = 0; desktopPoll(true); },
   saveNow() { savePoll(true); },
   pickFile() { const i = document.createElement('input'); i.type = 'file'; i.accept = '.csv,.tsv,.txt,.html,.htm,.json,.fmf'; i.onchange = () => { if (i.files[0]) ingestFile(i.files[0]); }; i.click(); },
   saveToggle() { ST.auto.save = !ST.auto.save; save(); render(); if (ST.auto.save) savePoll(); },
@@ -6482,8 +6505,7 @@ function renderNav() {
   const sq = players().length, op = oppPlayers().length, v = ST.view;
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
   const stat = (on, label, tip) => `<span class="tb-stat" title="${esc(tip || label)}"><span class="dot ${on ? 'ok' : ''}"></span><span class="lbl">${label}</span></span>`;
-  const saveTip = DESKTOP ? 'Save: ' + (SAVE_BUSY ? L('a ler…', 'reading…') : ST.auto.saveErr ? L('erro (ver Definições)', 'error (see Settings)') : ST.auto.save ? L('automático', 'automatic') : 'manual')
-    + ' · F9: ' + (!ST.f9Found ? L('plugin não encontrado', 'plugin not found') : ST.auto.on ? L('automático', 'automatic') : 'manual') : '';
+  const saveTip = DESKTOP ? 'Save: ' + (SAVE_BUSY ? L('a ler…', 'reading…') : ST.auto.saveErr ? L('erro (ver Definições)', 'error (see Settings)') : ST.auto.save ? L('automático', 'automatic') : 'manual') : '';
   const fmTip = fb.ok ? (fb.ready ? L('FM ligado (Tactical Bible Bridge)', 'FM connected (Tactical Bible Bridge)') : L('FM aberto, à espera do jogo', 'FM open, waiting for the game')) : L('FM não ligado (plugin opcional, ver Definições)', 'FM not connected (optional plugin, see Settings)');
   const main = NAV.filter(([id]) => id !== 'settings');
   const tabs = TABS[v] ? TABS[v].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[v] === k}" class="${ST.tabs[v] === k ? 'on' : ''}" onclick="A.tab('${v}','${k}')">${n}</button>`).join('')
@@ -6564,15 +6586,14 @@ function paintBusy() {
   clearInterval(BUSY_TICK); if (keys.length) BUSY_TICK = setInterval(paintBusy, 500);
 }
 
-// ---------- dados do jogo: ler o save / F9 / abrir ficheiro — sempre à mão ----------
+// ---------- dados do jogo: ler o save / abrir ficheiro — sempre à mão ----------
 function relTime(ts) {
   const t0 = typeof ts === 'number' ? ts : Date.parse(ts); if (!t0) return ''; const s = (Date.now() - t0) / 1000;
   if (s < 90) return L('agora mesmo', 'just now'); const m = s / 60; if (m < 60) return L(`há ${Math.round(m)} min`, `${Math.round(m)} min ago`);
   const h = m / 60; if (h < 24) return L(`há ${Math.round(h)} h`, `${Math.round(h)} h ago`); const d = Math.round(h / 24); return L(`há ${d} dia(s)`, `${d} day(s) ago`);
 }
 function dataButtons(size = '') {
-  if (DESKTOP) return `<button class="btn primary ${size}" data-busy="save" onclick="A.saveNow()" title="${L('Ler o plantel do último save (Ctrl+Shift+L)', 'Read the squad from your latest save (Ctrl+Shift+L)')}">📥 ${L('Ler o save agora', 'Read the save now')}</button>
-    <button class="btn ${size}" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar a última exportação F9 do FM View Exporter', 'Load the latest F9 export from FM View Exporter')}">⌨ ${L('Carregar último F9', 'Load latest F9')}</button>`;
+  if (DESKTOP) return `<button class="btn primary ${size}" data-busy="save" onclick="A.saveNow()" title="${L('Ler o plantel do último save (Ctrl+Shift+L)', 'Read the squad from your latest save (Ctrl+Shift+L)')}">📥 ${L('Ler o save agora', 'Read the save now')}</button>`;
   return `<button class="btn primary ${size}" onclick="A.pickFile()" title="${L('CSV/HTML/JSON do plantel (Ctrl+Shift+L)', 'Squad CSV/HTML/JSON (Ctrl+Shift+L)')}">📂 ${L('Abrir ficheiro do plantel', 'Open squad file')}</button>`;
 }
 function dataCard() {
@@ -6580,8 +6601,7 @@ function dataCard() {
   const when = sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet');
   const drop = L('Também pode arrastar qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.', 'You can also drag any file (CSV, HTML, .fmf, .json) into the window.');
   return `<div class="data-card" role="group" aria-label="${L('Dados do jogo', 'Game data')}">
-    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${esc(L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)') + ' — ' + when)}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
-      <button class="btn sm data-btn" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar último F9', 'Load latest F9')}" aria-label="${L('Carregar último F9', 'Load latest F9')}"><span class="ic" aria-hidden="true">⌨</span><span class="lbl">${L('Último F9', 'Latest F9')}</span></button>`
+    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${esc(L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)') + ' — ' + when)}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>`
     : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${esc(L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)') + ' — ' + when + '. ' + drop)}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
   </div>`;
 }
@@ -6638,22 +6658,6 @@ function setupDnD() {
   window.addEventListener('drop', (e) => { e.preventDefault(); depth = 0; ov.classList.remove('on'); [...e.dataTransfer.files].forEach(ingestFile); });
 }
 
-// ---------- app instalada: apanha o último F9 do FM View Exporter ----------
-let POLLING = false;
-async function desktopPoll(force) {
-  if (!DESKTOP || (!ST.auto.on && !force) || POLLING) return;
-  POLLING = true;
-  try {
-    const r = await window.__TAURI__.core.invoke('latest_export', { customDir: ST.auto.dir || null, since: ST.auto.mtime || null });
-    if (r && r.content) {
-      ST.auto.mtime = r.modified; ST.auto.last = r.name;
-      busyStart('f9', 'A carregar a exportação F9', { detail: r.name }); await new Promise(res => setTimeout(res, 30));
-      let where; try { where = ingestSquadText(r.content, r.name + ' (F9)'); } finally { busyEnd('f9'); }
-      save(); if (where) render();
-    } else if (force) toast(L('Nenhuma exportação nova encontrada', 'No new export found'));
-  } catch (e) { if (force) toast(L('Não consegui ler a pasta de exportação', 'Could not read the export folder')); }
-  POLLING = false;
-}
 // ---------- app instalada: lê o save (.fm) com o fmsave sempre que o jogo grava ----------
 let SAVE_BUSY = false;
 async function savePoll(force) {
@@ -6674,11 +6678,6 @@ async function savePoll(force) {
   SAVE_BUSY = false; busyEnd('save'); save(); render();
 }
 
-async function desktopDirs() {
-  if (!DESKTOP) return [];
-  try { const d = await window.__TAURI__.core.invoke('export_dirs', { customDir: ST.auto.dir || null }); return Array.isArray(d) ? d : []; } catch (e) { return []; }
-}
-
 document.addEventListener('click', (e) => {
   const a = e.target.closest && e.target.closest('a[href^="https://"]');
   if (!a || !DESKTOP) return;
@@ -6691,9 +6690,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();
   if (DESKTOP) {
-    desktopPoll(); setInterval(desktopPoll, 3000); savePoll(); setInterval(savePoll, 10000);
-    const chk = () => desktopDirs().then(d => { const f = d.some(x => x[1]); if (f !== ST.f9Found) { ST.f9Found = f; render(); } });
-    chk(); setInterval(chk, 30000);
+    savePoll(); setInterval(savePoll, 10000);
   }
 });
 

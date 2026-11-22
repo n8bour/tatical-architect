@@ -21,8 +21,7 @@ function renderNav() {
   const sq = players().length, op = oppPlayers().length, v = ST.view;
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
   const stat = (on, label, tip) => `<span class="tb-stat" title="${esc(tip || label)}"><span class="dot ${on ? 'ok' : ''}"></span><span class="lbl">${label}</span></span>`;
-  const saveTip = DESKTOP ? 'Save: ' + (SAVE_BUSY ? L('a ler…', 'reading…') : ST.auto.saveErr ? L('erro (ver Definições)', 'error (see Settings)') : ST.auto.save ? L('automático', 'automatic') : 'manual')
-    + ' · F9: ' + (!ST.f9Found ? L('plugin não encontrado', 'plugin not found') : ST.auto.on ? L('automático', 'automatic') : 'manual') : '';
+  const saveTip = DESKTOP ? 'Save: ' + (SAVE_BUSY ? L('a ler…', 'reading…') : ST.auto.saveErr ? L('erro (ver Definições)', 'error (see Settings)') : ST.auto.save ? L('automático', 'automatic') : 'manual') : '';
   const fmTip = fb.ok ? (fb.ready ? L('FM ligado (Tactical Bible Bridge)', 'FM connected (Tactical Bible Bridge)') : L('FM aberto, à espera do jogo', 'FM open, waiting for the game')) : L('FM não ligado (plugin opcional, ver Definições)', 'FM not connected (optional plugin, see Settings)');
   const main = NAV.filter(([id]) => id !== 'settings');
   const tabs = TABS[v] ? TABS[v].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[v] === k}" class="${ST.tabs[v] === k ? 'on' : ''}" onclick="A.tab('${v}','${k}')">${n}</button>`).join('')
@@ -103,15 +102,14 @@ function paintBusy() {
   clearInterval(BUSY_TICK); if (keys.length) BUSY_TICK = setInterval(paintBusy, 500);
 }
 
-// ---------- dados do jogo: ler o save / F9 / abrir ficheiro — sempre à mão ----------
+// ---------- dados do jogo: ler o save / abrir ficheiro — sempre à mão ----------
 function relTime(ts) {
   const t0 = typeof ts === 'number' ? ts : Date.parse(ts); if (!t0) return ''; const s = (Date.now() - t0) / 1000;
   if (s < 90) return L('agora mesmo', 'just now'); const m = s / 60; if (m < 60) return L(`há ${Math.round(m)} min`, `${Math.round(m)} min ago`);
   const h = m / 60; if (h < 24) return L(`há ${Math.round(h)} h`, `${Math.round(h)} h ago`); const d = Math.round(h / 24); return L(`há ${d} dia(s)`, `${d} day(s) ago`);
 }
 function dataButtons(size = '') {
-  if (DESKTOP) return `<button class="btn primary ${size}" data-busy="save" onclick="A.saveNow()" title="${L('Ler o plantel do último save (Ctrl+Shift+L)', 'Read the squad from your latest save (Ctrl+Shift+L)')}">📥 ${L('Ler o save agora', 'Read the save now')}</button>
-    <button class="btn ${size}" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar a última exportação F9 do FM View Exporter', 'Load the latest F9 export from FM View Exporter')}">⌨ ${L('Carregar último F9', 'Load latest F9')}</button>`;
+  if (DESKTOP) return `<button class="btn primary ${size}" data-busy="save" onclick="A.saveNow()" title="${L('Ler o plantel do último save (Ctrl+Shift+L)', 'Read the squad from your latest save (Ctrl+Shift+L)')}">📥 ${L('Ler o save agora', 'Read the save now')}</button>`;
   return `<button class="btn primary ${size}" onclick="A.pickFile()" title="${L('CSV/HTML/JSON do plantel (Ctrl+Shift+L)', 'Squad CSV/HTML/JSON (Ctrl+Shift+L)')}">📂 ${L('Abrir ficheiro do plantel', 'Open squad file')}</button>`;
 }
 function dataCard() {
@@ -119,8 +117,7 @@ function dataCard() {
   const when = sq ? L(`Plantel lido ${relTime(at)}`, `Squad read ${relTime(at)}`) : L('Ainda sem plantel', 'No squad yet');
   const drop = L('Também pode arrastar qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.', 'You can also drag any file (CSV, HTML, .fmf, .json) into the window.');
   return `<div class="data-card" role="group" aria-label="${L('Dados do jogo', 'Game data')}">
-    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${esc(L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)') + ' — ' + when)}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>
-      <button class="btn sm data-btn" data-busy="f9" onclick="A.autoNow()" title="${L('Carregar último F9', 'Load latest F9')}" aria-label="${L('Carregar último F9', 'Load latest F9')}"><span class="ic" aria-hidden="true">⌨</span><span class="lbl">${L('Último F9', 'Latest F9')}</span></button>`
+    ${DESKTOP ? `<button class="btn primary sm data-btn" data-busy="save" onclick="A.saveNow()" title="${esc(L('Ler o save agora (Ctrl+Shift+L)', 'Read the save now (Ctrl+Shift+L)') + ' — ' + when)}" aria-label="${L('Ler o save agora', 'Read the save now')}"><span class="ic" aria-hidden="true">📥</span><span class="lbl">${L('Ler o save agora', 'Read the save now')}</span></button>`
     : `<button class="btn primary sm data-btn" onclick="A.pickFile()" title="${esc(L('Abrir ficheiro do plantel (Ctrl+Shift+L)', 'Open squad file (Ctrl+Shift+L)') + ' — ' + when + '. ' + drop)}" aria-label="${L('Abrir ficheiro do plantel', 'Open squad file')}"><span class="ic" aria-hidden="true">📂</span><span class="lbl">${L('Abrir ficheiro', 'Open file')}</span></button>`}
   </div>`;
 }
@@ -177,22 +174,6 @@ function setupDnD() {
   window.addEventListener('drop', (e) => { e.preventDefault(); depth = 0; ov.classList.remove('on'); [...e.dataTransfer.files].forEach(ingestFile); });
 }
 
-// ---------- app instalada: apanha o último F9 do FM View Exporter ----------
-let POLLING = false;
-async function desktopPoll(force) {
-  if (!DESKTOP || (!ST.auto.on && !force) || POLLING) return;
-  POLLING = true;
-  try {
-    const r = await window.__TAURI__.core.invoke('latest_export', { customDir: ST.auto.dir || null, since: ST.auto.mtime || null });
-    if (r && r.content) {
-      ST.auto.mtime = r.modified; ST.auto.last = r.name;
-      busyStart('f9', 'A carregar a exportação F9', { detail: r.name }); await new Promise(res => setTimeout(res, 30));
-      let where; try { where = ingestSquadText(r.content, r.name + ' (F9)'); } finally { busyEnd('f9'); }
-      save(); if (where) render();
-    } else if (force) toast(L('Nenhuma exportação nova encontrada', 'No new export found'));
-  } catch (e) { if (force) toast(L('Não consegui ler a pasta de exportação', 'Could not read the export folder')); }
-  POLLING = false;
-}
 // ---------- app instalada: lê o save (.fm) com o fmsave sempre que o jogo grava ----------
 let SAVE_BUSY = false;
 async function savePoll(force) {
@@ -213,11 +194,6 @@ async function savePoll(force) {
   SAVE_BUSY = false; busyEnd('save'); save(); render();
 }
 
-async function desktopDirs() {
-  if (!DESKTOP) return [];
-  try { const d = await window.__TAURI__.core.invoke('export_dirs', { customDir: ST.auto.dir || null }); return Array.isArray(d) ? d : []; } catch (e) { return []; }
-}
-
 document.addEventListener('click', (e) => {
   const a = e.target.closest && e.target.closest('a[href^="https://"]');
   if (!a || !DESKTOP) return;
@@ -230,8 +206,6 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   load(); LANG = ST.lang || 'en'; applyTheme(); render(); setupDnD();
   if (DESKTOP) {
-    desktopPoll(); setInterval(desktopPoll, 3000); savePoll(); setInterval(savePoll, 10000);
-    const chk = () => desktopDirs().then(d => { const f = d.some(x => x[1]); if (f !== ST.f9Found) { ST.f9Found = f; render(); } });
-    chk(); setInterval(chk, 30000);
+    savePoll(); setInterval(savePoll, 10000);
   }
 });

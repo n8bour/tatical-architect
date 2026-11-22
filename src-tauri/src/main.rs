@@ -3,7 +3,6 @@
 
 //! Janela nativa do FM27 Tactical Bible.
 //! A app é toda front-end (app/index.html). Do lado nativo há só comandos de leitura:
-//!  • última exportação do FM View Exporter (F9) e as pastas onde pode estar;
 //!  • último save do FM27 (.fm) e a exportação do plantel desse save com o fmsave
 //!    (MIT, github.com/rhiever/fmsave), corrido sobre uma CÓPIA do save.
 //!  • base de dados inteira do save (todos os jogadores) para a prospeção, com cache até o save mudar;
@@ -20,119 +19,6 @@ use std::time::UNIX_EPOCH;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-#[derive(Serialize)]
-struct ExportFile {
-    path: String,
-    name: String,
-    modified: u64,
-    content: String,
-}
-
-/// Pastas candidatas: a personalizada (se houver) e as habituais dos Documentos,
-/// incluindo Documentos redireccionados para o OneDrive.
-fn candidate_dirs(custom: Option<String>) -> Vec<PathBuf> {
-    let mut out: Vec<PathBuf> = Vec::new();
-    if let Some(c) = custom {
-        if !c.trim().is_empty() {
-            out.push(PathBuf::from(c.trim()));
-        }
-    }
-    let tail = ["Sports Interactive", "FM View Exporter"];
-    let mut roots: Vec<PathBuf> = Vec::new();
-    for var in ["USERPROFILE", "HOME"] {
-        if let Ok(h) = std::env::var(var) {
-            for docs in ["Documents", "Documentos"] {
-                roots.push(PathBuf::from(&h).join(docs));
-                roots.push(PathBuf::from(&h).join("OneDrive").join(docs));
-            }
-        }
-    }
-    if let Ok(od) = std::env::var("OneDrive") {
-        for docs in ["Documents", "Documentos"] {
-            roots.push(PathBuf::from(&od).join(docs));
-        }
-    }
-    for r in roots {
-        let mut p = r;
-        for t in tail.iter() {
-            p.push(t);
-        }
-        if !out.contains(&p) {
-            out.push(p);
-        }
-    }
-    out
-}
-
-/// Devolve a exportação (.csv/.html) mais recente, se for mais nova do que `since` (segundos UNIX).
-#[tauri::command]
-fn latest_export(custom_dir: Option<String>, since: Option<u64>) -> Result<Option<ExportFile>, String> {
-    let mut best: Option<(u64, PathBuf)> = None;
-    for dir in candidate_dirs(custom_dir) {
-        let entries = match fs::read_dir(&dir) {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let ext = path
-                .extension()
-                .and_then(|x| x.to_str())
-                .unwrap_or("")
-                .to_ascii_lowercase();
-            if ext != "csv" && ext != "html" && ext != "htm" {
-                continue;
-            }
-            let modified = entry
-                .metadata()
-                .ok()
-                .and_then(|m| m.modified().ok())
-                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
-            let newer = match &best {
-                Some((m, _)) => modified > *m,
-                None => true,
-            };
-            if newer {
-                best = Some((modified, path));
-            }
-        }
-    }
-    let (modified, path) = match best {
-        Some(b) => b,
-        None => return Ok(None),
-    };
-    if let Some(s) = since {
-        if modified <= s {
-            return Ok(None);
-        }
-    }
-    let bytes = fs::read(&path).map_err(|e| e.to_string())?;
-    let content = String::from_utf8_lossy(&bytes).into_owned();
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    Ok(Some(ExportFile {
-        path: path.display().to_string(),
-        name,
-        modified,
-        content,
-    }))
-}
-
-/// Lista as pastas candidatas e se existem (mostrado nas Definições).
-#[tauri::command]
-fn export_dirs(custom_dir: Option<String>) -> Vec<(String, bool)> {
-    candidate_dirs(custom_dir)
-        .into_iter()
-        .map(|p| {
-            let exists = p.is_dir();
-            (p.display().to_string(), exists)
-        })
-        .collect()
-}
 
 // ---------------------------------------------------------------------------
 // Saves do FM27
@@ -649,7 +535,7 @@ fn open_url(url: String) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, export_save_db, bridge_call, plugin_status, plugin_install, open_url])
+        .invoke_handler(tauri::generate_handler![latest_save, export_save, export_save_db, bridge_call, plugin_status, plugin_install, open_url])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o FM27 Tactical Bible");
 }
