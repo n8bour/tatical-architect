@@ -18,3 +18,4 @@
     <MakeDir Directories="$(GamePath)\BepInEx\plugins\TacticalBibleBridge" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GamePath)\BepInEx\plugins\TacticalBibleBridge" />
   </Target>
+</Project>

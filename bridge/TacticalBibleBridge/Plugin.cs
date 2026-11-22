@@ -15,6 +15,15 @@
 //   WRITE type|pairs|prop <json>         -> OK
 //   EVENTS                               -> OK <json>\u001e<json>…   (orders recorded since the last call)
 //   RECORD 0|1                           -> OK
+//   SEQ 0|1                              -> OK   (logs FM's AddNode/OpenChannel/data sequence to bridge_seq.txt)
+//   TAP [filter]                         -> OK type|pairs|prop\t<json>\u001e…   (last data FM's own UI received)
+//   TAPON <substr,substr…>               -> OK   (reference types the tap keeps; default SetPiece)
+//   UIKEYS [filter]                      -> OK <keyHex> <parentHex> type|pairs|prop\u001e…   (channels the FM UI has open)
+//   WRITEUI type|-|prop <json>           -> OK   (UpdateChannelData on the UI's own open channel: the FM screen follows)
+//   READAT <parentHex|auto> type|pairs|prop ;; …  -> like READ, channels opened under that parent node
+//   DATAHOOK 1                           -> OK   (experimental: hooks SetData/SetTarget…; patching them at load crashed FM)
+//   DATA [filter]                        -> OK <index:version> <json> targets=<keyHex,…>\u001e…   (UI context data slots)
+//   SETDATA <index:version> <json>       -> OK   (changes a UI context data slot, like the FM screen does)
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -32,6 +41,7 @@ using Il2CppInterop.Runtime;
 using SI.Core;
 using SI.Interop;
 using UnityEngine;
+using DateTime = System.DateTime;
 
 namespace TacticalBibleBridge
 {
@@ -39,7 +49,7 @@ namespace TacticalBibleBridge
     public class Plugin : BasePlugin
     {
         public const string Guid = "fm27.tacticalbible.bridge";
-        public const string Version = "0.1.0";
+        public const string Version = "0.4.1";
         public const int Port = 27029;
         const uint KeySession = 1198877028;
 
@@ -57,6 +67,107 @@ namespace TacticalBibleBridge
         static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FM27TacticalBible");
         static string RefsPath => Path.Combine(Dir, "bridge_refs.txt");
         static string LogPath => Path.Combine(Dir, "bridge.log");
+        static string SeqPath => Path.Combine(Dir, "bridge_seq.txt");
+
+        // ------------------------------------------------------------ UI channel tap + sequence log
+        // The FM UI reads data through channels it opens itself (often under child nodes). Those replies carry the real state
+        // (e.g. the set-piece routine), while a channel we open ourselves may get a default. So we remember what the UI got.
+        internal static readonly Dictionary<ulong, string> UiChannels = new();   // key -> "type|pairs|prop"
+        internal static readonly Dictionary<string, (DateTime at, string json)> Tap = new();
+        internal static string[] TapTypes = { "SetPiece" };
+        internal static volatile bool SeqOn;
+        static StreamWriter s_seq;
+
+        internal static void Seq(string s)
+        {
+            if (!SeqOn) return;
+            try { lock (UiChannels) { s_seq ??= new StreamWriter(SeqPath, true, new UTF8Encoding(false)) { AutoFlush = true }; s_seq.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff ") + s); } } catch { }
+        }
+
+        static void SetSeq(bool on)
+        {
+            lock (UiChannels) { SeqOn = on; if (!on) { try { s_seq?.Dispose(); } catch { } s_seq = null; } }
+        }
+
+        internal static readonly Dictionary<ulong, ulong> NodeParent = new();   // UI node tree (key -> parent)
+
+        static string Chan(string type, string prop) => type + "|" + prop;
+        static string ChanOf(string full) { var p = full.Split('|'); return p.Length == 3 ? Chan(p[0], p[2]) : full; }
+
+        /// <summary>Key of the channel the FM UI has open for this type+property (session-independent), or 0.</summary>
+        internal static ulong UiKey(string type, string prop)
+        {
+            string want = Chan(type, prop.ToString());
+            lock (UiChannels) foreach (var kv in UiChannels) if (ChanOf(kv.Value) == want) return kv.Key;
+            return 0;
+        }
+
+        static string UiKeys(string filter)
+        {
+            lock (UiChannels) return string.Join("\u001e", UiChannels.Where(kv => string.IsNullOrEmpty(filter) || kv.Value.Contains(filter))
+                .Select(kv => $"{kv.Key:X} {(NodeParent.TryGetValue(kv.Key, out var p) ? p.ToString("X") : "?")} {kv.Value}"));
+        }
+
+        internal static string WriteUi(string type, string prop, string json)
+        {
+            if (Interop == null) return "ERR FM not ready yet";
+            ulong key = UiKey(type, Prop(prop).ToString());
+            if (key == 0) return "ERR the FM screen has no open channel for " + type + " " + prop;
+            TypedValue v;
+            using (var doc = System.Text.Json.JsonDocument.Parse(json)) v = FromJson(doc.RootElement);
+            Replaying = true;
+            try { Interop.UpdateChannelData(new SI.Bindable.Bindings.Key(key), v); }
+            finally { Replaying = false; }
+            Write($"wrote (ui {key:X}) {type} {prop}");
+            return "OK";
+        }
+
+        // UI context data (AddData/SetData/SetTarget): view state such as attacking/defending lives here
+        internal static readonly Dictionary<string, string> DataVals = new();           // "index:version" -> json
+        internal static readonly Dictionary<ulong, string> DataTargets = new();         // node key -> "index:version"
+        internal static string DK(SI.Bindable.Bindings.DataKey d) => d.Index + ":" + d.Version;
+
+        static string DataDump(string filter)
+        {
+            lock (DataVals) return string.Join("\u001e", DataVals.Where(kv => string.IsNullOrEmpty(filter) || kv.Value.Contains(filter) || kv.Key == filter)
+                .Select(kv => kv.Key + " " + kv.Value + " targets=" + string.Join(",", DataTargets.Where(t => t.Value == kv.Key).Select(t => t.Key.ToString("X")))));
+        }
+
+        internal static string SetDataCmd(string dk, string json)
+        {
+            if (Interop == null) return "ERR FM not ready yet";
+            var p = dk.Split(':');
+            var key = new SI.Bindable.Bindings.DataKey { Index = int.Parse(p[0]), Version = uint.Parse(p[1]) };
+            TypedValue v;
+            using (var doc = System.Text.Json.JsonDocument.Parse(json)) v = FromJson(doc.RootElement);
+            Replaying = true;
+            try { Interop.SetData(key, v); }
+            finally { Replaying = false; }
+            Write($"set data {dk}");
+            return "OK";
+        }
+
+        internal static ulong U(SI.Bindable.Bindings.Key k) => SI.Bindable.Bindings.Key.op_Implicit(ref k);
+
+        internal static bool Tapped(string chan) { foreach (var t in TapTypes) if (chan.Contains(t)) return true; return false; }
+
+        internal static void OnUiData(ulong key, TypedValue v)
+        {
+            string chan;
+            lock (UiChannels) if (!UiChannels.TryGetValue(key, out chan)) return;
+            bool tap = Tapped(chan);
+            if (!tap && !SeqOn) return;
+            string d;
+            try { d = DescribeValue(v, 0); } catch (Exception e) { d = "\"ERR " + Esc(e.Message) + "\""; }
+            if (tap) lock (Tap) Tap[chan] = (DateTime.Now, d);
+            if (SeqOn) Seq($"Data {key:X} {chan} {(tap ? d : d.Length > 300 ? d[..300] + "…" : d)}");
+        }
+
+        static string TapDump(string filter)
+        {
+            lock (Tap) return string.Join("\u001e", Tap.Where(kv => string.IsNullOrEmpty(filter) || kv.Key.Contains(filter))
+                .OrderBy(kv => kv.Key).Select(kv => kv.Key + "\t" + kv.Value.at.ToString("HH:mm:ss") + "\t" + kv.Value.json));
+        }
 
         public override void Load()
         {
@@ -236,7 +347,7 @@ namespace TacticalBibleBridge
             if (o is Il2CppSystem.Object io)
             {
                 var dict = io.TryCast<Il2CppSystem.Collections.Generic.Dictionary<uint, TypedValue>>();
-                if (dict != null && depth < 6)
+                if (dict != null && depth < 14)
                 {
                     var sb = new StringBuilder("{\"type\":\"" + Esc(io.GetIl2CppType().FullName) + "\",\"entries\":[");
                     bool first = true;
@@ -250,7 +361,7 @@ namespace TacticalBibleBridge
                     return sb.Append("]}").ToString();
                 }
                 var list = io.TryCast<Il2CppSystem.Collections.Generic.List<TypedValue>>();
-                if (list != null && depth < 6)
+                if (list != null && depth < 14)
                 {
                     var sb = new StringBuilder("[");
                     for (int i = 0; i < list.Count && i < 400; i++)
@@ -365,7 +476,7 @@ namespace TacticalBibleBridge
             lock (Pending) Pending[key] = d;
         }
 
-        internal static string Read(string[] reqs, int timeoutMs = 4000)
+        internal static string Read(string[] reqs, int timeoutMs = 4000, string at = null)
         {
             if (Interop == null) return "ERR FM not ready yet";
             var keys = new ulong[reqs.Length];
@@ -383,7 +494,15 @@ namespace TacticalBibleBridge
                         keys[i] = key;
                         var pid = new SI.Bindable.Reference.Core.PropertyID(Prop(q[2]));
                         var k = new SI.Bindable.Bindings.Key(key);
-                        Interop.AddNode(k, SI.Bindable.Bindings.RootKey, pid);
+                        var parent = SI.Bindable.Bindings.RootKey;
+                        if (at == "auto")
+                        {
+                            ulong ui = UiKey(q[0], Prop(q[2]).ToString()), p = 0;
+                            if (ui != 0) lock (UiChannels) NodeParent.TryGetValue(ui, out p);
+                            if (p != 0) parent = new SI.Bindable.Bindings.Key(p);
+                        }
+                        else if (at != null) parent = new SI.Bindable.Bindings.Key(Convert.ToUInt64(at, 16));
+                        Interop.AddNode(k, parent, pid);
                         Interop.OpenChannel(r, pid, k);
                     }
                     catch (Exception e) { err[i] = "ERR " + e.Message; }
@@ -442,6 +561,7 @@ namespace TacticalBibleBridge
         }
 
         static readonly object HandleLock = new();
+        static bool s_dataHooked;
 
         static string Handle(string cmd)
         {
@@ -453,6 +573,24 @@ namespace TacticalBibleBridge
                 case "REFS": return "OK session=" + SessionId + " " + string.Join(" | ", PairsByType.Select(kv => kv.Key + "=" + kv.Value));
                 case "EVENTS": lock (Events) { var s = string.Join("\u001e", Events); Events.Clear(); return "OK " + s; }
                 case "RECORD": Recording = parts.Length > 1 && parts[1] == "1"; return "OK";
+                case "SEQ": SetSeq(parts.Length > 1 && parts[1] == "1"); return "OK " + SeqPath;
+                case "UIKEYS": return "OK " + UiKeys(parts.Length > 1 ? parts[1].Trim() : null);
+                case "WRITEUI":
+                    var up = parts[1].Split(' ', 2); var uq = up[0].Split('|');
+                    return RunOnMain(() => WriteUi(uq[0], uq[2], up[1]));
+                case "READAT":
+                    var ra = parts[1].Split(' ', 2);
+                    return "OK " + Read(ra[1].Split(";;", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), 4000, ra[0]);
+                case "DATAHOOK":
+                    if (parts.Length < 2 || parts[1] != "1") return "ERR use DATAHOOK 1 (experimental: may crash FM)";
+                    if (s_dataHooked) return "OK already";
+                    return RunOnMain(() => { new Harmony(Guid + ".context").PatchAll(typeof(ContextPatches)); s_dataHooked = true; Write("context data hooks on"); return "OK"; });
+                case "DATA": return "OK " + DataDump(parts.Length > 1 ? parts[1].Trim() : null);
+                case "SETDATA":
+                    var sd = parts[1].Split(' ', 2);
+                    return RunOnMain(() => SetDataCmd(sd[0], sd[1]));
+                case "TAP": return "OK " + TapDump(parts.Length > 1 ? parts[1].Trim() : null);
+                case "TAPON": TapTypes = (parts.Length > 1 ? parts[1] : "SetPiece").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries); lock (Tap) Tap.Clear(); return "OK";
                 case "READ": return "OK " + Read(parts[1].Split(";;", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                 case "SENDJ":
                     var sj = parts[1].Split(' ', 4);
@@ -532,7 +670,7 @@ namespace TacticalBibleBridge
                 if (__2 == null) return;
                 var keys = __0.ToArray();
                 int n = Math.Min(keys.Length, __2.Count);
-                for (int i = 0; i < n; i++) Plugin.OnData(keys[i], __2[i]);
+                for (int i = 0; i < n; i++) { Plugin.OnData(keys[i], __2[i]); Plugin.OnUiData(keys[i], __2[i]); }
             }
             catch (Exception e) { if (!s_warned) { s_warned = true; Plugin.Write("data reading: " + e.Message); } }
         }
@@ -542,10 +680,64 @@ namespace TacticalBibleBridge
     {
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.OpenChannel))]
-        static void OpenChannel(GameInteropSubsystem __instance, InteropReference __0)
+        static void OpenChannel(GameInteropSubsystem __instance, InteropReference __0, SI.Bindable.Reference.Core.PropertyID __1, SI.Bindable.Bindings.Key __2)
         {
             Plugin.Interop ??= __instance;
             Plugin.Learn(__0);
+            try
+            {
+                ulong k = Plugin.U(__2);
+                string chan = __0.GetIl2CppType().FullName + "|" + Plugin.PairsOf(__0) + "|" + __1.ID;
+                if (k >> 48 != 0xFB29) lock (Plugin.UiChannels) Plugin.UiChannels[k] = chan;   // 0xFB29… = bridge keys, not the UI
+                Plugin.Seq($"OpenChannel {k:X} {chan}");
+            }
+            catch { }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.CloseChannel))]
+        static void CloseChannel(SI.Bindable.Bindings.Key __0)
+        {
+            try { ulong k = Plugin.U(__0); lock (Plugin.UiChannels) Plugin.UiChannels.Remove(k); Plugin.Seq($"CloseChannel {k:X}"); } catch { }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.AddNode))]
+        static void AddNode(SI.Bindable.Bindings.Key __0, SI.Bindable.Bindings.Key __1, SI.Bindable.Reference.Core.PropertyID __2)
+        {
+            try
+            {
+                ulong k = Plugin.U(__0), p = Plugin.U(__1);
+                lock (Plugin.UiChannels) { if (Plugin.NodeParent.Count > 200000) Plugin.NodeParent.Clear(); Plugin.NodeParent[k] = p; }
+                Plugin.Seq($"AddNode {k:X} parent={p:X} prop={__2.ID}");
+            }
+            catch { }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.UpdateChannelData))]
+        static void UpdateChannelData(SI.Bindable.Bindings.Key __0, TypedValue __1)
+        {
+            if (Plugin.Replaying) return;
+            try
+            {
+                ulong k = Plugin.U(__0);
+                string chan; lock (Plugin.UiChannels) Plugin.UiChannels.TryGetValue(k, out chan);
+                string d = Plugin.DescribeValue(__1, 0);
+                Plugin.Seq($"Update {k:X} {chan ?? "?"} {d}");
+                if (!Plugin.Recording || chan == null) return;
+                var parts = chan.Split('|');
+                var rec = "{\"upd\":" + parts[2] + ",\"ref\":\"" + Plugin.Esc(parts[0]) + "\",\"pairs\":\"" + Plugin.Esc(parts[1]) + "\",\"rec\":" + d + "}";
+                lock (Plugin.Events) { Plugin.Events.Add(rec); if (Plugin.Events.Count > 500) Plugin.Events.RemoveAt(0); }
+            }
+            catch (Exception e) { Plugin.Write("update record error: " + e.Message); }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.RemoveNode))]
+        static void RemoveNode(SI.Bindable.Bindings.Key __0)
+        {
+            try { ulong k = Plugin.U(__0); lock (Plugin.UiChannels) Plugin.NodeParent.Remove(k); Plugin.Seq($"RemoveNode {k:X}"); } catch { }
         }
 
         [HarmonyPrefix]
@@ -558,11 +750,74 @@ namespace TacticalBibleBridge
             {
                 Plugin.Learn(__1);
                 Plugin.LearnNumbers(__2);
-                if (!Plugin.Recording) return;
+                if (!Plugin.Recording && !Plugin.SeqOn) return;
                 var d = Plugin.Describe(__0, __1, __2);
+                Plugin.Seq("SendEvent " + d);
+                if (!Plugin.Recording) return;
                 lock (Plugin.Events) { Plugin.Events.Add(d); if (Plugin.Events.Count > 500) Plugin.Events.RemoveAt(0); }
             }
             catch (Exception e) { Plugin.Write("record error: " + e.Message); }
         }
+    }
+
+    /// <summary>UI context data hooks (SetData/AddData/ReleaseData/SetTarget/SendSicoreEvent). NOT patched at startup:
+    /// patching them at load crashed FM27 before the main menu (0.4.0). Applied only by the DATAHOOK 1 command.</summary>
+    static class ContextPatches
+    {
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.SetData))]
+        static void SetData(SI.Bindable.Bindings.DataKey __0, TypedValue __1)
+        {
+            try
+            {
+                string k = Plugin.DK(__0), d = Plugin.DescribeValue(__1, 0);
+                lock (Plugin.DataVals) Plugin.DataVals[k] = d;
+                Plugin.Seq($"SetData {k} {(d.Length > 600 ? d[..600] + "…" : d)}");
+                if (Plugin.Replaying || !Plugin.Recording) return;
+                lock (Plugin.Events) { Plugin.Events.Add("{\"setdata\":\"" + k + "\",\"rec\":" + (d.Length > 4000 ? "\"…\"" : d) + "}"); if (Plugin.Events.Count > 500) Plugin.Events.RemoveAt(0); }
+            }
+            catch { }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.AddData))]
+        static void AddData(SI.Bindable.Bindings.DataKey __0)
+        {
+            try { string k = Plugin.DK(__0); lock (Plugin.DataVals) Plugin.DataVals[k] = "null"; Plugin.Seq($"AddData {k}"); } catch { }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.ReleaseData))]
+        static void ReleaseData(SI.Bindable.Bindings.DataKey __0)
+        {
+            try
+            {
+                string k = Plugin.DK(__0);
+                lock (Plugin.DataVals) { Plugin.DataVals.Remove(k); foreach (var t in Plugin.DataTargets.Where(t => t.Value == k).Select(t => t.Key).ToList()) Plugin.DataTargets.Remove(t); }
+                Plugin.Seq($"ReleaseData {k}");
+            }
+            catch { }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.SetTarget))]
+        static void SetTarget(SI.Bindable.Bindings.Key __0, SI.Bindable.Bindings.DataKey __1)
+        {
+            try { ulong k = Plugin.U(__0); string d = Plugin.DK(__1); lock (Plugin.DataVals) Plugin.DataTargets[k] = d; Plugin.Seq($"SetTarget {k:X} -> {d}"); } catch { }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameInteropSubsystem), nameof(GameInteropSubsystem.SendSicoreEvent))]
+        static void SendSicoreEvent(uint __0)
+        {
+            try
+            {
+                Plugin.Seq($"SendSicoreEvent {__0}");
+                if (Plugin.Replaying || !Plugin.Recording) return;
+                lock (Plugin.Events) { Plugin.Events.Add("{\"sicore\":" + __0 + "}"); if (Plugin.Events.Count > 500) Plugin.Events.RemoveAt(0); }
+            }
+            catch { }
+        }
+
     }
 }
