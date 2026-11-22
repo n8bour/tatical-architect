@@ -90,3 +90,22 @@ Shooting Range 1, Attacking Third 2 (the full tab list, with Wide 3, Deep 4, Mid
   Attacking/Defending instead. **Never patch SetData/AddData/SetTarget at plugin load: that crashed FM27 before the main
   menu (0.4.0).** `DATAHOOK 1` applied mid-game worked.
 - Writing the tab through FM's own channel (`WRITEUI`) changes the stored value but neither FM's screen nor the routine.
+
+### Shortlist and recruitment focus (scout assignments): decoded and verified from the bridge (FM27 EN, plugin 0.4.1)
+- **Find a player** (any player in the save): `WRITE FM.UI.SearchReference|825307168=98;<session>;1719300978=1;1954115685=0|1851878757 ["System.String","<name>"]`,
+  then `READ` the same reference, property `1886547059` → list of `SearchResultReference` whose `1685218662` is the FM
+  **person id**. Confirm with `PersonReference|…|1970170212` = fmsave **`unique_id`** (not `uid`). fmsave doesn't export
+  the person id, so this lookup is required. Verified (`bridge/dev/_search.mjs`).
+- **Shortlist add / remove**: event `44` on `ActionReference|825307168=1;<session>;1633904996=<action>`; add = action
+  `1097488485` ("PersonAddPlayersToShortlist"), remove = `1500280650`. Payload {`1853189474` 1, `1214805357` {manager},
+  `1685218662` {person}, `1685218636` [{person}], `2004054900` [""], `1936223853` "", `1954115685` 0, `1818719336` 0};
+  remove also {`1415930182` {team}, `2003977071` True}. `1313882977` (chief scout) is not needed. Verified on FM's screen.
+- **Recruitment focus** (`RecruitmentFocusItemReference|825307168=85;<session>;1348620377=<manager>;1769566810=<team>;1919314276=<id>`,
+  id -1 = the one being created; its state lives in the game, so FM's own "create" screen shows what the bridge wrote):
+  name `1851878757` (string) · min/max age `1394625906` / `929909872` ({number, label}) · min current/potential ability
+  `1346584898` / `1347436866` (value = 10 + 2 × stars; step with events `1517250124` / `1431517038`, 1 up / 0 down) ·
+  area `1817143629` {label, {`1685218662` id}} then event `0` adds it to the list `1986161206` (continents `83886080`+n,
+  regions `318767104`…`131`, nations `167772160` + fmsave `nation_id`) · "Any position" `1366773845` · pitch position
+  toggle event `879773492` {`1265792339` in/out of possession, `1349481321` position bits, `1330991441` slot} ·
+  tactic `1750627946` · confirm event `55` (null). List: `ScoutingInfoReference|825307168=97;…|1953983593` (focus refs);
+  delete: event `53` on `ScoutingInfoReference` with the id. Create/list/delete verified (`bridge/dev/_focus*.mjs`).
