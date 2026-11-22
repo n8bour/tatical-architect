@@ -45,6 +45,8 @@ const EN_RX = [
   [/^Não consegui correr o fmsave\. ([\s\S]*)$/, 'Could not run fmsave. $1'],
   [/^Não consegui copiar o save: ([\s\S]*)$/, 'Could not copy the save: $1'],
   [/^Save não encontrado: ([\s\S]*)$/, 'Save not found: $1'],
+  [/^Não encontrei a pasta do FM27$/, 'FM27 folder not found'], [/^O BepInEx não está instalado no FM27$/, 'BepInEx is not installed in FM27'],
+  [/^Feche o FM27 e tente outra vez \(o plugin está em uso\)$/, 'Close FM27 and try again (the plugin is in use)'],
   [/^Caminho inválido$/, 'Invalid path'], [/^Método inválido$/, 'Invalid method'], [/^Link inválido$/, 'Invalid link'],
 ];
 const TR_ATTRS = ['title', 'placeholder', 'aria-label'];

@@ -13,6 +13,11 @@ dotnet build bridge/TacticalBibleBridge -c Release -p:GamePath="C:\...\Football 
 The build copies the DLL to `BepInEx\plugins\TacticalBibleBridge`. CI can't build it (the interop DLLs come from the game).
 Any .NET SDK ≥ 6 works (tested with 8.0.428). Restart FM after building: the plugin is loaded at launch.
 
+**Shipping:** the app carries the plugin inside its executable (`include_bytes!` in `src-tauri/src/main.rs`) and installs it
+from *Settings › Integrations* (`plugin_status` / `plugin_install`). CI can't build the plugin, so after changing `Plugin.cs`:
+build, copy `bin/Release/TacticalBibleBridge.dll` to `bridge/dist/`, and bump `PLUGIN_VERSION` in `main.rs` (same as `Plugin.Version`).
+BepInEx 6 itself is not installed by the app (FM27 Assistant's installer does it).
+
 ## Testing without the app
 - `node bridge/ping.mjs [port] [commands…]`: tiny TCP client (default `PING`, `VERSION`, `REFS` on 27029).
 - `bridge/fmb-node.mjs`: runs the app's real `src/ui/fmbridge.js` (`FMB`) from Node over TCP, for scripted tests

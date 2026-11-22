@@ -32,7 +32,7 @@ with sync_playwright() as p:
         pg = b.new_page(viewport={'width': 1600, 'height': 1000}); pg.on('pageerror', lambda e: errors.append(str(e)))
         if desktop:
             pg.add_init_script("""window.__TAURI__={core:{invoke:async(c,a)=>{ if(c==='export_dirs')return [['C:/x/FM View Exporter',false]]; if(c==='latest_save')return {path:'C:/x/T.fm',name:'T.fm',modified:5,size:104857600};
-              return null; }}};""")
+              if(c==='plugin_status')return {fm_dir:'C:/Games/Football Manager 27',bepinex:true,installed:true,up_to_date:false,version:'0.4.1'}; return null; }}};""")
         pg.goto(U.APP); pg.wait_for_timeout(200)
         pg.evaluate("() => { ST.lang = LANG = 'en'; render(); }"); [texts.add(x) for x in pg.evaluate(GRAB)]
         pg.evaluate(SETUP); pg.evaluate("t => ingestSquadText(t, 'rival.csv', { force: 'opp' })", U.RIVAL)

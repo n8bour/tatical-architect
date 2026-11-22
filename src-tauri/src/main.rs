@@ -532,6 +532,106 @@ async fn bridge_call(cmd: String, timeout_ms: Option<u64>) -> Result<BridgeReply
         .map_err(|e| e.to_string())?
 }
 
+// ---------------------------------------------------------------- plugin do bridge, instalado a partir da app
+// O DLL vai dentro do executável (serve o instalador e o .exe portátil). O CI não o consegue compilar (precisa dos
+// DLLs do jogo), por isso vem já compilado em bridge/dist (ver bridge/README.md). Requer o BepInEx 6 no FM27.
+const PLUGIN_DLL: &[u8] = include_bytes!("../../bridge/dist/TacticalBibleBridge.dll");
+const PLUGIN_VERSION: &str = "0.4.1";
+
+#[derive(Serialize)]
+struct PluginStatus {
+    fm_dir: Option<String>,
+    bepinex: bool,
+    installed: bool,
+    up_to_date: bool,
+    version: String,
+}
+
+/// Bibliotecas do Steam: a pasta do Steam e as que estão em steamapps/libraryfolders.vdf.
+fn steam_libraries() -> Vec<PathBuf> {
+    let mut roots: Vec<PathBuf> = Vec::new();
+    for v in ["ProgramFiles(x86)", "ProgramFiles"] {
+        if let Ok(p) = std::env::var(v) {
+            roots.push(PathBuf::from(p).join("Steam"));
+        }
+    }
+    roots.push(PathBuf::from("C:\\Steam"));
+    let mut libs: Vec<PathBuf> = Vec::new();
+    for r in roots {
+        if let Ok(t) = fs::read_to_string(r.join("steamapps").join("libraryfolders.vdf")) {
+            for line in t.lines() {
+                let l = line.trim();
+                if let Some(rest) = l.strip_prefix("\"path\"") {
+                    let p = rest.trim().trim_matches('"').replace("\\\\", "\\");
+                    if !p.is_empty() {
+                        libs.push(PathBuf::from(p));
+                    }
+                }
+            }
+        }
+        if r.is_dir() {
+            libs.push(r);
+        }
+    }
+    libs
+}
+
+/// Pasta do FM27 (a indicada pelo utilizador ou a do Steam).
+fn fm_dir(custom: Option<String>) -> Option<PathBuf> {
+    if let Some(c) = custom.filter(|c| !c.trim().is_empty()) {
+        let p = PathBuf::from(c.trim());
+        if p.join("fm.exe").is_file() || p.join("BepInEx").is_dir() {
+            return Some(p);
+        }
+    }
+    steam_libraries()
+        .into_iter()
+        .map(|lib| lib.join("steamapps").join("common").join("Football Manager 27"))
+        .find(|p| p.is_dir())
+}
+
+fn plugin_path(fm: &Path) -> PathBuf {
+    fm.join("BepInEx").join("plugins").join("TacticalBibleBridge").join("TacticalBibleBridge.dll")
+}
+
+fn plugin_status_of(fm: Option<PathBuf>) -> PluginStatus {
+    let bepinex = fm.as_ref().map(|d| d.join("BepInEx").join("core").is_dir()).unwrap_or(false);
+    let current = fm.as_ref().and_then(|d| fs::read(plugin_path(d)).ok());
+    PluginStatus {
+        fm_dir: fm.as_ref().map(|d| d.to_string_lossy().into_owned()),
+        bepinex,
+        installed: current.is_some(),
+        up_to_date: current.as_deref() == Some(PLUGIN_DLL),
+        version: PLUGIN_VERSION.to_string(),
+    }
+}
+
+#[tauri::command]
+fn plugin_status(custom_dir: Option<String>) -> PluginStatus {
+    plugin_status_of(fm_dir(custom_dir))
+}
+
+/// Copia o plugin para BepInEx\plugins\TacticalBibleBridge. O FM tem de estar fechado (o jogo bloqueia o DLL).
+#[tauri::command]
+fn plugin_install(custom_dir: Option<String>) -> Result<PluginStatus, String> {
+    let fm = fm_dir(custom_dir).ok_or_else(|| "Não encontrei a pasta do FM27".to_string())?;
+    if !fm.join("BepInEx").join("core").is_dir() {
+        return Err("O BepInEx não está instalado no FM27".into());
+    }
+    let dest = plugin_path(&fm);
+    if let Some(dir) = dest.parent() {
+        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    fs::write(&dest, PLUGIN_DLL).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(32) {
+            "Feche o FM27 e tente outra vez (o plugin está em uso)".to_string()
+        } else {
+            e.to_string()
+        }
+    })?;
+    Ok(plugin_status_of(Some(fm)))
+}
+
 /// Abre um link https no browser do sistema (os links da app: plugin, fmsave, uv, bridge).
 #[tauri::command]
 fn open_url(url: String) -> Result<(), String> {
@@ -549,7 +649,7 @@ fn open_url(url: String) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, export_save_db, bridge_call, open_url])
+        .invoke_handler(tauri::generate_handler![latest_export, export_dirs, latest_save, export_save, export_save_db, bridge_call, plugin_status, plugin_install, open_url])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o FM27 Tactical Bible");
 }

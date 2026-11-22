@@ -6,7 +6,21 @@ const A = {
   tab(v, tab) { ST.view = v; ST.tabs[v] = tab; save(); render(true); },
   theme(v) { ST.theme = v; applyTheme(); save(); render(); },
   // tática
-  async bridgeCheck() { await FMB.status(true); render(); },
+  async bridgeCheck() { await FMB.status(true); FMB.pluginChecked = false; render(); },
+  // the bridge plugin inside FM: status and install/update (the app carries the DLL)
+  async pluginCheck() {
+    if (!DESKTOP) return;
+    try { FMB.plugin = await window.__TAURI__.core.invoke('plugin_status', { customDir: ST.fmDir || null }); } catch (e) { FMB.plugin = null; }
+    if (ST.view === 'settings') render();
+  },
+  async pluginInstall() {
+    try {
+      FMB.plugin = await withBusy('plugin', L('A instalar o plugin no FM27', 'Installing the plugin in FM27'), () => window.__TAURI__.core.invoke('plugin_install', { customDir: ST.fmDir || null }));
+      toast(L('Plugin instalado. Abra o FM27 (ou reinicie-o) para o carregar.', 'Plugin installed. Start (or restart) FM27 to load it.'));
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
+  pluginDir(v) { ST.fmDir = String(v || '').trim(); save(); A.pluginCheck(); },
   async bridgeXI() {
     if (players().length < 11) return toast(L('Precisa de pelo menos 11 jogadores no plantel', 'You need at least 11 players in the squad'));
     if (ST.tactic.slots.every(s => !s.pid)) return toast(L('Escolha o XI primeiro (Tática › Analisar).', 'Pick the XI first (Tactic › Analyse).'));

@@ -35,9 +35,10 @@ function integrationsHTML(compact) {
      ${DESKTOP && !compact ? `<label class="f">Pasta personalizada (opcional)<input type="text" value="${esc(ST.auto.dir)}" placeholder="ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter" onchange="A.autoDir(this.value)"></label><div id="dirs" class="grid" style="gap:4px"></div>` : ''}`,
     `<a class="btn sm" href="${LINKS.fmve}" target="_blank" rel="noopener">Descarregar o plugin</a>${DESKTOP ? `<label class="row small"><input type="checkbox" ${ST.auto.on ? 'checked' : ''} onchange="A.autoToggle()"> Carregar cada F9 automaticamente</label><button class="btn sm" data-busy="f9" onclick="A.autoNow()">Carregar o último F9</button>` : ''}`);
   const fb = (typeof FMB !== 'undefined' && FMB.state) || {};
+  const plug = DESKTOP && !compact ? pluginHTML() : '';
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
-    `<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, os botões <b>Colocar XI no FM</b> (Tática › Analisar) e <b>Aplicar no FM</b> (Tática › Bolas paradas) mudam o jogo directamente. O plugin FM27Bridge do FM27 Assistant só serve para o XI e os marcadores.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, the <b>Place XI in FM</b> (Tactic › Analyse) and <b>Apply in FM</b> (Tactic › Set pieces) buttons change the game directly. FM27 Assistant's FM27Bridge plugin only covers the XI and the takers.`)}</p>
+    `${plug}<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, os botões <b>Colocar XI no FM</b> (Tática › Analisar) e <b>Aplicar no FM</b> (Tática › Bolas paradas) mudam o jogo directamente. O plugin FM27Bridge do FM27 Assistant só serve para o XI e os marcadores.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, the <b>Place XI in FM</b> (Tactic › Analyse) and <b>Apply in FM</b> (Tactic › Set pieces) buttons change the game directly. FM27 Assistant's FM27Bridge plugin only covers the XI and the takers.`)}</p>
      ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}</div>
        <p class="small muted">${L('Para acrescentar acções ou rever depois de um patch: carregue em Gravar, mude essa opção à mão no FM, e carregue em Parar.', 'To add actions or re-check after a patch: press Record, change that option by hand in FM, then press Stop.')}</p>
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
@@ -47,6 +48,7 @@ function integrationsHTML(compact) {
 }
 function vSettings() {
   if (DESKTOP) fmbRefresh('settings');
+  if (DESKTOP && !FMB.pluginChecked) { FMB.pluginChecked = true; A.pluginCheck(); }
   if (DESKTOP) setTimeout(async () => {
     const el = document.getElementById('dirs'); if (!el) return;
     const ds = await desktopDirs(); const uniq = []; ds.forEach(([p, ok]) => { if (!uniq.some(u => u[0] === p)) uniq.push([p, ok]); });
@@ -72,4 +74,19 @@ function vSettings() {
       <p class="small muted">v${VERSION} · não afiliado à Sports Interactive/SEGA.</p>
     </div>
   </div>`;
+}
+
+// Plugin inside FM: the app installs it (the DLL ships inside the app). FMB.plugin = result of the native plugin_status.
+function pluginHTML() {
+  const p = FMB.plugin;
+  if (!p) return '';
+  const msg = !p.fm_dir ? L('Não encontrei o FM27 nas pastas do Steam.', 'FM27 not found in the Steam folders.')
+    : !p.bepinex ? L('Falta o BepInEx 6 no FM27 (o instalador do FM27 Assistant instala-o).', 'BepInEx 6 is missing in FM27 (the FM27 Assistant installer sets it up).')
+    : p.up_to_date ? L(`Plugin v${p.version} instalado no FM27.`, `Plugin v${p.version} installed in FM27.`)
+    : p.installed ? L(`Há uma versão mais recente do plugin (v${p.version}).`, `A newer plugin is available (v${p.version}).`)
+    : L('O plugin ainda não está instalado no FM27.', 'The plugin is not installed in FM27 yet.');
+  const can = p.fm_dir && p.bepinex && !p.up_to_date;
+  return `<div class="notice small${p.up_to_date ? '' : ' warn'}"><b>${msg}</b>${p.fm_dir ? ` <span class="muted">${esc(p.fm_dir)}</span>` : ''}
+    ${can ? `<div class="row" style="margin-top:6px"><button class="btn primary sm" data-busy="plugin" onclick="A.pluginInstall()">${p.installed ? L('Actualizar o plugin', 'Update the plugin') : L('Instalar o plugin no FM27', 'Install the plugin in FM27')}</button><span class="muted">${L('Com o FM fechado; depois abra o FM.', 'With FM closed; then start FM.')}</span></div>` : ''}
+    ${!p.fm_dir ? `<label class="f" style="margin-top:6px">${L('Pasta do FM27', 'FM27 folder')}<input type="text" value="${esc(ST.fmDir || '')}" placeholder="D:\\SteamLibrary\\steamapps\\common\\Football Manager 27" onchange="A.pluginDir(this.value)"></label>` : ''}</div>`;
 }

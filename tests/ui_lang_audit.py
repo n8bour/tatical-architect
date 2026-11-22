@@ -68,7 +68,7 @@ def collect(lang):
             if desktop:
                 pg.add_init_script("""window.__TAURI__={core:{invoke:async(c,a)=>{ if(c==='export_dirs')return [['C:/x',true]]; if(c==='latest_save')return {path:'C:/x/T.fm',name:'T.fm',modified:5,size:1e8};
                   if(c==='export_save') throw 'Não consegui correr o fmsave. uvx: UnsupportedGameError';
-                  return null; }}};""")
+                  if(c==='plugin_status')return {fm_dir:'C:/Games/Football Manager 27',bepinex:true,installed:true,up_to_date:false,version:'0.4.1'}; return null; }}};""")
             pg.goto(U.APP); pg.wait_for_timeout(150)
             g = lambda: [texts.add(x) for x in pg.evaluate(GRAB, lang)]
             pg.evaluate(f"() => {{ ST.lang = LANG = '{lang}'; render(); }}"); g()
