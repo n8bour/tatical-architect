@@ -22,7 +22,7 @@ function pitchSVG(t, mode, selIdx, opts = {}) {
     const pos = mode === 'OOP' ? b : a;
     const role = ROLE_BY_ID[mode === 'OOP' ? s.oop : s.ip];
     const p = pmap[s.pid]; const sc = p ? slotScore(p, t, s) : null;
-    const fill = p ? fitColor(sc) : (mode === 'OOP' ? '#2d5f8f' : 'rgba(0,0,0,.42)');
+    const fill = p ? fitColor(sc) : (mode === 'OOP' ? '#3d4a5a' : 'rgba(0,0,0,.42)');
     if (mode === 'BOTH') g += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="rgba(255,255,255,.5)" stroke-width=".5" stroke-dasharray="1.5 1"/>
       <circle cx="${X(b.x)}" cy="${Y(b.y)}" r="3.2" fill="none" stroke="#9cc9ff" stroke-width=".8"/>`;
     const sel = selIdx === i;

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FM27 Tactical Bible</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23b3131d'/><rect x='15' y='13' width='70' height='74' rx='3' fill='none' stroke='%23f3ead8' stroke-width='2.2'/><g fill='%23f6eedd'><circle cx='50' cy='81' r='4.6'/><circle cx='26' cy='68' r='4.6'/><circle cx='43' cy='70' r='4.6'/><circle cx='57' cy='70' r='4.6'/><circle cx='74' cy='68' r='4.6'/><circle cx='32' cy='52' r='4.6'/><circle cx='50' cy='55' r='4.6'/><circle cx='68' cy='52' r='4.6'/><circle cx='28' cy='32' r='4.6'/><circle cx='50' cy='28' r='4.6'/><circle cx='72' cy='32' r='4.6'/></g></svg>">
 <style>
 /* ============================================================
    Tema "Dark Paper" (por defeito) e "Paper" (claro), ao estilo FM27 / Jonukas Skin:
@@ -14,8 +14,8 @@
   --font-head:"Bahnschrift SemiCondensed","Bahnschrift","Arial Narrow","Roboto Condensed","Segoe UI",sans-serif;
   --bar:#b3131d; --bar-ink:#ffffff; --sub:#211f1c; --desk:#141311;
   --bg:#1a1917; --panel:#282622; --panel2:#322f2b; --line:#45403a; --text:#ece5d6; --muted:#a69e90;
-  --accent:#3f8ad8; --accent2:#6aa7e6; --accent-ink:#ffffff; --pitch:#2c5a36; --pitch2:#275131; --pitchline:rgba(255,255,255,.6);
-  --good:#52b25a; --warn:#e3a83f; --crit:#e5553f; --info:#5b9be0; --chip:#3a3631;
+  --accent:#c8202b; --accent2:#ff8f96; --accent-ink:#ffffff; --pitch:#2c5a36; --pitch2:#275131; --pitchline:rgba(255,255,255,.6);
+  --good:#52b25a; --warn:#e3a83f; --crit:#e5553f; --info:#b8ab92; --chip:#3a3631;
   --att-hi:#2f9e4f; --att-mid:#c9a227; --att-lo:#5d5850;
   --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 20px rgba(0,0,0,.28);
   color-scheme: dark;
@@ -23,8 +23,8 @@
 :root[data-theme="light"]{
   --bar:#b3131d; --bar-ink:#ffffff; --sub:#efe8d8; --desk:#8b7558;
   --bg:#c8b594; --panel:#f5f0e4; --panel2:#ebe3d1; --line:#d6cbb3; --text:#211e19; --muted:#6c6353;
-  --accent:#2f74c0; --accent2:#1f5a99; --accent-ink:#ffffff; --pitch:#3a7a45; --pitch2:#347040; --pitchline:rgba(255,255,255,.8);
-  --good:#2e8b3e; --warn:#b7791f; --crit:#c2412d; --info:#3b6ea8; --chip:#e6dcc6;
+  --accent:#b3131d; --accent2:#8c0f17; --accent-ink:#ffffff; --pitch:#3a7a45; --pitch2:#347040; --pitchline:rgba(255,255,255,.8);
+  --good:#2e8b3e; --warn:#b7791f; --crit:#c2412d; --info:#7a6f5c; --chip:#e6dcc6;
   --att-hi:#2f8f48; --att-mid:#c79a1c; --att-lo:#cfc4ad;
   --shadow:0 1px 0 rgba(0,0,0,.18),0 8px 20px rgba(0,0,0,.18);
   color-scheme: light;
@@ -36,7 +36,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 h1,h2,h3,h4{margin:0 0 .4em;line-height:1.2}
 h1{font-size:28px} h2{font-size:21px} h3{font-size:16px} h4{font-size:14px}
 p{margin:.3em 0 .7em}
-a{color:var(--accent)}
+a{color:var(--accent2)}
 main{overflow:auto;padding:22px 28px 60px}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap}
 .eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
@@ -78,7 +78,7 @@ svg.pitch{width:100%;height:auto;display:block;border-radius:10px}
 .finding:first-child{border-top:0}
 .sev{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
 .sev.crit{background:var(--crit)}.sev.warn{background:var(--warn)}.sev.info{background:var(--info)}.sev.good{background:var(--good)}
-.finding b{display:block}.finding .fix{font-size:12px;color:var(--accent);margin-top:2px}
+.finding b{display:block}.finding .fix{font-size:12px;color:var(--accent2);margin-top:2px}
 .ti-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .ti{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel)}
 .ti.changed{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
@@ -269,7 +269,7 @@ tr.cliprow td{background:var(--panel2)}
 .scout-table td:nth-child(2){white-space:normal;min-width:140px}
 .scout-table tr.click{cursor:pointer}.scout-table tr.click:hover td{background:var(--panel2)}
 .th-sort{background:none;border:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;padding:0;text-transform:inherit;letter-spacing:inherit}
-.th-sort.on{color:var(--accent)}
+.th-sort.on{color:var(--accent2)}
 .star{background:none;border:0;font-size:16px;cursor:pointer;color:var(--muted);padding:0 4px}.star.on{color:#f5b301}
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:grid;place-items:center;padding:20px}
 .modal{background:var(--panel);border-radius:14px;max-width:920px;width:100%;max-height:90vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
@@ -4379,7 +4379,7 @@ function roleName(r) { return r ? (LANG === 'pt' && PT_ROLE_ID[r.id] ? PT_ROLE_I
 // ============================================================
 // Estado, persistência e utilitários
 // ============================================================
-const VERSION = '5.0.0';
+const VERSION = '5.1.0';
 
 const STORE_KEY = 'fm27tb.v1';
 
@@ -4543,7 +4543,7 @@ function pitchSVG(t, mode, selIdx, opts = {}) {
     const pos = mode === 'OOP' ? b : a;
     const role = ROLE_BY_ID[mode === 'OOP' ? s.oop : s.ip];
     const p = pmap[s.pid]; const sc = p ? slotScore(p, t, s) : null;
-    const fill = p ? fitColor(sc) : (mode === 'OOP' ? '#2d5f8f' : 'rgba(0,0,0,.42)');
+    const fill = p ? fitColor(sc) : (mode === 'OOP' ? '#3d4a5a' : 'rgba(0,0,0,.42)');
     if (mode === 'BOTH') g += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="rgba(255,255,255,.5)" stroke-width=".5" stroke-dasharray="1.5 1"/>
       <circle cx="${X(b.x)}" cy="${Y(b.y)}" r="3.2" fill="none" stroke="#9cc9ff" stroke-width=".8"/>`;
     const sel = selIdx === i;
