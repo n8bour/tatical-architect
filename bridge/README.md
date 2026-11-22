@@ -144,4 +144,5 @@ Active tactic = `TeamTacticReference|825307168=126;<session>;1651271022=1;168521
 - Team instructions: event `862931569` = › next option, `1249276755` = ‹ previous; value = instruction id (1–30). The arrows
   stop at the ends, and FM drops presses that arrive too fast (150 ms between presses). Table: `FMB_IDS.tactic.ti`
   (instruction id, number of FM options, app option → FM option). Ids 2, 13 and 14 never appeared.
-- Not done yet: out-of-possession formation (other position bits), creating a new tactic slot.
+- Out-of-possession formation: same move event with `1769491558` False (slot id in `857762170`); the slot's OOP position is `927294289`.
+- Not done yet: creating a new tactic slot.

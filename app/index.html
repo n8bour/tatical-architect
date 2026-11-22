@@ -5791,7 +5791,7 @@ const FMB_IDS = {
   // ---- tactic (verified FM27 EN 22 Nov, see bridge/README.md): active tactic = TeamTacticReference
   tactic: {
     pairs: (c) => `825307168=126;1198877028=1;1651271022=1;1685218662=${c.team}`,
-    slots: 1919628150, slotIdx: 1414752632, ipPos: 1835167823,
+    slots: 1919628150, slotIdx: 1414752632, ipPos: 1835167823, oopPos: 927294289,
     ipRoles: 930166885, ipRole: 1698852728, oopRoles: 1798391651, oopRole: 1349481322,
     move: 21, moveFrom: 929121399, moveTo: 944851554, moveIP: 1769491558, moveSlot: 857762170,
     setRole: 1467503190, roleRec: 1349481322, roleName: 909713440, roleIP: 1265792339,
@@ -6161,10 +6161,10 @@ const FMB = {
   async readTacticSlots(c) {
     const T = FMB_IDS.tactic, P = T.pairs(c);
     const [slots, ips, oops] = await FMB.read([['TeamTacticReference', P, T.slots], ['TeamTacticReference', P, T.ipRoles], ['TeamTacticReference', P, T.oopRoles]]);
-    const ipR = {}, oopR = {}, side = BigInt(T.left) | BigInt(T.right) | 4194304n | 8388608n;
+    const ipR = {}, oopR = {}, side = 2097152n | 4194304n | 8388608n;   // OOP role field = role bits + flags 2^21..2^23 (2^20 is a real role: Central Midfielder)
     FMB.items(ips).forEach(r => { ipR[FMB.num(FMB.field(r, T.slotIdx))] = String(FMB.field(r, T.ipRole)); });
     FMB.items(oops).forEach(r => { const v = FMB.field(r, T.oopRole); if (v != null) oopR[FMB.num(FMB.field(r, T.slotIdx))] = (BigInt(v) & ~side).toString(); });
-    return FMB.items(slots).map(r => { const slot = FMB.num(FMB.field(r, T.slotIdx)); return { slot, ip: FMB.num(FMB.field(r, T.ipPos)), ipRole: ipR[slot], oopRole: oopR[slot] }; });
+    return FMB.items(slots).map(r => { const slot = FMB.num(FMB.field(r, T.slotIdx)); return { slot, ip: FMB.num(FMB.field(r, T.ipPos)), oop: FMB.num(FMB.field(r, T.oopPos)), ipRole: ipR[slot], oopRole: oopR[slot] }; });
   },
   /** Applies the app's tactic to FM's active tactic. say(text) shows progress. Returns lines describing what was done. */
   async applyTactic(t, squad, say = () => {}) {
@@ -6188,6 +6188,27 @@ const FMB = {
       await sleep(150);
     }
     done.push(L(`Formação com bola: ${t.ipForm} (${movers.length} posições mudadas)`, `In-possession formation: ${t.ipForm} (${movers.length} positions moved)`));
+    // 1b. out-of-possession formation: each FM slot (one player) goes to the OOP position the app pairs with its IP position.
+    //     Same move event with the out-of-possession flag; a slot whose target is taken waits, cycles go through a free spot.
+    cur = await FMB.readTacticSlots(c);
+    const wantOOP = {}, usedS = new Set();
+    for (const s of t.slots) { const fm = cur.find(x => x.ip === FMB.ipBits(s.ipCode) && !usedS.has(x.slot)); if (fm) { usedS.add(fm.slot); wantOOP[fm.slot] = FMB.ipBits(s.oopCode); } }
+    if (Object.values(wantOOP).some(b => b == null)) throw new Error(L('Posição sem bola sem equivalente no FM.', 'Out-of-possession position with no FM equivalent.'));
+    const moveOOP = (slot, from, to) => FMB.send(T.move, 'TeamTacticReference', P, { type: 'SI.Core.Record', entries: [
+      [T.moveFrom, 'SI.Core.Record', { type: 'SI.Core.Record', entries: [N(T.moveFrom, from), B(T.moveIP, false), N(T.moveSlot, slot)] }],
+      [T.moveTo, 'SI.Core.Record', { type: 'SI.Core.Record', entries: [N(T.moveTo, to), B(T.moveIP, false)] }]] });
+    const pos = Object.fromEntries(cur.map(x => [x.slot, x.oop]));
+    const spare = [256, 512, 32, 64, 2048, 4096, 8192, 16384, 1024, 128].filter(b => !Object.values(wantOOP).includes(b));
+    let movedOOP = 0;
+    for (let guard = 0; guard < 40; guard++) {
+      const todo = Object.keys(wantOOP).map(Number).filter(s => pos[s] !== wantOOP[s]); if (!todo.length) break;
+      const s = todo.find(x => !Object.values(pos).includes(wantOOP[x]));
+      if (s != null) { await moveOOP(s, pos[s], wantOOP[s]); pos[s] = wantOOP[s]; movedOOP++; }
+      else { const x = todo[0], tmp = spare.find(b => !Object.values(pos).includes(b)); if (tmp == null) break; await moveOOP(x, pos[x], tmp); pos[x] = tmp; }
+      await sleep(150);
+    }
+    const afterOOP = await FMB.readTacticSlots(c), okOOPpos = afterOOP.filter(x => wantOOP[x.slot] === x.oop).length;
+    done.push(L(`Formação sem bola: ${t.oopForm} (${movedOOP} mudadas, ${okOOPpos}/11 confirmadas)`, `Out-of-possession formation: ${t.oopForm} (${movedOOP} moved, ${okOOPpos}/11 confirmed)`));
     // 2. XI
     say('XI');
     const xi = await FMB.applyXI(t, squad); done.push(L(`XI: ${xi.placed} trocas`, `XI: ${xi.placed} swaps`) + (xi.skipped.length ? ' — ' + xi.skipped.slice(0, 3).join('; ') : ''));
@@ -6225,7 +6246,6 @@ const FMB = {
       nTI++;
     }
     done.push(L(`Instruções de equipa: ${nTI} aplicadas`, `Team instructions: ${nTI} applied`) + (noTI.length ? L(' · sem opção igual no FM: ', ' · no matching FM option: ') + noTI.join(', ') : ''));
-    done.push(L('Formação sem bola: ajuste no FM (ainda não aplicada pela app).', 'Out-of-possession formation: set it in FM (not applied by the app yet).'));
     return done;
   },
   /** Places the app's XI into FM's active tactic, matching by position. Returns { placed, skipped[] }. */
