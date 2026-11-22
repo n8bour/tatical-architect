@@ -54,6 +54,9 @@ const FMB_IDS = {
     move: 21, moveFrom: 929121399, moveTo: 944851554, moveIP: 1769491558, moveSlot: 857762170,
     setRole: 1467503190, roleRec: 1349481322, roleName: 909713440, roleIP: 1265792339,
     mentality: 1162170689,
+    menu: 1949648203, menuCopy: 0, menuSub: 876950356,   // tactic menu: item 0 (Copy Tactic) submenu = every tactic
+    maxTactics: 3,   // FM27 keeps 3 tactics
+    wizard: { open: 1412787285, next: 1515149153, finish: 879515246, style: 1381059181, styleBase: 10 },   // styleBase 10 = Clean Slate
     name: 1851878757,
     tiPrev: 1249276755, tiNext: 862931569,   // value = instruction id; FM27's ‹ / › arrows (they stop at the ends)
     left: 1048576, right: 2097152,           // added to central positions (DCL = DC + left); verified on FM's screen
@@ -425,13 +428,37 @@ const FMB = {
     FMB.items(oops).forEach(r => { const v = FMB.field(r, T.oopRole); if (v != null) oopR[FMB.num(FMB.field(r, T.slotIdx))] = (BigInt(v) & ~side).toString(); });
     return FMB.items(slots).map(r => { const slot = FMB.num(FMB.field(r, T.slotIdx)); return { slot, ip: FMB.num(FMB.field(r, T.ipPos)), oop: FMB.num(FMB.field(r, T.oopPos)), ipRole: ipR[slot], oopRole: oopR[slot] }; });
   },
+  /** FM's tactics (names): the "Copy Tactic" submenu of the tactic menu lists all of them (menu item id 0; read live,
+   *  unlike the recruitment screen's list, which stays stale after a delete). */
+  async tacticList(c) {
+    const T = FMB_IDS.tactic, [menu] = await FMB.read([['TeamTacticReference', T.pairs(c), T.menu]]);
+    const copy = FMB.items(menu).find(m => FMB.num(FMB.field(FMB.field(m, 1383036740), FMB_IDS.key.number), -1) === T.menuCopy);
+    return FMB.items(FMB.field(copy, T.menuSub)).map(x => String(FMB.field(x, FMB_IDS.key.payload) || ''));
+  },
+  /** Creates a NEW tactic in FM (the others are not touched) by replaying its "Create New Tactic" wizard, then applies on it.
+   *  Sequence from FM27 Assistant (TacticFm.cs): new, style, Next, Next, confirm. No event 90 (replaying it replaced the active tactic).
+   *  FM keeps at most 3 tactics: with 3 it refuses. Returns the new tactic's name. */
+  async createTactic(say = () => {}) {
+    const c = await FMB.context(), T = FMB_IDS.tactic, P = T.pairs(c), W = T.wizard, sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const have = await FMB.tacticList(c);
+    if (have.length >= T.maxTactics) throw new Error(L(`O FM j\u00e1 tem ${have.length} t\u00e1ticas (o m\u00e1ximo): apague uma no FM primeiro, ou use \u201cAplicar no FM\u201d, que escreve na t\u00e1tica activa.`, `FM already has ${have.length} tactics (the maximum): delete one in FM first, or use \u201cApply in FM\u201d, which writes into the active tactic.`));
+    say(L('A criar uma t\u00e1tica nova', 'Creating a new tactic'));
+    const ev = (e) => FMB.send(e, 'TeamTacticReference', P, null);
+    await ev(W.open); await sleep(600);
+    await FMB.ok(`WRITE FM.UI.TeamTacticReference|${P}|${W.style} ${JSON.stringify(['SI.Core.DynamicNumber', String(W.styleBase)])}`); await sleep(3500);
+    await ev(W.next); await sleep(400); await ev(W.next); await sleep(400); await ev(W.finish); await sleep(1500);
+    const now = await FMB.tacticList(c);
+    if (now.length !== have.length + 1) throw new Error(L('O FM n\u00e3o criou a t\u00e1tica nova.', 'FM did not create the new tactic.'));
+    return (await FMB.read([['TeamTacticReference', P, T.name]]))[0] || '';
+  },
   /** Applies the app's tactic to FM's active tactic. say(text) shows progress. Returns lines describing what was done. */
-  async applyTactic(t, squad, say = () => {}) {
+  async applyTactic(t, squad, say = () => {}, opts = {}) {
     await FMB.status(true);
     const v = String((FMB.state || {}).version || '0').split('.').map(Number);
     if (FMB.port === 27027 || v[0] * 10000 + (v[1] || 0) * 100 + (v[2] || 0) < 402) throw new Error(L('Aplicar a tática precisa do Tactical Bible Bridge 0.4.2 ou mais recente (Definições › Integrações).', 'Applying the tactic needs Tactical Bible Bridge 0.4.2 or newer (Settings › Integrations).'));
     const c = await FMB.context(), T = FMB_IDS.tactic, P = T.pairs(c), sleep = (ms) => new Promise(r => setTimeout(r, ms)), done = [];
     const N = (k, v) => [k, 'SI.Core.DynamicNumber', String(v)], B = (k, v) => [k, 'System.Boolean', v ? 'True' : 'False'];
+    if (opts.create) { const nm = await FMB.createTactic(say); done.push(L(`Tática nova no FM: ${nm}`, `New tactic in FM: ${nm}`)); }
     // 1. in-possession formation: move the FM slots that aren't on a target position to the free target positions
     say(L('Formação', 'Formation'));
     const want = t.slots.map(s => FMB.ipBits(s.ipCode));
@@ -558,6 +585,7 @@ function fmButton(kind) {
   const st = FMB.state || {}, ready = !!(st.ok && st.ready);
   const K = {
     xi: ['bridge', 'A.bridgeXI()', L('Colocar XI no FM', 'Place XI in FM'), L('Põe os jogadores do teu XI na tática activa do FM.', 'Puts your XI into the active tactic in FM.')],
+    tacticnew: ['bridge-tac', 'A.bridgeTactic(true)', L('Criar nova no FM', 'Create new in FM'), L('Cria uma tática nova no FM (as outras ficam como estão) e aplica esta nela. O FM só aceita 3 táticas.', 'Creates a new tactic in FM (the others stay as they are) and applies this one to it. FM only holds 3 tactics.')],
     tactic: ['bridge-tac', 'A.bridgeTactic()', L('Aplicar no FM', 'Apply in FM'), L('Escreve esta tática na tática activa do FM: formação com bola, XI, papéis, mentalidade e instruções de equipa.', 'Writes this tactic into FM’s active tactic: in-possession formation, XI, roles, mentality and team instructions.')],
     sp: ['bridge-sp', 'A.bridgeSetPieces()', L('Aplicar no FM', 'Apply in FM'), L('Aplica os marcadores e as rotinas de bolas paradas no FM. No FM, abra Táticas › Bolas paradas.', 'Applies the takers and set-piece routines in FM. In FM, open Tactics › Set Pieces.')],
     shortlist: ['bridge-sl', 'A.fmShortlist()', L('Lista → FM', 'Shortlist → FM'), L('Junta os jogadores da tua lista à shortlist do FM.', 'Adds the players on your list to FM\'s shortlist.')],

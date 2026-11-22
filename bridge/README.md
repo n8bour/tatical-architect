@@ -146,9 +146,8 @@ Active tactic = `TeamTacticReference|825307168=126;<session>;1651271022=1;168521
   (instruction id, number of FM options, app option → FM option). Ids 2, 13 and 14 never appeared.
 - Out-of-possession formation: same move event with `1769491558` False (slot id in `857762170`); the slot's OOP position is `927294289`.
 - Not done yet: creating a new tactic slot.
-- **Creating a tactic from the bridge is NOT safe, so the app doesn't do it.** The "Create New Tactic" wizard can be replayed
-  (events `90`, `1412787285`, style `1381059181`, `1515149153`, formation index `1749303654` twice, `879515246`), but replayed it
-  **replaced the active tactic** twice, once with FM at its tactic limit and once with a free slot (FM's own click-through
-  created a new one). Not understood yet. The tactic list is readable from the tactic menu `1949648203` (item id 0 "Copy
-  Tactic", its submenu `876950356` lists every tactic); the recruitment screen's list is stale after a delete.
-  Workflow: create the empty tactic in FM, then Apply in FM writes into it.
+- **Create a new tactic** (verified on FM's screen; sequence from FM27 Assistant's TacticFm.cs): event `1412787285` (new), write the
+  style `1381059181` (10 = Clean Slate), wait ~3.5 s, event `1515149153` twice (Next), event `879515246` (confirm); the app then
+  applies the tactic on it. **Do not send event `90` first**: replaying the recorded wizard with it replaced the active tactic.
+  FM keeps at most 3 tactics (with 3 the app refuses). The list of tactics = the tactic menu `1949648203`, item id 0 ("Copy
+  Tactic") submenu `876950356` (the recruitment screen's list stays stale after a delete).
