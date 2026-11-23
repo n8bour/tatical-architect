@@ -1,68 +1,49 @@
-# Handoff: finish the FM27 bridge on the Windows machine
+# Handoff: the FM27 bridge (state at v5.2.0)
 
-Read this first, then `bridge/README.md` and `src/ui/fmbridge.js` (`FMB_IDS` holds every FM id).
-Previous work was done on a Linux server with no game, so **nothing below was ever run against FM27**.
+Read `bridge/README.md` first (decoded ids and verified behaviour) and `src/ui/fmbridge.js` (`FMB_IDS` holds every FM id; `FMB` is
+the client). Everything below was verified against a running FM27 (27.1.0.2505117, EN, Windows) with the user checking FM's screen.
 
 ## What the app is
-FM27 Tactical Bible: Tauri 2 app (Rust shell + one-file JS UI built by `build.mjs` into `app/index.html`).
-Squad data comes from fmsave (save file) or F9 export. Version now: **4.13.4** (bump in 4 places, see "Releasing").
+FM27 Tactical Bible: Tauri 2 app (Rust shell + one-file JS UI built by `build.mjs` into `app/index.html`). Squad and the whole player
+database come from the save (fmsave). The optional BepInEx 6 plugin `bridge/TacticalBibleBridge` (port 27029, line protocol) lets the
+app read and change the running game. The plugin DLL ships inside the app (`bridge/dist`, `include_bytes!`) and is installed from
+Settings › Integrations. FM27 Assistant's FM27Bridge (port 27027) is a fallback for XI and takers only.
 
-## The optional bridge (what this task is about)
-A BepInEx 6 (IL2CPP) plugin inside FM27 that the app talks to over `127.0.0.1` (one line = one command).
-- Our own plugin: `bridge/TacticalBibleBridge/Plugin.cs`, port **27029** (trimmed from fm27-assistant's FM27Bridge, MIT).
-- Fallback: fm27-assistant's FM27Bridge (separate repo `n8bour/fm27-assistant`, port **27027**, same protocol, has `SAMPLE`).
-- Rust client: `bridge_call` in `src-tauri/src/main.rs` (tries 27029 then 27027).
-- JS: `src/ui/fmbridge.js` (status, read, send, applyXI, applySetPieces, recorder, dumpSetPieces).
-- UI: Settings › Integrations card; Tactic › Set pieces › "Apply in FM".
+## Done and verified (all checked on FM's screen)
+- Place XI; set pieces (takers per foot, corner delivery/target, attacking + defending corner routines slot by slot).
+- **Tactic › Apply in FM / Create new in FM:** in- and out-of-possession formations, XI, roles (68 of 77 app roles have an FM id),
+  mentality, 26 team instructions, player instructions. Create new = FM27 Assistant's wizard sequence (no event 90), refuses at 3 tactics.
+- Scouting: shortlist to FM (FM search + `unique_id`), Recruitment Focus (scout assignment) from a search.
+- Next opponent from FM (fixture → team → players → save database). F9 / FM View Exporter and FM Tactics Lab are gone.
 
-## Setup on this machine
-1. FM27 installed (Steam), BepInEx 6 IL2CPP already working (fm27-assistant's installer does it). Launch FM once so `BepInEx\interop` exists.
-2. Install: Git, Node 22, **.NET 6+ SDK**. (Rust only if building the Tauri app locally; CI builds releases.)
-3. `git clone git@github.com:n8bour/tatical-architect.git`
-4. Build the plugin (copies itself into the game):
-   `dotnet build bridge/TacticalBibleBridge -c Release -p:GamePath="<FM27 folder>"`
-   It was **never compiled** — expect small compile errors; fix them. Do not run it together with FM27Bridge on the same
-   hooks if they conflict (different ports/Harmony ids, should coexist; verify).
-5. `npm test` and `node build.mjs` work anywhere.
+## Gaps still open (none blocks the current release)
+1. **Roles without an FM id:** lhk, ocb, cwcb, swcb, hwb, prwb, fr, ss, soam. Click a player in a position where the role exists in FM
+   and read the role list (see "Role lists" in `bridge/README.md`; `dev/_tienum.mjs`/`dev/_pienum.mjs` show the technique).
+2. **App instructions with no FM tile:** player instructions Hold position, Move into channels, Arrive Late, Attack the Defensive
+   Line; team instruction "Play for Set Pieces → Balanced". Hold Up Ball (5), Attack Box Side/Depth, Marking Target options and the
+   second option of Marking (12) were never mapped.
+3. **Not decoded:** penalty order (`1649488964`), long throws / taker list moves (`1144009829`), opposition instructions, captains,
+   Position vs Player scope of player instructions (only Position is written), team-instruction ids 2, 13, 14 (never appeared).
+4. **Opposition report and live match data** (what TeknikOda shows): not started. The next fixture is readable; FM's own opposition
+   analysis screen and the match tactic references (`MatchTacticReference`, same event ids as the tactic) are the leads. FM27 Assistant's
+   `bridge.log` in `%APPDATA%\FM27Scout` has recordings of in-match changes.
+5. **Not run from the installed app:** every FM-facing button was exercised through `bridge/dev/*.mjs` (the app's own `FMB` code over TCP),
+   not by clicking in the installed app. Rust compiles on CI only (no Rust needed locally).
+6. **BepInEx is a prerequisite** the app does not install (FM27 Assistant's installer does).
 
-## Tasks, in order
-1. **Compile the plugin and get `PING`/`VERSION`/`REFS` answering** on 27029 (test with a tiny PowerShell/Node TCP client).
-2. **Verify what already ships** against a throwaway save (note: user plays on a real save; never test on it without asking):
-   - Place my XI in FM (`FMB.applyXI`).
-   - Set pieces › Apply in FM (`FMB.applySetPieces`): corner + direct-FK takers per foot, corner swing, corner aim-for.
-   Fix anything wrong; record real behaviour in `bridge/README.md`.
-3. **Slot layout / routine read (the open problem).** Reading `SetPieceReference` props `1867869768` (routine) and
-   `1786266473` (takers) through our top-level `READ` returns FM's *default empty routine on every tab* (see
-   "What we learned"). FM27Bridge's `SAMPLE` did capture the real data because it logs the UI's own channel traffic.
-   Idea to try: the UI opens channels as **child nodes** (`AddNode(key, parentKey, prop)`), not under `RootKey`. Log the UI's
-   `OpenChannel`/`AddNode` sequence while the Set Pieces screen is open (FM27Bridge had `bridge_seq.txt` via `Plugin.Seq`) and
-   replicate the parent chain in `Plugin.Read`. Also remove the 4000-char cut in sampling if you use it.
-4. Only if 3 works: wire penalties order (`1649488964`), long/throw-in takers (kind 9), per-slot corner instructions
-   (`1633039705`). Otherwise leave them manual and remove the "📋 Copy set-piece state" button.
-5. Bundle our plugin (or not): installer currently ships no plugin. fm27-assistant keeps `payload/bepinex.zip`; decide with the user.
-
-## What we learned (from recordings, FM27 EN)
-- Order `1249537108` = corner aim-for: record `{label(1903577654), number(1886680684)}`: Mixed 0, Short 1, Near Post 2, Far Post 3, Edge of Area 4, Centre 5. (The plain-number form of the same event is another setting.)
-- Takers: see `FMB_IDS.sp.ev` (add L `1213227378`, add R `1416066355`, remove `910380099`), entry `{kind(1398883404), list(961376122), sel(1883858041), person}`; kinds: corner 5, free kick 6, long throw 9.
-- Tab type channel `1668375608` (writable): Corners 0, Shooting Range (free kicks) 1, Attacking Third (throw-ins) 2.
-- Corner slot instruction: ev `1633039705` `{label, {group 1114920816, slot 1883858041, option 1750627616, kind 1398883404 (5 att, 0 def), 1279880290: 0}}`.
-  Known options: attacking Go Forward 4, Attack Near Post 5, Attack Ball from Edge 7; defending Go Back 1, Stay Forward (Centre) 2, Player Mark 6, Zonal Six-Yard Far Post 11, Edge of Area 12.
-  Groups: attacking Aerial Threats 4, Box Threats 7 (in the box), Creators 6, Recovery Defenders 5 (out of the box); defending groups 0/1/2.
-- Penalty/list move: ev `1649488964` / `1144009829` = `{inner{current index, person}, 1782997593: new index}` — needs the current order.
-- `bridge/README.md` has the full decoded table.
-
-## Rules of the road
-- Don't touch the user's saves; ask before anything that writes to the game on a real save.
-- Don't modify `fm27-assistant` without asking (separate repo, user's other project).
-- The user's own FM27Bridge may be installed: keep ports/Harmony ids separate.
-- No new JS dependencies; the UI is plain JS concatenated by `build.mjs` (order in `ORDER`).
+## Hard-won rules (read before touching the bridge)
+- FM27's replayed events: the **‹ event works on any tile, › only on the tile last clicked by hand** (player instructions).
+- Team-instruction arrows drop presses that arrive too fast: 150 ms between presses.
+- **Never replay the recorded "Create New Tactic" wizard with event 90**: it replaced the active tactic. Use `FMB.createTactic`.
+- Never patch SetData/AddData/SetTarget at plugin load (crashed FM before the main menu); `DATAHOOK 1` mid-game is fine.
+- `READ` from the plugin gets FM's empty default for screen-scoped data: use `READAT auto` with the screen open.
+- Log file `%APPDATA%\FM27TacticalBible\bridge_seq.txt` grows ~100 MB/min: turn `SEQ 0` off when done; it can stall past ~0.5-1.5 GB.
+- Don't touch the user's saves; ask before changing a real game; keep ports/Harmony ids separate from FM27Bridge.
+- After changing `Plugin.cs`: build (needs the .NET SDK ≥ 6; none is installed now), copy `bin/Release/TacticalBibleBridge.dll` to
+  `bridge/dist/`, bump `Plugin.Version` and `PLUGIN_VERSION` in `src-tauri/src/main.rs`, restart FM.
 
 ## Releasing (only when the user asks)
 Bump the version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src/ui/state.js` (CI fails if they differ),
 edit `.github/RELEASE_NOTES.md`, `node build.mjs && npm test`, push to `main`. CI builds only if release `v<version>` doesn't
-exist; UI checks (Playwright) run in parallel with a 10-minute limit. Releases contain only the two `.exe` files.
-
-## Open questions for the user
-1. Does FM27 have one free-kick taker list or separate direct/crossed lists?
-2. In the long-throw recording, what was the plain 0/1 toggled on event `1249537108`?
-3. Ship our own plugin in the installer, or rely on FM27 Assistant's?
+exist and runs the Playwright UI checks (layout EN/PT, busy, i18n, language audit). Releases contain only the two `.exe` files.
+Local tooling is not installed any more: Playwright tests run on CI (`uv run --with playwright==1.56.0 python tests/ui_*.py` locally).
