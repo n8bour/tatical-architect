@@ -58,6 +58,22 @@ const FMB_IDS = {
     maxTactics: 3,   // FM27 keeps 3 tactics
     wizard: { open: 1412787285, next: 1515149153, finish: 879515246, style: 1381059181, styleBase: 10 },   // styleBase 10 = Clean Slate
     name: 1851878757,
+    // player instructions (verified FM27): arrows per category id, which CYCLE (wrap around); revert = role defaults (all Standard)
+    // DISABLED (piEnabled): FM only accepts a replayed arrow press on the tile the user last clicked by hand (not found what makes a tile
+    // "live"), and the revert would wipe manual instructions without setting new ones. See bridge/README.md.
+    piEnabled: false,
+    piNext: 1668445233, piPrev: 1668445234, piCat: 1449616730, piRevert: 1984657952, piRevertRec: 1936487524,
+    // app player instruction -> [in possession?, FM category id, number of › presses from Standard]. Option order from Standard (›):
+    //  0 width: Stay Wider, Sit Narrower · 2 dribbling: More, Less · 3 runs: Fewer, More · 4 freedom: Roam From Position · 6 shooting: More, Less
+    //  8 passing risk: More, Fewer · 9 crossing target: Far Post, Centre, Near Post, Target Forward · 10 cross from: Deep, Byline
+    //  11 trigger press: More Often, Less Often · 12 marking: (looser), Mark Tighter · 13 tackling: Tackle Harder, Ease Off Tackles
+    pi: {
+      'Stay wider': [true, 0, 1], 'Sit narrower': [true, 0, 2], 'Dribble more': [true, 2, 1], 'Dribble less': [true, 2, 2],
+      'Get further forward': [true, 3, 2], 'Roam from position': [true, 4, 1], 'Shoot more': [true, 6, 1], 'Shoot less': [true, 6, 2],
+      'Take more risks': [true, 8, 1], 'Take fewer risks': [true, 8, 2], 'Target Far Post': [true, 9, 1], 'Target Centre': [true, 9, 2],
+      'Target Near Post': [true, 9, 3], 'Cross from deep': [true, 10, 1], 'Cross from byline': [true, 10, 2],
+      'Press more': [false, 11, 1], 'Press less': [false, 11, 2], 'Mark tighter': [false, 12, 2], 'Tackle harder': [false, 13, 1], 'Ease off tackles': [false, 13, 2],
+    },
     tiPrev: 1249276755, tiNext: 862931569,   // value = instruction id; FM27's ‹ / › arrows (they stop at the ends)
     left: 1048576, right: 2097152,           // added to central positions (DCL = DC + left); verified on FM's screen
     roles: {acb: '16384', am_ip: '512', am_oop: '1073741824', ap: '131072', awb: '274877906944', b2b: '65536', b2bp: '70368744177664', bpcb: '16777216', bpgk: '4096', cb_ip: '2', cb_oop: '8', ccb: '32', cf_ip: '2048', cf_oop: '4398046511104', chf: '2147483648', chm: '72057594037927936', cm_ip: '32', cm_oop: '1048576', coam: '4294967296', cocf: '17592186044416', ddm: '65536', dlf: '1024', dlp: '32768', dm_ip: '16', dm_oop: '32768', f9: '1099511627776', fb_ip: '4', fb_oop: '512', gk_ip: '1', gk_oop: '1', hb: '34359738368', hfb: '2048', if_ip: '134217728', ifb: '4503599627370496', iow: '1099511627776', iw_ip: '562949953421312', iwb: '17592186044416', lhk: '4', mp: '144115188075855872', nncb: '536870912', nngk: '9007199254740992', pcm: '134217728', pdm: '131072', pfb: '1024', poa: '524288', pw: '8796093022208', pwb: '36028797018963968', scb: '16', scm: '268435456', sdm: '262144', socf: '35184372088832', swk: '2', tam: '2147483648', tcf: '8796093022208', tf: '262144', tw: '549755813888', twm: '68719476736', w_ip: '128', w_oop: '274877906944', wb_ip: '8', wb_oop: '8', wccm: '536870912', wcdm: '524288', wcm: '281474976710656', wf_ip: '35184372088832', wm_ip: '64', wm_oop: '34359738368', wow: '2199023255552', wowm: '137438953472'},
@@ -501,12 +517,12 @@ const FMB = {
     // 3. roles, per FM slot holding that position
     say(L('Papéis', 'Roles'));
     cur = await FMB.readTacticSlots(c);
-    const used = new Set(), missing = [];
+    const used = new Set(), missing = [], fmSlotOf = [];
     const setRole = (slot, bits, name, ip) => FMB.send(T.setRole, 'TeamTacticReference', P, { type: 'SI.Core.Record', entries: [N(T.slotIdx, slot),
       [T.roleRec, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [N(FMB_IDS.key.number, 1), [FMB_IDS.key.payload, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [
         N(T.roleRec, bits), [1464367445, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [N(1298233430, 14), N(1298755158, 14), B(1397715049, false)] }], B(1936487524, false), [T.roleName, 'System.String', name]] }]] }], B(T.roleIP, ip)] });
     for (const s of t.slots) {
-      const bits = FMB.ipBits(s.ipCode), fm = cur.find(x => x.ip === bits && !used.has(x.slot)); if (!fm) continue; used.add(fm.slot);
+      const bits = FMB.ipBits(s.ipCode), fm = cur.find(x => x.ip === bits && !used.has(x.slot)); if (!fm) continue; used.add(fm.slot); fmSlotOf.push([s, fm.slot]);
       for (const [rid, ip] of [[s.ip, true], [s.oop, false]]) {
         const rb = rid && T.roles[rid], r = rid && ROLE_BY_ID[rid];
         if (!rb) { if (rid) missing.push(roleName(r) || rid); continue; }
@@ -517,6 +533,27 @@ const FMB = {
     let okIP = 0, okOOP = 0, n = 0;
     for (const s of t.slots) { const fm = after.find(x => x.ip === FMB.ipBits(s.ipCode)); if (!fm) continue; n++; if (fm.ipRole === T.roles[s.ip]) okIP++; if (fm.oopRole === T.roles[s.oop]) okOOP++; }
     done.push(L(`Papéis: ${okIP}/${n} com bola e ${okOOP}/${n} sem bola confirmados no FM`, `Roles: ${okIP}/${n} in possession and ${okOOP}/${n} out of possession confirmed in FM`) + (missing.length ? L(' · sem equivalente: ', ' · no FM equivalent: ') + [...new Set(missing)].join(', ') : ''));
+    // 3b. player instructions: revert every slot to its role defaults, then step each wanted category (they cycle) from Standard
+    say(L('Instruções individuais', 'Player instructions'));
+    let nPI = 0; const noPI = new Set();
+    if (!T.piEnabled) {
+      const lines = fmSlotOf.filter(([s]) => (s.pis || []).length).map(([s]) => `${s.ipCode}: ${s.pis.join(', ')}`);
+      if (lines.length) done.push(L('Instruções individuais (a fazer à mão no FM): ', 'Player instructions (set these by hand in FM): ') + lines.join(' · '));
+    }
+    const revert = (slot, ip) => FMB.send(T.piRevert, 'TeamTacticReference', P, { type: 'SI.Core.Record', entries: [N(T.slotIdx, slot), B(T.roleIP, ip),
+      [T.piRevertRec, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [N(FMB_IDS.key.number, 0), [FMB_IDS.key.payload, 'System.String', 'Revert to Role']] }]] });
+    const piPress = (slot, cat, ip) => FMB.send(T.piNext, 'TeamTacticReference', P, { type: 'SI.Bindable.DynamicReference', entries: [N(T.slotIdx, slot), N(T.piCat, cat), B(T.roleIP, ip)] });
+    for (const [s, slot] of (T.piEnabled ? fmSlotOf : [])) {
+      const want = (s.pis || []).map(n => [n, T.pi[n]]);
+      if (!want.length) continue;
+      await revert(slot, true); await sleep(150); await revert(slot, false); await sleep(250);
+      for (const [n, m] of want) {
+        if (!m) { noPI.add(n); continue; }
+        for (let i = 0; i < m[2]; i++) { await piPress(slot, m[1], m[0]); await sleep(150); }
+        nPI++;
+      }
+    }
+    if (T.piEnabled) done.push(L(`Instruções individuais: ${nPI} aplicadas`, `Player instructions: ${nPI} applied`) + (noPI.size ? L(' · sem equivalente no FM: ', ' · no FM equivalent: ') + [...noPI].join(', ') : ''));
     // 4. mentality
     const mi = MENTALITIES.indexOf(t.ment);
     if (mi >= 0) { await FMB.ok(`WRITE FM.UI.TeamTacticReference|${P}|${T.mentality} ${JSON.stringify({ type: 'SI.Bindable.DynamicReference', entries: [N(FMB_IDS.key.number, mi + 1), [FMB_IDS.key.payload, 'System.String', t.ment]] })}`); done.push(L('Mentalidade: ', 'Mentality: ') + t.ment); }

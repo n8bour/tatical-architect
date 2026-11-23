@@ -14,7 +14,7 @@ const c = await FMB.context(), P = `825307168=126;1198877028=1;1651271022=1;1685
 const out = {};
 for (let i = 0; i < props.length; i += 50) {
   const ch = props.slice(i, i + 50);
-  const r = (await call('READ ' + ch.map(p => `FM.UI.TeamTacticReference|${P}|${p}`).join(' ;; '), 30000)).slice(3).split('\u001e');
+  const r = (await call((process.env.TSNAP_AT ? 'READAT auto ' : 'READ ') + ch.map(p => `FM.UI.TeamTacticReference|${P}|${p}`).join(' ;; '), 30000)).slice(3).split('\u001e');
   ch.forEach((p, k) => out[p] = r[k]);
 }
 fs.writeFileSync(a, JSON.stringify(out));

@@ -151,3 +151,17 @@ Active tactic = `TeamTacticReference|825307168=126;<session>;1651271022=1;168521
   applies the tactic on it. **Do not send event `90` first**: replaying the recorded wizard with it replaced the active tactic.
   FM keeps at most 3 tactics (with 3 the app refuses). The list of tactics = the tactic menu `1949648203`, item id 0 ("Copy
   Tactic") submenu `876950356` (the recruitment screen's list stays stale after a delete).
+
+### Player instructions (decoded but NOT applied: `FMB_IDS.tactic.piEnabled = false`)
+- Panel = tiles ("categories") per role; ids (same for Winger / Wing-Back; other roles show a subset, some tiles locked): in possession 0 Attacking
+  Width (Stay Wider, Sit Narrower), 1 Dribbling Direction (Cut Inside With Ball, Run Wide With Ball), 2 Dribbling Frequency (Dribble More/Less),
+  3 Forward Runs (Make More/Fewer Runs), 4 Freedom of Movement (Roam From Position / Follow Tactical Position), 5 Hold Up Ball (Yes/No),
+  6 Shooting (Shoot More/Less Often), 7 Passing Strategy (Shorter / More Direct), 8 Passing Risk (Take More/Fewer Risks), 9 Crossing Strategy
+  (Far Post, Centre, Near Post, Target Forward), 10 Cross From (Cross From Deep, Byline); out of possession 11 Trigger Press, 12 Marking,
+  13 Tackling, 14 Marking Target. Attack Box Side/Depth: ids not seen (locked for the roles tried).
+- Events: `1668445233` (›) / `1668445234` (‹) {`1414752632` slot, `1449616730` category, `1265792339` in-possession}; options **cycle** (wrap).
+  Revert to role defaults: `1984657952` {slot, `1265792339`, `1936487524` {0, "Revert to Role"}}. Scope switch "Apply to: Position / Player" exists.
+- **Why it is off:** a replayed press only changes the tile the user LAST CLICKED BY HAND (verified: replaying ‹ and › on that tile works;
+  any other tile, with the panel open, does nothing). Not the selection property `1481799789`, not the begin/end events `1330856259` /
+  `1330857029` (sent via SENDJ). Unknown: a UI-side "current tile" that only a real click sets (probably needs the plugin to send
+  `SendSicoreEvent` / drive the UI). Meanwhile Apply in FM lists each player's planned instructions to set by hand.
