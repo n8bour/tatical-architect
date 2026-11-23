@@ -5801,20 +5801,20 @@ const FMB_IDS = {
     wizard: { open: 1412787285, next: 1515149153, finish: 879515246, style: 1381059181, styleBase: 10 },   // styleBase 10 = Clean Slate
     name: 1851878757,
     // player instructions (verified FM27): arrows per category id, which CYCLE (wrap around); revert = role defaults (all Standard)
-    // DISABLED (piEnabled): FM only accepts a replayed arrow press on the tile the user last clicked by hand (not found what makes a tile
-    // "live"), and the revert would wipe manual instructions without setting new ones. See bridge/README.md.
-    piEnabled: false,
-    piNext: 1668445233, piPrev: 1668445234, piCat: 1449616730, piRevert: 1984657952, piRevertRec: 1936487524,
-    // app player instruction -> [in possession?, FM category id, number of › presses from Standard]. Option order from Standard (›):
-    //  0 width: Stay Wider, Sit Narrower · 2 dribbling: More, Less · 3 runs: Fewer, More · 4 freedom: Roam From Position · 6 shooting: More, Less
-    //  8 passing risk: More, Fewer · 9 crossing target: Far Post, Centre, Near Post, Target Forward · 10 cross from: Deep, Byline
-    //  11 trigger press: More Often, Less Often · 12 marking: (looser), Mark Tighter · 13 tackling: Tackle Harder, Ease Off Tackles
+    // player instructions (verified FM27, user checked the panel): arrows per category id; the options CYCLE (wrap). The ‹ event works on ANY tile,
+    // the › event only on the tile the user last clicked by hand: so we only use ‹. Revert = role defaults (every tile back to Standard).
+    piEnabled: true,
+    piPrev: 1668445234, piCat: 1449616730, piRevert: 1984657952, piRevertRec: 1936487524,
+    // app player instruction -> [in possession?, FM category id, number of ‹ presses from Standard]. Option order from Standard (‹):
+    //  0 width: Sit Narrower, Stay Wider · 2 dribbling: Less, More · 3 runs: More, Fewer · 4 freedom: Roam From Position · 6 shooting: Less, More
+    //  8 passing risk: Fewer, More · 9 crossing target: Target Forward, Near Post, Centre, Far Post · 10 cross from: Byline, Cross From Deep
+    //  11 trigger press: Less, More Often · 12 marking: Mark Tighter · 13 tackling: Ease Off Tackles, Tackle Harder
     pi: {
-      'Stay wider': [true, 0, 1], 'Sit narrower': [true, 0, 2], 'Dribble more': [true, 2, 1], 'Dribble less': [true, 2, 2],
-      'Get further forward': [true, 3, 2], 'Roam from position': [true, 4, 1], 'Shoot more': [true, 6, 1], 'Shoot less': [true, 6, 2],
-      'Take more risks': [true, 8, 1], 'Take fewer risks': [true, 8, 2], 'Target Far Post': [true, 9, 1], 'Target Centre': [true, 9, 2],
-      'Target Near Post': [true, 9, 3], 'Cross from deep': [true, 10, 1], 'Cross from byline': [true, 10, 2],
-      'Press more': [false, 11, 1], 'Press less': [false, 11, 2], 'Mark tighter': [false, 12, 2], 'Tackle harder': [false, 13, 1], 'Ease off tackles': [false, 13, 2],
+      'Sit narrower': [true, 0, 1], 'Stay wider': [true, 0, 2], 'Dribble less': [true, 2, 1], 'Dribble more': [true, 2, 2],
+      'Get further forward': [true, 3, 1], 'Roam from position': [true, 4, 1], 'Shoot less': [true, 6, 1], 'Shoot more': [true, 6, 2],
+      'Take fewer risks': [true, 8, 1], 'Take more risks': [true, 8, 2], 'Target Near Post': [true, 9, 2], 'Target Centre': [true, 9, 3],
+      'Target Far Post': [true, 9, 4], 'Cross from byline': [true, 10, 1], 'Cross from deep': [true, 10, 2],
+      'Press less': [false, 11, 1], 'Press more': [false, 11, 2], 'Mark tighter': [false, 12, 1], 'Ease off tackles': [false, 13, 1], 'Tackle harder': [false, 13, 2],
     },
     tiPrev: 1249276755, tiNext: 862931569,   // value = instruction id; FM27's ‹ / › arrows (they stop at the ends)
     left: 1048576, right: 2097152,           // added to central positions (DCL = DC + left); verified on FM's screen
@@ -6284,7 +6284,7 @@ const FMB = {
     }
     const revert = (slot, ip) => FMB.send(T.piRevert, 'TeamTacticReference', P, { type: 'SI.Core.Record', entries: [N(T.slotIdx, slot), B(T.roleIP, ip),
       [T.piRevertRec, 'SI.Bindable.DynamicReference', { type: 'SI.Bindable.DynamicReference', entries: [N(FMB_IDS.key.number, 0), [FMB_IDS.key.payload, 'System.String', 'Revert to Role']] }]] });
-    const piPress = (slot, cat, ip) => FMB.send(T.piNext, 'TeamTacticReference', P, { type: 'SI.Bindable.DynamicReference', entries: [N(T.slotIdx, slot), N(T.piCat, cat), B(T.roleIP, ip)] });
+    const piPress = (slot, cat, ip) => FMB.send(T.piPrev, 'TeamTacticReference', P, { type: 'SI.Bindable.DynamicReference', entries: [N(T.slotIdx, slot), N(T.piCat, cat), B(T.roleIP, ip)] });
     for (const [s, slot] of (T.piEnabled ? fmSlotOf : [])) {
       const want = (s.pis || []).map(n => [n, T.pi[n]]);
       if (!want.length) continue;
