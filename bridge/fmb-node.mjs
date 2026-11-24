@@ -23,7 +23,7 @@ function bridgeCall(cmd, timeoutMs = 15000) {
 
 const ctx = vm.createContext({
   DESKTOP: true, console, setTimeout, JSON, Promise, Date, Math, Number, String, Object, Array, Set, Error,
-  window: { __TAURI__: { core: { invoke: async (_, a) => ({ port: PORT, reply: await bridgeCall(a.cmd, a.timeoutMs) }) } } },
+  window: { __TAURI__: { core: { invoke: async (_, a) => bridgeCall(a.cmd, a.timeoutMs) } } },
   L: (pt, en) => en,
 });
 if (process.env.FMB_CORE) for (const f of ['i18n/i18n.js', 'core/roles.js', 'core/tactics_data.js', 'core/engine.js']) vm.runInContext(fs.readFileSync(path.join(here, '../src', f), 'utf8') + ';globalThis.ROLE_BY_ID = typeof ROLE_BY_ID !== "undefined" ? ROLE_BY_ID : globalThis.ROLE_BY_ID;', ctx);

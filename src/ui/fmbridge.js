@@ -126,12 +126,8 @@ const FMB = {
   state: null,   // { ok, ready, version, fm, err }
   async call(cmd, timeoutMs) {
     if (!DESKTOP) throw new Error('Só na app instalada');
-    const r = await window.__TAURI__.core.invoke('bridge_call', { cmd, timeoutMs: timeoutMs || 15000 });
-    if (r && typeof r === 'object') { FMB.port = r.port; return r.reply; }
-    return r;
+    return window.__TAURI__.core.invoke('bridge_call', { cmd, timeoutMs: timeoutMs || 15000 });
   },
-  // which plugin answered: ours (27029) or fm27-assistant's FM27Bridge (27027, same protocol)
-  pluginName() { return FMB.port === 27027 ? 'FM27Bridge (fm27-assistant)' : 'Tactical Bible Bridge'; },
   async ok(cmd, timeoutMs) {
     const r = String(await FMB.call(cmd, timeoutMs) || '');
     if (!r.startsWith('OK')) throw new Error(r || 'no reply');
@@ -149,9 +145,8 @@ const FMB = {
       const p = String(await FMB.call('PING', 2500) || '');
       if (!p.startsWith('PONG')) throw new Error(p || 'no reply');
       let version = '', fm = '';
-      try { [version, fm] = (await FMB.ok('VERSION', 2500)).split(' '); } catch (e) {}   // FM27Bridge has no VERSION
-      // ours answers "PONG ready", FM27Bridge "PONG prêt" (or "PONG (attente …)" while FM loads)
-      return (FMB.state = { ok: true, ready: /ready|prêt/.test(p), version, fm, plugin: FMB.pluginName(), port: FMB.port });
+      try { [version, fm] = (await FMB.ok('VERSION', 2500)).split(' '); } catch (e) {}
+      return (FMB.state = { ok: true, ready: /ready/.test(p), version, fm });
     } catch (e) { return (FMB.state = { ok: false, err: String(e.message || e) }); }
   },
   // reqs: [[type, pairs, prop]] -> [json|null]. at = 'auto': read under the node of FM's own open screen (plugin ≥ 0.3),
@@ -269,9 +264,9 @@ const FMB = {
     done.push(air ? L('Cantos: procurar o 2.º poste', 'Corners: aim for the far post') : L('Cantos: curtos', 'Corners: short'));
     return done;
   },
-  /** Routines need our plugin (READAT, 0.3+); FM27Bridge (27027) or older plugins can only do the takers. */
+  /** Routines need READAT (plugin 0.3+); older plugins can only do the takers. */
   canRoutines() {
-    const st = FMB.state || {}; if (FMB.port === 27027 || !st.version) return false;
+    const st = FMB.state || {}; if (!st.version) return false;
     const [a, b] = String(st.version).split('.').map(Number); return a > 0 || b >= 3;
   },
   /** The routine shown on FM's Set Pieces screen: { kind, side, slots: [{ group, slot, name, person, option, label, options: [{ id, label }] }] }
@@ -545,7 +540,7 @@ const FMB = {
   async applyTactic(t, squad, say = () => {}, opts = {}) {
     await FMB.status(true);
     const v = String((FMB.state || {}).version || '0').split('.').map(Number);
-    if (FMB.port === 27027 || v[0] * 10000 + (v[1] || 0) * 100 + (v[2] || 0) < 402) throw new Error(L('Aplicar a tática precisa do Tactical Bible Bridge 0.4.2 ou mais recente (Definições › Integrações).', 'Applying the tactic needs Tactical Bible Bridge 0.4.2 or newer (Settings › Integrations).'));
+    if (v[0] * 10000 + (v[1] || 0) * 100 + (v[2] || 0) < 402) throw new Error(L('Aplicar a tática precisa do Tactical Bible Bridge 0.4.2 ou mais recente (Definições › Integrações).', 'Applying the tactic needs Tactical Bible Bridge 0.4.2 or newer (Settings › Integrations).'));
     const c = await FMB.context(), T = FMB_IDS.tactic, P = T.pairs(c), sleep = (ms) => new Promise(r => setTimeout(r, ms)), done = [];
     const N = (k, v) => [k, 'SI.Core.DynamicNumber', String(v)], B = (k, v) => [k, 'System.Boolean', v ? 'True' : 'False'];
     if (opts.create) { const nm = await FMB.createTactic(say); done.push(L(`Tática nova no FM: ${nm}`, `New tactic in FM: ${nm}`)); }

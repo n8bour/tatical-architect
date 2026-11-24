@@ -31,11 +31,11 @@ function integrationsHTML(compact) {
   const plug = DESKTOP && !compact ? pluginHTML() : '';
   const bridgeCard = compact ? '' : card('Aplicar no FM — Tactical Bible Bridge',
     DESKTOP ? pill(fb.ok, fb.ok ? (fb.ready ? 'ligado' : 'a aguardar o jogo') : '', 'não encontrado') : pill(false, '', 'só na app instalada'),
-    `${plug}<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, os botões <b>Colocar XI no FM</b> (Tática › Analisar) e <b>Aplicar no FM</b> (Tática › Bolas paradas) mudam o jogo directamente. O plugin FM27Bridge do FM27 Assistant só serve para o XI e os marcadores.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, the <b>Place XI in FM</b> (Tactic › Analyse) and <b>Apply in FM</b> (Tactic › Set pieces) buttons change the game directly. FM27 Assistant's FM27Bridge plugin only covers the XI and the takers.`)}</p>
+    `${plug}<p class="small">${L(`<b>Requer</b> o plugin <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> (BepInEx 6) dentro do FM27, só Windows. Opcional: sem ele a app funciona igual e a Ficha para o FM27 continua a ser o caminho. Com ele, os botões <b>Colocar XI no FM</b> (Tática › Analisar) e <b>Aplicar no FM</b> (Tática › Bolas paradas) mudam o jogo directamente.`, `<b>Requires</b> the <a href="${LINKS.bridge}" target="_blank" rel="noopener">Tactical Bible Bridge</a> plugin (BepInEx 6) inside FM27, Windows only. Optional: without it the app works the same and the FM27 sheet stays the way in. With it, the <b>Place XI in FM</b> (Tactic › Analyse) and <b>Apply in FM</b> (Tactic › Set pieces) buttons change the game directly.`)}</p>
      ${fb.ok ? `<div class="row"><button class="btn sm" onclick="A.bridgeRec()">${FMB.rec && FMB.rec.on ? '⏹ ' + L('Parar gravação', 'Stop recording') : '⏺ ' + L('Gravar uma acção no FM', 'Record an action in FM')}</button>${FMB.rec && FMB.rec.out ? `<button class="btn sm" onclick="A.bridgeRecCopy()">${L('Copiar', 'Copy')}</button>` : ''}</div>
        <p class="small muted">${L('Para acrescentar acções ou rever depois de um patch: carregue em Gravar, mude essa opção à mão no FM, e carregue em Parar.', 'To add actions or re-check after a patch: press Record, change that option by hand in FM, then press Stop.')}</p>
        ${FMB.rec && FMB.rec.out ? `<textarea readonly rows="6" style="width:100%;font-family:monospace;font-size:11px">${esc(FMB.rec.out)}</textarea>` : ''}` : ''}
-     ${fb.ok ? `<p class="small muted">${esc((fb.plugin || '') + ' · ' + L('porta', 'port') + ' ' + (fb.port || '') + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
+     ${fb.ok ? `<p class="small muted">${esc('Tactical Bible Bridge' + (fb.version ? ' · v' + fb.version + ' · FM ' + (fb.fm || '?') : ''))} · ${esc(FMB_IDS.builtFor)}</p>` : (DESKTOP && fb.err ? `<p class="small muted">${esc(fb.err)}</p>` : '')}`,
     DESKTOP ? `<button class="btn sm" onclick="A.bridgeCheck()">${L('Verificar ligação', 'Check connection')}</button>` : '');
   return fmsaveCard + bridgeCard;
 }
@@ -69,7 +69,7 @@ function pluginHTML() {
   const p = FMB.plugin;
   if (!p) return '';
   const msg = !p.fm_dir ? L('Não encontrei o FM27 nas pastas do Steam.', 'FM27 not found in the Steam folders.')
-    : !p.bepinex ? L('Falta o BepInEx 6 no FM27 (o instalador do FM27 Assistant instala-o).', 'BepInEx 6 is missing in FM27 (the FM27 Assistant installer sets it up).')
+    : !p.bepinex ? L('Falta o BepInEx 6 (IL2CPP) no FM27: instale-o a partir de builds.bepinex.dev.', 'BepInEx 6 (IL2CPP) is missing in FM27: install it from builds.bepinex.dev.')
     : p.up_to_date ? L(`Plugin v${p.version} instalado no FM27.`, `Plugin v${p.version} installed in FM27.`)
     : p.installed ? L(`Há uma versão mais recente do plugin (v${p.version}).`, `A newer plugin is available (v${p.version}).`)
     : L('O plugin ainda não está instalado no FM27.', 'The plugin is not installed in FM27 yet.');

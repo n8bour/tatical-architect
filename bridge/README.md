@@ -3,8 +3,8 @@
 A minimal BepInEx 6 (IL2CPP) plugin that runs inside FM27 and lets FM27 Tactical Bible **apply** things in the game
 (currently: place your XI into the active tactic). Windows only. The app works fully without it.
 
-Trimmed from FM27Bridge (fm27-assistant, MIT, © 2026 arress03). Listens on `127.0.0.1:27029` (different from
-FM27Bridge's 27027, so both can be installed). Data folder: `%APPDATA%\FM27TacticalBible` (`bridge.log`, `bridge_refs.txt`).
+Trimmed from FM27Bridge (fm27-assistant, MIT, © 2026 arress03). Listens on `127.0.0.1:27029`. Data folder:
+`%APPDATA%\FM27TacticalBible` (`bridge.log`, `bridge_refs.txt`).
 
 ## Build (needs FM27 + BepInEx 6 IL2CPP, launched once so `BepInEx\interop` exists)
 ```
@@ -16,7 +16,7 @@ Any .NET SDK ≥ 6 works (tested with 8.0.428). Restart FM after building: the p
 **Shipping:** the app carries the plugin inside its executable (`include_bytes!` in `src-tauri/src/main.rs`) and installs it
 from *Settings › Integrations* (`plugin_status` / `plugin_install`). CI can't build the plugin, so after changing `Plugin.cs`:
 build, copy `bin/Release/TacticalBibleBridge.dll` to `bridge/dist/`, and bump `PLUGIN_VERSION` in `main.rs` (same as `Plugin.Version`).
-BepInEx 6 itself is not installed by the app (FM27 Assistant's installer does it).
+BepInEx 6 (IL2CPP) itself is not installed by the app: install it from builds.bepinex.dev.
 
 ## Testing without the app
 - `node bridge/ping.mjs [port] [commands…]`: tiny TCP client (default `PING`, `VERSION`, `REFS` on 27029).

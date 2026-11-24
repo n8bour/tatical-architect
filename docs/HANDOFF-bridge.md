@@ -7,7 +7,7 @@ the client). Everything below was verified against a running FM27 (27.1.0.250511
 FM27 Tactical Bible: Tauri 2 app (Rust shell + one-file JS UI built by `build.mjs` into `app/index.html`). Squad and the whole player
 database come from the save (fmsave). The optional BepInEx 6 plugin `bridge/TacticalBibleBridge` (port 27029, line protocol) lets the
 app read and change the running game. The plugin DLL ships inside the app (`bridge/dist`, `include_bytes!`) and is installed from
-Settings › Integrations. FM27 Assistant's FM27Bridge (port 27027) is a fallback for XI and takers only.
+Settings › Integrations. It is the only plugin the app talks to (the FM27Bridge 27027 fallback was removed).
 
 ## Done and verified (all checked on FM's screen)
 - Place XI; set pieces (takers per foot, corner delivery/target, attacking + defending corner routines slot by slot).
@@ -25,11 +25,10 @@ Settings › Integrations. FM27 Assistant's FM27Bridge (port 27027) is a fallbac
 3. **Not decoded:** penalty order (`1649488964`), long throws / taker list moves (`1144009829`), opposition instructions, captains,
    Position vs Player scope of player instructions (only Position is written), team-instruction ids 2, 13, 14 (never appeared).
 4. **Opposition report and live match data** (what TeknikOda shows): not started. The next fixture is readable; FM's own opposition
-   analysis screen and the match tactic references (`MatchTacticReference`, same event ids as the tactic) are the leads. FM27 Assistant's
-   `bridge.log` in `%APPDATA%\FM27Scout` has recordings of in-match changes.
+   analysis screen and the match tactic references (`MatchTacticReference`, same event ids as the tactic) are the leads.
 5. **Not run from the installed app:** every FM-facing button was exercised through `bridge/dev/*.mjs` (the app's own `FMB` code over TCP),
    not by clicking in the installed app. Rust compiles on CI only (no Rust needed locally).
-6. **BepInEx is a prerequisite** the app does not install (FM27 Assistant's installer does).
+6. **BepInEx is a prerequisite** the app does not install (builds.bepinex.dev, BepInEx 6 IL2CPP).
 
 ## Hard-won rules (read before touching the bridge)
 - FM27's replayed events: the **‹ event works on any tile, › only on the tile last clicked by hand** (player instructions).
@@ -38,7 +37,7 @@ Settings › Integrations. FM27 Assistant's FM27Bridge (port 27027) is a fallbac
 - Never patch SetData/AddData/SetTarget at plugin load (crashed FM before the main menu); `DATAHOOK 1` mid-game is fine.
 - `READ` from the plugin gets FM's empty default for screen-scoped data: use `READAT auto` with the screen open.
 - Log file `%APPDATA%\FM27TacticalBible\bridge_seq.txt` grows ~100 MB/min: turn `SEQ 0` off when done; it can stall past ~0.5-1.5 GB.
-- Don't touch the user's saves; ask before changing a real game; keep ports/Harmony ids separate from FM27Bridge.
+- Don't touch the user's saves; ask before changing a real game; keep the plugin's port 27029 and Harmony ids unique.
 - After changing `Plugin.cs`: build (needs the .NET SDK ≥ 6; none is installed now), copy `bin/Release/TacticalBibleBridge.dll` to
   `bridge/dist/`, bump `Plugin.Version` and `PLUGIN_VERSION` in `src-tauri/src/main.rs`, restart FM.
 

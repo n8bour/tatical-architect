@@ -38,7 +38,7 @@ To take the tactic into the game, use **Tactic › FM27 sheet**. The sheet follo
 | Tactic › Set pieces | Takers (corners with the right foot, direct and crossed free kicks, penalties, long throws), captain and vice-captain, attacking and defending corners in a diagram (zones, marking the opponent's strongest in the air, who stays back and who stays up) and applicable tips |
 | Tactic › FM27 sheet | Step-by-step guide to recreate the tactic in the game, including the *Set Pieces & Captains* section |
 | Training | Tactical Understanding priorities, typical week, Role Training and focus per player |
-| **Apply in FM** (optional, Windows) | With the Tactical Bible Bridge plugin inside FM27 (installed from *Settings › Integrations*; needs BepInEx 6): **Place XI in FM** (Tactic › Analyse), **Apply in FM** in Set pieces (corner and free-kick takers per foot, corner delivery, and the attacking and defending corner routines slot by slot), **Shortlist → FM** and **Scout in FM** (creates a Recruitment Focus with ages, minimum ability/potential stars and the countries of your search results). See `bridge/README.md`. |
+| **Apply in FM** (optional, Windows) | With the Tactical Bible Bridge plugin inside FM27 (installed from *Settings › Integrations*; needs BepInEx 6 IL2CPP installed first, from builds.bepinex.dev; it is the only plugin the app talks to): **Place XI in FM** (Tactic › Analyse), **Apply in FM** for the tactic (formations, XI, roles, mentality, team and player instructions; can also create a new tactic) and for Set pieces (corner and free-kick takers per foot, corner delivery, and the attacking and defending corner routines slot by slot), **Shortlist → FM**, **Scout in FM** (creates a Recruitment Focus), **Next opponent from FM** and **Refresh squad from FM** (live squad). Verified on FM27 27.1.1. See `bridge/README.md`. |
 | Bible | 77 roles and instructions (including the new FM27 ones), concepts and Tactical Effectiveness. Each role has a **clip** showing that player's individual movement. Each animated instruction has a **dual clip** showing, side by side, the effect of the minimum and maximum option |
 
 You can drag any file anywhere onto the window. Your club's squads go to Squad; another club's squads go to Opponent; `.fmf` files go to the inspector; `.json` backups are restored.
@@ -52,7 +52,7 @@ You can drag any file anywhere onto the window. Your club's squads go to Squad; 
 2. The build runs on every push to `main` (or via **Actions › Build desktop app › Run workflow**). It reads the version from `src-tauri/tauri.conf.json` and, if release `v<version>` doesn't exist yet, builds and publishes it with the notes in `.github/RELEASE_NOTES.md`. If that version was already published, nothing is built.
 3. Open **Releases** (right-hand column of the repository's main page) and download from *Assets* the `…setup.exe` (installer) or `FM27-Tactical-Bible-portatil.exe` (runs without installing).
 
-**To publish a new version:** bump the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` (the build fails if they differ), update `.github/RELEASE_NOTES.md` and push to `main`.
+**To publish a new version:** bump the version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `src/ui/state.js` (the build fails if they differ), update `.github/RELEASE_NOTES.md` and push to `main`.
 
 Duration: about 6 to 8 minutes the first time and 2 to 3 minutes afterwards, thanks to the cache. By default it only builds for Windows. For macOS and Linux, tick the option in *Run workflow*.
 
@@ -94,12 +94,15 @@ The app opens in **English** by default. Portuguese is chosen with the **EN/PT**
 ## Structure
 
 ```
-src/i18n/   i18n.js (L/T/translateDOM) · en_dict.js (PT→EN dictionary)
-src/core/   roles.js · tactics_data.js · engine.js · insights.js (PIs, opponent, set pieces) · generator.js (generator) · sim_model.js
-src/ui/     state.js · components.js · sim_view.js · views_*.js · actions.js · main.js
-build.mjs   bundles everything into app/index.html (single file)
-tests/      npm test — engine, simulator (473 scenarios), insights, real .fmf and squad CSVs
-src-tauri/  native window: latest save (.fm) → fmsave → squad; installs the bridge plugin; local TCP client for the optional in-game bridge plugin
+src/i18n/   i18n.js (L/T/translateDOM) · en_dict.js (PT→EN dictionary) · pt_terms.js (FM terms in PT)
+src/core/   roles.js · tactics_data.js · engine.js · insights.js · synergy.js · generator.js · gameplans.js · scouting.js · sim_model.js
+src/ui/     state.js · components.js · sim_view.js (canvas pitch) · clips.js · views_*.js · fmbridge.js (FM ids + bridge client) · actions.js · main.js
+src/styles.css
+build.mjs   bundles src/ into app/index.html (single file; file order is in build.mjs)
+tests/      npm test (engine.test.cjs) · sim_canvas.test.cjs · Playwright UI checks ui_*.py (run on CI)
+src-tauri/  native window: latest save (.fm) → fmsave → squad; installs the bridge plugin; TCP client (127.0.0.1:27029) for it
+bridge/     TacticalBibleBridge (C# BepInEx plugin source), dist/ (prebuilt DLL embedded in the app), dev/ scripts, README.md (decoded FM ids)
+docs/       HANDOFF-bridge.md (state of the bridge, open gaps, rules)
 ```
 
 Not affiliated with Sports Interactive or SEGA.
