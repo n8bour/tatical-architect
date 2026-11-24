@@ -5,7 +5,7 @@ function genOpts() { if (!ST.gen) ST.gen = { expect: 'mid', must: [], star: '', 
 function vGen() {
   const ps = players(), g = genOpts();
   if (ps.length < 11) return `<div class="panel empty"><h3>Carregue o plantel primeiro</h3><p>O gerador monta uma tática completa à volta do teu plantel: formas com e sem bola, XI com papel para cada fase, as instruções todas com o porquê, bolas paradas, profundidade, reforços e alternativas.</p>
-    <div class="row" style="justify-content:center">${dataButtons()}<button class="btn" onclick="A.sampleSquad();A.tab('team','gen')">Usar exemplo</button></div></div>`;
+    <div class="row" style="justify-content:center">${dataButtons()}${fmButton('squad')}<button class="btn" onclick="A.sampleSquad();A.tab('team','gen')">Usar exemplo</button></div></div>`;
   const byName = [...ps].sort((a, b) => a.name.localeCompare(b.name));
   const young = byName.filter(p => p.age != null && p.age <= 21);
   const opts = `<div class="panel grid"><h3>O teu contexto</h3>
@@ -15,14 +15,14 @@ function vGen() {
     ${young.length ? `<div class="f"><span>Jovens a desenvolver (≤ 21) — ganham prioridade no XI</span><div class="chips">${young.map(p => `<button class="chip pick ${g.youth.includes(p.id) ? 'on' : ''}" onclick="A.genToggle('youth','${esc(p.id)}')">${esc(p.name)} <span class="muted">${p.age}</span></button>`).join('')}</div></div>` : ''}
     <button class="btn primary" data-busy="gen" onclick="A.genRun()">${g.res ? 'Gerar de novo' : 'Gerar tática'}</button>
     <p class="small muted" style="margin:0">Testa todos os pares de formações, escolhe o papel de cada posição com regras de equilíbrio (rest-defence, largura, área, criadores, outlets) e o XI exacto pelo algoritmo húngaro.</p></div>`;
-  if (!g.res) return `<div class="top"><div><h2>Gerar tática</h2><p class="muted small" style="margin:0">Uma tática completa feita à volta do teu plantel, pronta a copiar para o FM27.</p></div></div><div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">${opts}<div class="panel empty">Escolha o contexto e carregue em <b>Gerar tática</b>.</div></div>`;
+  if (!g.res) return `<div class="top"><div><h2>Gerar tática</h2><p class="muted small" style="margin:0">Uma tática completa feita à volta do teu plantel, pronta a copiar para o FM27.</p></div><div class="row">${fmButton('squad')}</div></div><div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">${opts}<div class="panel empty">Escolha o contexto e carregue em <b>Gerar tática</b>.</div></div>`;
   const all = [g.res.main, ...g.res.alts], r = all[g.pick] || all[0], t = r.t;
   const pm = Object.fromEntries(ps.map(p => [p.id, p]));
   const sp = setPiecePlan(t, ps, oppPlayers()), tp = trainingPlan(t, ps, r.audit), dc = depthChart(t, ps), weak = weakSpots(t, ps);
   const pis = t.slots.map(s => { const a = slotInfo(t.ipForm, s.ipCode); const rec = recommendPIs(pm[s.pid], ROLE_BY_ID[s.ip], ROLE_BY_ID[s.oop], a.group).slice(0, 2); return { s, p: pm[s.pid], rec }; }).filter(x => x.rec.length);
   const sec = (n, title, body) => `<div class="panel"><h3><span class="secn">${n}</span>${title}</h3>${body}</div>`;
   return `<div class="top"><div><h2>Gerar tática</h2><p class="muted small" style="margin:0">${g.res.considered} pares de formações avaliados, ${g.res.optimised} optimizados a fundo.</p></div>
-    <div class="row"><button class="btn primary" onclick="A.genUse()">Usar esta tática</button><button class="btn" onclick="A.genUse(true)">▶ Ver em campo</button><button class="btn" onclick="A.genCopy()">Copiar como texto</button></div></div>
+    <div class="row">${fmButton('squad')}<button class="btn primary" onclick="A.genUse()">Usar esta tática</button><button class="btn" onclick="A.genUse(true)">▶ Ver em campo</button><button class="btn" onclick="A.genCopy()">Copiar como texto</button></div></div>
   <div class="grid" style="grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">
     <div class="grid">${opts}
       <div class="panel"><h3>Opções geradas</h3>${all.map((x, i) => `<button class="genopt ${i === g.pick ? 'on' : ''}" onclick="A.genPick(${i})"><b>${i === 0 ? 'Recomendada' : 'Alternativa ' + i}</b><span>${esc(x.t.ipForm)} → ${esc(x.t.oopForm)}</span><span class="small muted">${L(`adequação ${x.fitAvg} · sinergia ${x.syn ?? '—'} · diagnóstico ${x.audit.overall}`, `fit ${x.fitAvg} · synergy ${x.syn ?? '—'} · diagnosis ${x.audit.overall}`)}</span>${ring(x.total, 46)}</button>`).join('')}</div>

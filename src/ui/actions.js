@@ -55,6 +55,37 @@ const A = {
     } catch (e) { toast(String(e.message || e)); }
     render();
   },
+  async bridgeSquad() {
+    if (!DESKTOP || BUSY['bridge-sq']) return;
+    try {
+      const r = await withBusy('bridge-sq', L('A ler o plantel do FM', 'Reading squad from FM'), (prog) => FMB.readSquad((t) => prog(null, t)));
+      if (!r.players.length) throw new Error(L('Nenhum jogador com atributos foi lido do FM.', 'No players with attributes were read from FM.'));
+      // preserve fmsave-only extras (CA/PA, personality, hidden attrs, contract) by unique_id when available
+      const prevByUid = new Map();
+      (SCOUT.db ? SCOUT.db.players : []).forEach(p => { if (p.uniq) prevByUid.set(String(p.uniq), p); });
+      players().forEach(p => { const u = p.uniq || (p.meta && p.meta.uid); if (u) prevByUid.set(String(u), p); });
+      const keep = ['ca', 'pa', 'paRange', 'hid', 'pers', 'value', 'wage', 'end', 'status', 'rep', 'wrep', 'nat', 'loan', 'loanFrom'];
+      r.players.forEach(p => {
+        const old = p.uniq && prevByUid.get(String(p.uniq));
+        if (!old) return;
+        keep.forEach(k => { if (old[k] != null) p[k] = old[k]; });
+      });
+      ST.squad = { players: r.players, warnings: [], mapped: [], source: L('FM ao vivo (ponte)', 'FM live (bridge)'), at: new Date().toISOString() };
+      if (r.club) ST.myClub = r.club;
+      ST.sugg = null;
+      const ids = new Set(r.players.map(p => p.id));
+      ST.tactic.slots.forEach(s => { if (s.pid && !ids.has(s.pid)) s.pid = null; });
+      if (ST.gen) {
+        ST.gen.must = (ST.gen.must || []).filter(id => ids.has(id));
+        ST.gen.youth = (ST.gen.youth || []).filter(id => ids.has(id));
+        if (ST.gen.star && !ids.has(ST.gen.star)) ST.gen.star = '';
+      }
+      if (ST.tactic.slots.every(s => !s.pid) && r.players.length >= 11) autoPickXI(ST.tactic, r.players);
+      save();
+      toast(L(`Plantel actualizado do FM${r.club ? ' — ' + r.club : ''}: ${r.players.length} jogadores`, `Squad refreshed from FM${r.club ? ' — ' + r.club : ''}: ${r.players.length} players`));
+    } catch (e) { toast(String(e.message || e)); }
+    render();
+  },
   setName(v) { ST.tactic.name = v; save(); },
   setMent(v) { ST.tactic.ment = v; save(); render(); },
   setForm(phase, v) {

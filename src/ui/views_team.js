@@ -4,7 +4,7 @@
 function vSquad() {
   const ps = players();
   return `<div class="top"><div><h2><span>Plantel</span>${ST.myClub ? ' — ' + esc(ST.myClub) : ''}</h2><p class="muted small" style="margin:0">${ps.length ? `${L(`${ps.length} jogadores`, `${ps.length} players`)} · ${esc(ST.squad.source)}${ST.squad.at ? ' · ' + new Date(ST.squad.at).toLocaleString('pt-PT') : ''}` : 'Ainda sem plantel carregado.'}</p></div>
-    <div class="row">${dataButtons()}<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>${ps.length ? '<button class="btn" onclick="A.clearSquad()">Limpar</button>' : ''}</div></div>
+    <div class="row">${dataButtons()}${fmButton('squad')}<button class="btn" onclick="A.sampleSquad()">Usar exemplo</button>${ps.length ? '<button class="btn" onclick="A.clearSquad()">Limpar</button>' : ''}</div></div>
   <div class="grid g2">
     <div class="panel"><h3>Como trazer o plantel do FM27</h3>
       <p class="small muted" style="margin:.2em 0 8px">Escolha uma via. Ambas são opcionais e precisam de uma ferramenta externa gratuita:</p>

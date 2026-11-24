@@ -91,6 +91,23 @@ const FMB_IDS = {
   // ---- next opponent (verified FM27: TeamReference props; fixture keys)
   team: { pairs: (id) => `825307168=28;1198877028=1;1685218662=${id}`, nextFixture: 1852130921, players: 926359584, name: 1851878757 },
   fixture: { opp: 1717663572, us: 1718119764, date: 1717859429 },
+  // ---- live squad from FM (verified FM27: PersonReference props)
+  person: {
+    pairs: (id) => `825307168=28;1198877028=1;1685218662=${id}`,
+    name: 1851878757, uniqueId: 1970170212, age: 825565216, height: 825761824,
+    foot: 1244885353, footLeft: 842276896, footRight: 842211360,
+    positions: 1785291618, posBit: 1349481321,
+    attrLists: [1095920457, 1198541656, 1667594052, 2018531687, 1515086679],
+    attrValBox: 1112556614, attrVal: 829967672, attrInfoBox: 1095398731, attrId: 1768169504,
+    attrKey: {
+      0:'aer', 1:'cmd', 2:'com', 3:'ecc', 4:'han', 5:'kic', 6:'ref', 7:'tro', 8:'pun', 9:'thr', 10:'ovo',
+      11:'cro', 12:'dri', 13:'fin', 14:'hea', 15:'lon', 16:'lth', 17:'mar', 18:'pas', 19:'pen', 20:'fre',
+      21:'tck', 22:'tec', 23:'fir', 24:'cor', 25:'agg', 26:'ant', 27:'bra', 28:'vis', 29:'dec', 30:'det',
+      31:'fla', 32:'ldr', 33:'otb', 34:'pos', 35:'tea', 36:'wor', 37:'cmp', 38:'cnt', 39:'acc', 40:'agi',
+      41:'bal', 42:'pac', 43:'sta', 44:'str', 45:'jum', 46:'nat',
+    },
+    posKey: { 1:'gk', 4:'dr', 8:'dl', 16:'dc', 32:'wbr', 64:'wbl', 128:'dm', 256:'mr', 512:'ml', 1024:'mc', 2048:'amr', 4096:'aml', 8192:'amc', 16384:'stc' },
+  },
   // ---- recruitment (decoded and verified from the bridge, see bridge/README.md)
   search: { pairs: '825307168=98;1198877028=1;1719300978=1;1954115685=0', text: 1851878757, people: 1886547059, uniqueId: 1970170212 },
   action: { ev: 44, pairs: (id) => `825307168=1;1198877028=1;1633904996=${id}`, shortlistAdd: 1097488485, shortlistRemove: 1500280650 },
@@ -339,6 +356,63 @@ const FMB = {
   },
   // FM display strings come as "\u0001<formatting>\u0002<text>\u0001": keep the text
   text(v) { return typeof v === 'string' ? v.split('\u0002').pop().replace(/\u0001/g, '').trim() : ''; },
+  /** Live squad of the managed team from the running FM (visible attributes, positions, age, foot, height). */
+  async readSquad(say = () => {}) {
+    await FMB.status(true);
+    const c = await FMB.context(), T = FMB_IDS.team, P = FMB_IDS.person, K = FMB_IDS.key;
+    say(L('A ler a lista de jogadores', 'Reading squad list'));
+    const [teamNameRaw, list] = await FMB.read([['TeamReference', T.pairs(c.team), T.name], ['TeamReference', T.pairs(c.team), T.players]]);
+    const club = FMB.text(teamNameRaw);
+    const persons = [...new Set(FMB.items(list).map(x => FMB.pair(x, K.personId)).filter(Boolean))];
+    if (!persons.length) throw new Error(L('Não encontrei jogadores na equipa do FM.', 'No players found in the FM team.'));
+    const props = [P.name, P.uniqueId, P.age, P.height, P.foot, P.positions, ...P.attrLists];
+    const reqs = [];
+    persons.forEach(id => { const pp = P.pairs(id); props.forEach(pr => reqs.push(['PersonReference', pp, pr])); });
+    say(L(`A ler ${persons.length} jogadores do FM`, `Reading ${persons.length} players from FM`));
+    const vals = await FMB.read(reqs);
+    const players = [];
+    persons.forEach((personId, pi) => {
+      const b = pi * props.length;
+      const name = FMB.text(vals[b]);
+      if (!name) return;
+      const uidNum = FMB.num(vals[b + 1], 0);
+      const uid = uidNum > 0 ? String(uidNum) : '';
+      const age = FMB.num(vals[b + 2], null);
+      const height = FMB.num(vals[b + 3], null);
+      const footRec = vals[b + 4];
+      const lf = FMB.num(FMB.field(footRec, P.footLeft), null), rf = FMB.num(FMB.field(footRec, P.footRight), null);
+      const foot = lf != null && rf != null ? (lf >= 15 && rf >= 15 ? 'B' : lf > rf ? 'L' : 'R') : null;
+      const posR = {}, natSet = new Set();
+      FMB.items(vals[b + 5]).forEach(item => {
+        const k = P.posKey[FMB.num(FMB.field(item, P.posBit), 0)]; if (!k) return;
+        const r = FMB.num(FMB.field(item, K.number), 0);
+        if (r > 0) { posR[k] = r; if (r >= 18 && POS_RATING[k]) natSet.add(POS_RATING[k][0]); }
+      });
+      const ent = Object.entries(posR), top = ent.length ? Math.max(...ent.map(e => e[1])) : 0;
+      const good = ent.filter(([, r]) => r >= 15 || (top < 15 && r === top)).map(([k]) => k);
+      const pos = [...new Set(good.flatMap(k => POS_RATING[k] || []))];
+      const posRaw = good.map(k => k.toUpperCase()).join(', ');
+      const a = {};
+      for (let li = 0; li < P.attrLists.length; li++) {
+        FMB.items(vals[b + 6 + li]).forEach(item => {
+          const info = FMB.field(item, P.attrInfoBox), valBox = FMB.field(item, P.attrValBox);
+          const ak = P.attrKey[FMB.num(FMB.field(info, P.attrId), -1)];
+          const v = FMB.num(FMB.field(valBox, P.attrVal), null);
+          if (ak && v != null) a[ak] = v;
+        });
+      }
+      if (Object.keys(a).length < 3) return;
+      const footLabel = foot === 'L' ? 'Left' : foot === 'R' ? 'Right' : foot === 'B' ? 'Either' : '';
+      players.push({
+        id: uid ? 'u' + uid : 'fm' + personId, uniq: uid || null, name,
+        age, height,
+        foot, lf, rf,
+        club, posR, pos, natPos: [...natSet], posRaw, a,
+        meta: { uid: uid || undefined, club: club || undefined, foot: footLabel, height: height != null ? height : undefined },
+      });
+    });
+    return { team: c.team, club, players };
+  },
   /** Next match of the managed team: { team, name, uniqs: [fmsave unique_id of each opponent player] } or null. */
   async nextOpponent() {
     const c = await FMB.context(), T = FMB_IDS.team, X = FMB_IDS.fixture;
@@ -627,6 +701,7 @@ function fmButton(kind) {
     sp: ['bridge-sp', 'A.bridgeSetPieces()', L('Aplicar no FM', 'Apply in FM'), L('Aplica os marcadores e as rotinas de bolas paradas no FM. No FM, abra Táticas › Bolas paradas.', 'Applies the takers and set-piece routines in FM. In FM, open Tactics › Set Pieces.')],
     shortlist: ['bridge-sl', 'A.fmShortlist()', L('Lista → FM', 'Shortlist → FM'), L('Junta os jogadores da tua lista à shortlist do FM.', 'Adds the players on your list to FM\'s shortlist.')],
     focus: ['bridge-focus', 'A.focusOpen()', L('Observação no FM', 'Scout in FM'), L('Cria um Recruitment Focus (missão de observação) no FM a partir desta pesquisa.', 'Creates a Recruitment Focus (scouting assignment) in FM from this search.')],
+    squad: ['bridge-sq', 'A.bridgeSquad()', L('Actualizar plantel do FM', 'Refresh squad from FM'), L('Lê o plantel actual directamente do FM aberto (atributos, posições, idade, pé e altura), sem precisar de gravar o save.', 'Reads the live squad directly from the running FM (attributes, positions, age, foot and height), without saving first.')],
   }[kind];
   const off = st.ok ? L('O FM está aberto mas ainda não carregou um jogo.', 'FM is open but has not loaded a game yet.')
     : L('Precisa do plugin Tactical Bible Bridge dentro do FM (Definições › Integrações).', 'Needs the Tactical Bible Bridge plugin inside FM (Settings › Integrations).');

@@ -121,6 +121,14 @@ one) → `FixtureReference` whose `1717663572` / `1718119764` are the two teams 
 `TeamReference|…=<their team>` property `926359584` (list of `PersonReference`; `1400137537` is the staff). Each player's
 `PersonReference` `1970170212` = fmsave `unique_id` → the save database gives the attributes (52/52 matched for RB Salzburg).
 
+### Live squad from FM (verified FM27, used by Generate tactic / Squad › Refresh squad from FM)
+`TeamReference|…=<my team>` property `1851878757` = club name, `926359584` = player list (`PersonReference`).
+Per `PersonReference`: name `1851878757` · `unique_id` `1970170212` · age `825565216` · height cm `825761824` ·
+preferred foot `1244885353` (left `842276896`, right `842211360`, 1–20) · positions `1785291618` (list of `{bit 1349481321, rating 1886680684}`) ·
+visible attributes in 5 lists: physical `1095920457`, technical `1198541656`, set pieces `1667594052`, mental `2018531687`,
+goalkeeping `1515086679` (each item: value `1112556614.829967672`, language-independent attribute id `1095398731.1768169504`, 0–46).
+30 players (330 properties) read in ~450 ms; preserves `fmsave`-only extras (CA/PA, personality, hidden attributes, contract) by `unique_id`.
+
 ### Tactics (work in progress, FM27 EN, recorded 22 Nov)
 Active tactic = `TeamTacticReference|825307168=126;<session>;1651271022=1;1685218662=<team>`.
 - **Verified from the bridge** (seen on FM's screen): mentality = `WRITE …|1162170689 {1886680684: n, 1903577654: label}`
