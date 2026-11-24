@@ -21,7 +21,7 @@ function vRoles() {
     <div class="attrs"><b>Preferidos:</b> ${r.pref.map(k => `<span class="chip">${esc(attrName(k))}</span>`).join('')}</div>
     ${r.tags.length ? `<div class="attrs muted"><span>Comportamento:</span> ${r.tags.map(x => `<span>${tagNames[x] || x}</span>`).join(', ')}</div>` : ''}
     <div class="row" style="margin-top:8px"><button class="btn sm" onclick="A.clipToggle('role:${r.id}')" aria-expanded="${!!(ST.openClips || {})['role:' + r.id]}">${(ST.openClips || {})['role:' + r.id] ? '■ Fechar clip' : '▶ Clip do papel'}</button><button class="btn sm ghost" onclick="A.roleDemo('${r.id}')" title="Abrir no campo animado completo">Campo completo</button></div>
-    ${(ST.openClips || {})['role:' + r.id] ? clipHTML('role:' + r.id, (() => { const n = MOVE_NOTES[r.id], ph = `<span>${r.phase === 'IP' ? 'construção → progressão → último terço' : 'último terço → perda → bloco'}</span>`; return n ? `<b>${esc(r.ab)}</b> <span>${esc(n[1])}</span> · ${ph}` : ph; })()) : ''}
+    ${(ST.openClips || {})['role:' + r.id] ? clipHTML('role:' + r.id, (() => { const n = MOVE_NOTES[r.id], ph = `<span>${r.phase === 'IP' ? L('posição → movimento → acção com bola', 'shape → movement → ball action') : r.tags.includes('OUT') ? L('bloco → fica alto → contra-ataque', 'block → stays high → counter') : L('bloco → ataque adversário → reacção', 'block → opponent attack → reaction')}</span>`; return n ? `<b>${esc(r.ab)}</b> <span>${esc(n[1])}</span> · ${ph}` : ph; })()) : ''}
   </div>`).join('')}</div>`;
 }
 
@@ -41,10 +41,54 @@ function vTI() {
     </div></div>`;
 }
 
+function conceptDiagram(k) {
+  if (k === 'complexity') {
+    const tiers = [
+      [L('Baixa', 'Low'), L('0–5 desvios · adaptação rápida', '0–5 tweaks · fast learning'), 'var(--good)', 32],
+      [L('Média', 'Medium'), L('6–12 desvios · equilíbrio', '6–12 tweaks · balanced'), 'var(--warn)', 66],
+      [L('Alta', 'High'), L('13+ desvios · exige elite e treino', '13+ tweaks · needs elite IQ & training'), 'var(--crit)', 96],
+    ];
+    return `<div class="concept-viz">${tiers.map(([l, d, col, w]) => `<div class="cv-row"><span class="cv-lbl">${l}</span><div class="cv-bar"><i style="width:${w}%;background:${col}"></i></div><span class="small muted">${d}</span></div>`).join('')}</div>`;
+  }
+  if (k === 'effectiveness') {
+    const pillars = [
+      [L('Compreensão tática', 'Tactical Understanding'), L('Treino + jogos + simplicidade', 'Training + matches + simplicity'), 'var(--good)'],
+      [L('Capacidade do jogador', 'Player Ability'), L('Adequação ao papel + CA', 'Role suitability + CA'), '#3b82f6'],
+      [L('Adesão do plantel', 'Player Buy-In'), L('Apoio + coesão + promessas', 'Support + cohesion + promises'), 'var(--warn)'],
+      [L('Info. próximo jogo', 'Next Match Info'), L('Analistas + preparação', 'Analysts + match prep'), '#a855f7'],
+    ];
+    return `<div class="concept-viz cv-pillars">${pillars.map(([l, d, col]) => `<div class="cv-pill" style="border-top-color:${col}"><b>${l}</b><span class="small muted">${d}</span></div>`).join('')}</div>`;
+  }
+  return '';
+}
+
 function vConcepts() {
+  const open = ST.openClips || {};
   return `<div class="top"><div><h2>Conceitos, princípios e adversários</h2></div></div>
-  <div class="grid g2">${CONCEPTS.map(c => `<div class="panel"><h3>${esc(c.n)}</h3><p class="small">${esc(c.t)}</p></div>`).join('')}</div>
-  <div class="panel" style="margin-top:16px"><h3>Contra cada sistema</h3><table><tbody>${OPPONENTS.map(o => `<tr><td style="width:170px"><b>${esc(o.f)}</b></td><td class="small">${esc(o.t)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="grid g2">${CONCEPTS.map(c => {
+    const cid = 'concept:' + c.k, hasClip = CONCEPT_CLIPS.has(c.k), isOpen = !!open[cid];
+    return `<div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3 style="margin:0">${esc(c.n)}</h3>
+        ${hasClip ? `<ui-toggle class="clip-tg" data-clip-toggle="${cid}"${isOpen ? ' default-pressed' : ''}><button type="button" class="btn sm">${L('Ver no campo', 'Show on pitch')}</button></ui-toggle>` : ''}
+      </div>
+      <p class="small" style="margin-top:8px">${esc(c.t)}</p>
+      ${conceptDiagram(c.k)}
+      ${hasClip && isOpen ? clipHTML(cid, `<b>${esc(c.n)}</b> · <span>${L('animação tática', 'tactical animation')}</span>`) : ''}
+    </div>`;
+  }).join('')}</div>
+  <div class="panel" style="margin-top:16px"><h3>Contra cada sistema</h3>
+    <div class="grid g2" style="margin-top:10px">${OPPONENTS.map(o => {
+      const cid = 'opp:' + o.k, isOpen = !!open[cid];
+      return `<div class="opp-card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <b>${esc(o.f)}</b>
+          <ui-toggle class="clip-tg" data-clip-toggle="${cid}"${isOpen ? ' default-pressed' : ''}><button type="button" class="btn sm">${L('Ver plano', 'Show plan')}</button></ui-toggle>
+        </div>
+        <p class="small" style="margin:.45em 0 0">${esc(o.t)}</p>
+        ${isOpen ? clipHTML(cid, `<span>${L('Como bater', 'How to beat')}</span> <b>${esc(o.f)}</b>`) : ''}
+      </div>`;
+    }).join('')}</div></div>
   <div class="panel" style="margin-top:16px"><h3>Glossário</h3><table><tbody>${GLOSSARY.map(([a, b]) => `<tr><td style="width:170px"><b>${esc(a)}</b></td><td class="small">${esc(b)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 

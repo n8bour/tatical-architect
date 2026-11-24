@@ -108,9 +108,9 @@ const TEAM_INSTRUCTIONS = [
     d:'Zona preferida de progressão.', pro:'Concentre no lado do seu melhor jogador ou do ponto fraco adversário.',
     con:'Previsível; adversário pode sobrecarregar esse lado.' },
   // IP — último terço
-  { k:'patience', n:'Final Third Patience', ph:'IP', area:'Último terço', opts:['Low','Balanced','High'], def:1, cx:1,
-    d:'Trabalhar a bola até à área ou finalizar cedo.', pro:'Alta: melhores oportunidades. Baixa: mais remates, apanha bloco desorganizado.',
-    con:'Alta contra bloco baixo pode gerar posse estéril.' },
+  { k:'patience', n:'Final Third Patience', ph:'IP', area:'Último terço', opts:['Hit Early Crosses','Balanced','Work Ball Into Box'], def:1, cx:1,
+    d:'Cruzar cedo para a área ou trabalhar a bola com paciência até à finalização.', pro:'Work Ball Into Box: melhores oportunidades. Hit Early Crosses: apanha a defesa antes de se organizar.',
+    con:'Work Ball Into Box contra bloco baixo pode gerar posse estéril; Hit Early Crosses desperdiça bolas sem boas referências.' },
   { k:'long_shots', n:'Shots from Distance', ph:'IP', area:'Último terço', opts:['Discourage','Balanced','Encourage'], def:1, cx:0.5,
     d:'Frequência de remates de fora da área.', pro:'Encoraje com bons rematadores contra blocos baixos.', con:'Remates fracos desperdiçam posses.', need:{ high:['lon','tec'] } },
   { k:'crossing', n:'Crossing Style', ph:'IP', area:'Último terço', opts:['Low Crosses','Balanced','Whipped Crosses','Floated Crosses'], def:1, cx:0.5,
@@ -234,26 +234,26 @@ const TRAINING = {
 
 // ---- Conceitos / princípios (bíblia)
 const CONCEPTS = [
-  { n:'In / Out of Possession', t:'Desde o FM26, cada jogador tem um papel com bola (IP) e outro sem bola (OOP), e a equipa tem uma formação para cada fase. Não existem duties nem fluidez: o comportamento vem do papel + instruções. O jogo avisa se a distância entre a posição IP e OOP de um jogador é demasiado grande — isso cria buracos nas transições.' },
-  { n:'Rest-defence', t:'Jogadores que ficam atrás da linha da bola durante o ataque para travar o contra-ataque. Regra prática: 3 a 5 (sem contar o GR) com mentalidade Positive/Attacking — tipicamente 2 centrais + 1 médio defensivo, ou um lateral que fecha por dentro (IFB/IWB).' },
-  { n:'Largura', t:'Cada flanco precisa de UM jogador a dar largura no último terço (W, WF, WB, AWB, WCM, OCB). Se o extremo entra por dentro, a largura tem de vir de trás. Dois jogadores abertos no mesmo corredor atropelam-se.' },
-  { n:'Ocupação da área', t:'Pelo menos 2–3 jogadores a atacar a área (avançado + extremo interior/AM/BBM). Com um falso 9 ou DLF, alguém tem de atacar a profundidade (IF, CHM, SS). No FM27 as novas instruções de ataque à área (near/centre/far post, arrive late) permitem coordenar quem vai a cada zona.' },
-  { n:'Coerência da pressão', t:'Linha de pressão (LoE) e linha defensiva devem andar juntas. LoE alta + linha baixa = buraco entre linhas. LoE baixa + linha alta = espaço nas costas sem pressão sobre o passe. Pressing Trap Outside precisa de quem feche o corredor (Pressing FB/WB, Tracking Winger).' },
-  { n:'Outlets', t:'Papéis OOP "Outlet" ficam na frente para o contra-ataque e não defendem. 1–2 dão uma saída; 3+ deixam o bloco em inferioridade.' },
-  { n:'Criatividade', t:'1–2 criadores principais (DLP, MP, AP, FR, PW, PWB). Demasiados criadores = todos pedem a bola, ninguém ataca o espaço.' },
-  { n:'Assimetria', t:'Lados diferentes não são um defeito: lateral seguro (IFB) num lado e ala ofensivo (WB/AWB) no outro é das estruturas mais estáveis. Faça corresponder o lado ofensivo ao seu melhor jogador.' },
-  { n:'Complexidade (FM27)', t:'O FM27 mede a complexidade (instruções de equipa, individuais e de adversário). Quanto mais complexa, mais capazes os jogadores e mais tempo de treino precisam. Em divisões baixas, simplicidade ganha jogos.' },
-  { n:'Tactical Effectiveness (FM27)', t:'Substitui a Familiaridade Tática. Quatro pilares: Tactical Understanding, Player Ability, Player Buy-In e Next Match Information. Visível em Treino, no ecrã de tácticas, plantel, base de dados e relatórios de observação ("Projected Effectiveness").' },
+  { k:'ip_oop', n:'In / Out of Possession', t:'Desde o FM26, cada jogador tem um papel com bola (IP) e outro sem bola (OOP), e a equipa tem uma formação para cada fase. Não existem duties nem fluidez: o comportamento vem do papel + instruções. O jogo avisa se a distância entre a posição IP e OOP de um jogador é demasiado grande — isso cria buracos nas transições.' },
+  { k:'rest_def', n:'Rest-defence', t:'Jogadores que ficam atrás da linha da bola durante o ataque para travar o contra-ataque. Regra prática: 3 a 5 (sem contar o GR) com mentalidade Positive/Attacking — tipicamente 2 centrais + 1 médio defensivo, ou um lateral que fecha por dentro (IFB/IWB).' },
+  { k:'width', n:'Largura', t:'Cada flanco precisa de UM jogador a dar largura no último terço (W, WF, WB, AWB, WCM, OCB). Se o extremo entra por dentro, a largura tem de vir de trás. Dois jogadores abertos no mesmo corredor atropelam-se.' },
+  { k:'box', n:'Ocupação da área', t:'Pelo menos 2–3 jogadores a atacar a área (avançado + extremo interior/AM/BBM). Com um falso 9 ou DLF, alguém tem de atacar a profundidade (IF, CHM, SS). No FM27 as novas instruções de ataque à área (near/centre/far post, arrive late) permitem coordenar quem vai a cada zona.' },
+  { k:'press_coh', n:'Coerência da pressão', t:'Linha de pressão (LoE) e linha defensiva devem andar juntas. LoE alta + linha baixa = buraco entre linhas. LoE baixa + linha alta = espaço nas costas sem pressão sobre o passe. Pressing Trap Outside precisa de quem feche o corredor (Pressing FB/WB, Tracking Winger).' },
+  { k:'outlets', n:'Outlets', t:'Papéis OOP "Outlet" ficam na frente para o contra-ataque e não defendem. 1–2 dão uma saída; 3+ deixam o bloco em inferioridade.' },
+  { k:'creativity', n:'Criatividade', t:'1–2 criadores principais (DLP, MP, AP, FR, PW, PWB). Demasiados criadores = todos pedem a bola, ninguém ataca o espaço.' },
+  { k:'asymmetry', n:'Assimetria', t:'Lados diferentes não são um defeito: lateral seguro (IFB) num lado e ala ofensivo (WB/AWB) no outro é das estruturas mais estáveis. Faça corresponder o lado ofensivo ao seu melhor jogador.' },
+  { k:'complexity', n:'Complexidade (FM27)', t:'O FM27 mede a complexidade (instruções de equipa, individuais e de adversário). Quanto mais complexa, mais capazes os jogadores e mais tempo de treino precisam. Em divisões baixas, simplicidade ganha jogos.' },
+  { k:'effectiveness', n:'Tactical Effectiveness (FM27)', t:'Substitui a Familiaridade Tática. Quatro pilares: Tactical Understanding, Player Ability, Player Buy-In e Next Match Information. Visível em Treino, no ecrã de tácticas, plantel, base de dados e relatórios de observação ("Projected Effectiveness").' },
 ];
 
 // ---- Contra formações adversárias
 const OPPONENTS = [
-  { f:'4-4-2', t:'Superioridade central com 3 médios (4-3-3/4-2-3-1). Ataque os meios-espaços nas costas dos médios ala. OOP: 4-4-2 compacto ou 4-1-4-1 cobrindo os dois avançados com 2 centrais + DM.' },
-  { f:'4-2-3-1', t:'O AMC é a ameaça: Stopping CB, Screening DM, ou OI de marcação apertada. Os dois pivots podem ser pressionados com dois homens (4-4-2 OOP com AM a pressionar).' },
-  { f:'4-3-3', t:'Decida onde quer superioridade: meio (losango/4-2-2-2) ou corredores (alas). Os laterais adversários sobem — explore com Wide Outlet ou Splitting Outlet.' },
-  { f:'3-5-2 / 3-4-3', t:'Proteja os meios-espaços (central do lado + ala). Alas adversários dão largura: Pressing Trap Outside com Pressing FB. Use extremos para prender os alas atrás.' },
-  { f:'5-3-2 / 5-4-1 (bloco baixo)', t:'Paciência alta, largura, remates de longe se tiver qualidade, sobrecarga num flanco. Counter-press para não ser apanhado em transição. Cruzamentos baixos e ataques ao segundo poste.' },
-  { f:'4-4-2 losango', t:'É estreito: Exploit Width, alas/laterais ofensivos. OOP: feche o meio, deixe-os ir para fora e defenda o cruzamento.' },
+  { k:'442', f:'4-4-2', t:'Superioridade central com 3 médios (4-3-3/4-2-3-1). Ataque os meios-espaços nas costas dos médios ala. OOP: 4-4-2 compacto ou 4-1-4-1 cobrindo os dois avançados com 2 centrais + DM.' },
+  { k:'4231', f:'4-2-3-1', t:'O AMC é a ameaça: Stopping CB, Screening DM, ou OI de marcação apertada. Os dois pivots podem ser pressionados com dois homens (4-4-2 OOP com AM a pressionar).' },
+  { k:'433', f:'4-3-3', t:'Decida onde quer superioridade: meio (losango/4-2-2-2) ou corredores (alas). Os laterais adversários sobem — explore com Wide Outlet ou Splitting Outlet.' },
+  { k:'352', f:'3-5-2 / 3-4-3', t:'Proteja os meios-espaços (central do lado + ala). Alas adversários dão largura: Pressing Trap Outside com Pressing FB. Use extremos para prender os alas atrás.' },
+  { k:'541', f:'5-3-2 / 5-4-1 (bloco baixo)', t:'Paciência alta, largura, remates de longe se tiver qualidade, sobrecarga num flanco. Counter-press para não ser apanhado em transição. Cruzamentos baixos e ataques ao segundo poste.' },
+  { k:'diamond', f:'4-4-2 losango', t:'É estreito: Exploit Width, alas/laterais ofensivos. OOP: feche o meio, deixe-os ir para fora e defenda o cruzamento.' },
 ];
 
 // ---- Modelos táticos (usados pelas sugestões)

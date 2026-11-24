@@ -46,7 +46,7 @@ const PT_TERMS = {
   'More Disciplined':'Mais Disciplinado', 'More Expressive':'Mais Expressivo', 'Hold Shape':'Manter a Forma', 'Counter-Attack':'Contra-Ataque', 'Keep Ball in Play':'Manter a Bola em Jogo',
   'Pass into Space':'Passe para o Espaço', 'Pass to Feet':'Passe ao Pé', 'Play Through Press':'Sair a Jogar contra a Pressão', 'Bypass Press':'Contornar a Pressão',
   'Slow Pace Down':'Abrandar', 'Distribute Quickly':'Repor Rápido', 'Centre-Backs':'Centrais', 'Full-Backs':'Laterais', 'Flanks':'Flancos',
-  'Underlap':'Por Dentro', 'Overlap':'Por Fora', 'Discourage':'Desencorajar', 'Encourage':'Encorajar', 'Low Crosses':'Cruzamentos Rasteiros', 'Whipped Crosses':'Cruzamentos Tensos',
+  'Underlap':'Por Dentro', 'Overlap':'Por Fora', 'Discourage':'Desencorajar', 'Encourage':'Encorajar', 'Hit Early Crosses':'Cruzar Cedo', 'Work Ball Into Box':'Trabalhar a Bola até à Área', 'Low Crosses':'Cruzamentos Rasteiros', 'Whipped Crosses':'Cruzamentos Tensos',
   'Floated Crosses':'Cruzamentos Altos', 'Low Block':'Bloco Baixo', 'Mid Block':'Bloco Médio', 'High Press':'Pressão Alta', 'Drop Off':'Recuar', 'Step Up':'Subir',
   'Much Less':'Muito Menos', 'Much More':'Muito Mais', 'Regroup':'Reagrupar', 'Counter-Press':'Contra-Pressão', 'Stay On Feet':'Ficar de Pé', 'Get Stuck In':'Entrar Forte',
   'Invite Crosses':'Convidar Cruzamentos', 'Stop Crosses':'Impedir Cruzamentos', 'Balanced':'Equilibrado', 'Standard':'Normal', 'Short':'Curtos', 'Mixed':'Mistos', 'Long':'Longos',

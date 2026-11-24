@@ -183,7 +183,7 @@ function gamePlan(base, players, k, opts = {}) {
     setTI('passing', Math.max(cur('passing'), 3), L('Chegar à frente sem dar tempo para pressionarem.', 'Get forward without giving them time to press.'));
     if (attPace >= 13) setTI('reception', 0, L('Bola para o espaço nas costas deles.', 'Balls into the space behind them.'));
     if (firstLine < 12.5) setTI('buildup', 2, L(`Primeira linha pouco segura com bola (${f1(firstLine)}): saltar a pressão deles.`, `First line not secure on the ball (${f1(firstLine)}): bypass their press.`));
-    setTI('patience', 0, L('Quando houver oportunidade, aproveitá-la: serão poucas.', 'When the chance comes, take it: there will be few.'));
+    setTI('patience', 0, L('Cruzar cedo para aproveitar a defesa desorganizada.', 'Hit early crosses to catch the defence disorganised.'));
     setTI('cross_eng', cbAir >= 14 ? 0 : 2, cbAir >= 14 ? L(`Centrais fortes no ar (${f1(cbAir)}).`, `Centre-backs strong in the air (${f1(cbAir)}).`) : L(`Centrais menos fortes no ar (${f1(cbAir)}): impedir cruzamentos.`, `Centre-backs weaker in the air (${f1(cbAir)}): stop crosses.`));
     // uma saída para o contra-ataque, o resto a defender
     const outs = [...grp(['ST']), ...grp(['AM_LR'])].sort((m, n) => q(n.p, ['pac', 'acc', 'otb']) - q(m.p, ['pac', 'acc', 'otb']));

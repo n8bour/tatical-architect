@@ -15,6 +15,8 @@ const html = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FM27 Tactical Bible</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23b3131d'/><rect x='15' y='13' width='70' height='74' rx='3' fill='none' stroke='%23f3ead8' stroke-width='2.2'/><g fill='%23f6eedd'><circle cx='50' cy='81' r='4.6'/><circle cx='26' cy='68' r='4.6'/><circle cx='43' cy='70' r='4.6'/><circle cx='57' cy='70' r='4.6'/><circle cx='74' cy='68' r='4.6'/><circle cx='32' cy='52' r='4.6'/><circle cx='50' cy='55' r='4.6'/><circle cx='68' cy='52' r='4.6'/><circle cx='28' cy='32' r='4.6'/><circle cx='50' cy='28' r='4.6'/><circle cx='72' cy='32' r='4.6'/></g></svg>">
+<script type="module" src="https://ui-sdk.dev/web.js"></script>
+<link rel="stylesheet" href="https://ui-sdk.dev/web.css" />
 <style>
 ${r('styles.css')}
 </style>

@@ -210,7 +210,7 @@ function generateTIs(t, players, exp) {
   if (QL != null && QR != null && Math.abs(QL - QR) >= 1.3) set('progress', QL > QR ? 0 : 3, L(`O teu flanco ${QL > QR ? 'esquerdo' : 'direito'} é mais forte (${f1(Math.max(QL, QR))} vs ${f1(Math.min(QL, QR))}).`, `Your ${QL > QR ? 'left' : 'right'} flank is stronger (${f1(Math.max(QL, QR))} vs ${f1(Math.min(QL, QR))}).`));
   else keep('progress', L('Flancos equilibrados.', 'Balanced flanks.'));
   if (exp.press > 0 && tech != null && tech >= 13) set('patience', 2, L('Favorito e técnico: trabalha a bola até à área.', 'Favourites and technical: work the ball into the box.'));
-  else if (exp.press < 0) set('patience', 0, L('Como underdog, aproveita cada chegada.', 'As the underdog, make every attack count.'));
+  else if (exp.press < 0) set('patience', 0, L('Como underdog, cruzar cedo antes da defesa adversária se organizar.', 'As the underdog, hit early crosses before the opposition sets.'));
   else keep('patience', L('Paciência normal.', 'Normal patience.'));
   if (lon >= 14.5) set('long_shots', 2, L(`Há quem remate bem de longe (top 3: ${f1(lon)}).`, `You have good long-range shooters (top 3: ${f1(lon)}).`)); else if (lon <= 10) set('long_shots', 0, L(`Remates de longe fracos (${f1(lon)}).`, `Weak long-range shooting (${f1(lon)}).`)); else keep('long_shots', L('Remates de longe na média.', 'Average long-range shooting.'));
   if (stAir >= 15) set('crossing', 3, L(`Avançados dominantes no ar (${f1(stAir)}): cruzamentos altos.`, `Strikers dominant in the air (${f1(stAir)}): high crosses.`));

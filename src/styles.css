@@ -1,3 +1,4 @@
+@layer ui-sdk;
 /* ============================================================
    Tema "Dark Paper" (por defeito) e "Paper" (claro), ao estilo FM27 / Jonukas Skin:
    barra de topo na cor do clube, folhas de papel escuro sobre a secretária, títulos condensados em maiúsculas.
@@ -10,6 +11,9 @@
   --good:#52b25a; --warn:#e3a83f; --crit:#e5553f; --info:#b8ab92; --chip:#3a3631;
   --att-hi:#2f9e4f; --att-mid:#c9a227; --att-lo:#5d5850;
   --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 20px rgba(0,0,0,.28);
+  --ui-background:#282622; --ui-foreground:#ece5d6; --ui-muted:#322f2b; --ui-muted-foreground:#b8b0a2;
+  --ui-border:#45403a; --ui-input:#58524a; --ui-primary:#c8202b; --ui-primary-foreground:#ffffff;
+  --ui-ring:#ff8f96; --ui-ring-border:#ff8f96; --ui-radius:8px;
   color-scheme: dark;
 }
 :root[data-theme="light"]{
@@ -19,6 +23,9 @@
   --good:#2e8b3e; --warn:#b7791f; --crit:#c2412d; --info:#7a6f5c; --chip:#e6dcc6;
   --att-hi:#2f8f48; --att-mid:#c79a1c; --att-lo:#cfc4ad;
   --shadow:0 1px 0 rgba(0,0,0,.18),0 8px 20px rgba(0,0,0,.18);
+  --ui-background:#f5f0e4; --ui-foreground:#211e19; --ui-muted:#ebe3d1; --ui-muted-foreground:#5e5546;
+  --ui-border:#c9bda3; --ui-input:#b3a588; --ui-primary:#b3131d; --ui-primary-foreground:#ffffff;
+  --ui-ring:#8c0f17; --ui-ring-border:#8c0f17; --ui-radius:8px;
   color-scheme: light;
 }
 *{box-sizing:border-box}
@@ -106,15 +113,35 @@ ul.clean{margin:.3em 0;padding-left:18px} ul.clean li{margin:.25em 0}
 /* ---------- campo animado ---------- */
 .simgrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
 .simwrap{border-radius:12px;overflow:hidden;box-shadow:var(--shadow);background:var(--pitch)}
-svg.simpitch{display:block;width:100%;height:auto}
-.simp{cursor:pointer}
-.simp:focus-visible{outline:none}
+canvas.simpitch,svg.simpitch{display:block;width:100%;height:auto;aspect-ratio:110/72}
+canvas.clip-canvas{display:block;width:100%;height:auto;aspect-ratio:110/72}
 .simbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;justify-content:space-between}
-.phases{display:flex;flex:1 1 100%;order:3;gap:4px}
-.phases .ph{flex:1;position:relative;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 4px 9px;cursor:pointer;font-size:12px;overflow:hidden;text-align:center;line-height:1.25}
-.phases .ph i{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--accent)}
+.simbar-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;justify-content:space-between}
+.simbar [data-slot="toggle"]{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:6px 12px;border-radius:8px;height:auto;font-weight:600;cursor:pointer}
+.simbar [data-slot="toggle"][data-pressed]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.simlegend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 2px 0;align-items:center}
+.simlegend span{display:inline-flex;align-items:center;gap:5px}
+.simlegend i{display:inline-block;width:12px;height:3px;border-radius:2px}
+#sim-speed{display:inline-flex;position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
+#sim-speed [data-slot="segmented-control-item"]{height:auto;padding:4px 10px;font-size:12px;border-radius:6px;color:var(--text);cursor:pointer}
+#sim-speed [data-slot="segmented-control-item"][data-checked]{color:var(--accent-ink);font-weight:700}
+#sim-speed [data-slot="segmented-control-indicator"]{background:var(--accent);border-radius:6px}
+.phases{display:flex;flex:1 1 100%;order:3;gap:4px;position:relative;background:transparent;padding:0;border:0}
+.phases .ph{flex:1;position:relative;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 4px 9px;cursor:pointer;font-size:12px;overflow:hidden;text-align:center;line-height:1.25;height:auto;color:var(--text)}
+.phases .ph i{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--accent);pointer-events:none}
 .phases .ph.OOP i{background:var(--info)} .phases .ph.T i{background:var(--warn)}
-.phases .ph.on{border-color:var(--accent);font-weight:600}
+.phases .ph.on,.phases .ph[data-checked]{border-color:var(--accent);font-weight:700;background:var(--panel2)}
+.phases [data-slot="segmented-control-indicator"]{display:none}
+.sim-switches{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.sim-sw-field{display:inline-flex;flex-direction:row;align-items:center;gap:8px}
+.sim-sw-field [data-slot="field-label"]{font-size:12px;color:var(--text);cursor:pointer}
+#sim-acc{max-width:none;width:100%}
+#sim-acc [data-slot="accordion-header"] h4{margin:0;width:100%}
+#sim-acc [data-slot="accordion-trigger"]{width:100%;justify-content:space-between;padding:8px 2px;font-size:13px;font-weight:700;color:var(--text);background:transparent;border:0;height:auto}
+#sim-acc [data-slot="accordion-panel"]{padding:0 0 8px}
+.simside ui-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.simside ui-field [data-slot="field-label"]{font-size:12px;color:var(--muted)}
+.simside ui-field.hl{outline:2px solid var(--warn);outline-offset:3px;border-radius:6px}
 .simcap h3{font-size:17px}
 .simside label.f.hl{outline:2px solid var(--warn);outline-offset:3px;border-radius:6px}
 @media (max-width:1180px){.simgrid{grid-template-columns:1fr}}
@@ -227,6 +254,16 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
 .clip-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .clip-pair .clip{margin:0}.clip-pair .clip-box{max-width:none}
 tr.cliprow td{background:var(--panel2)}
+.clip-tg [data-slot="toggle"]{height:auto;padding:4px 9px;font-size:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;cursor:pointer}
+.clip-tg [data-slot="toggle"][data-pressed]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.opp-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+.concept-viz{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.cv-row{display:grid;grid-template-columns:64px minmax(60px,120px) 1fr;gap:8px;align-items:center}
+.cv-lbl{font-size:12px;font-weight:700}
+.cv-bar{height:7px;background:var(--panel2);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.cv-bar i{display:block;height:100%;border-radius:4px}
+.cv-pillars{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cv-pill{background:var(--panel2);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:2px;font-size:12px}
 .btn.ghost{background:transparent}
 
 /* ---------- sinergia ofensiva ---------- */
