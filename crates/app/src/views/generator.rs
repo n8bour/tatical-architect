@@ -2,7 +2,8 @@
 
 use crate::state::{NavSection, TacticTab, ToastKind};
 use crate::widgets::common::{
-    badge_pill, empty_state_card, score_color, score_ring, suitability_bar, BadgeTone,
+    badge_pill, empty_state_card, page_title, panel, panel_title, score_color, score_ring,
+    suitability_bar, BadgeTone,
 };
 use crate::widgets::synergy_map::dual_synergy_maps;
 use crate::views::tactic_sheet::sheet_text;
@@ -19,7 +20,7 @@ use ta_core::data::{
 };
 use ta_core::engine::{recommend_pis, set_piece_plan, slot_score, training_plan};
 use ta_core::planning::{depth_chart, generate_tactic, weak_spots};
-use ta_core::types::{Expectation, GeneratorConfig, GeneratorResult, Player, SynergyPhase};
+use ta_core::types::{Expectation, GeneratorConfig, GeneratorResult, Lang, Player, SynergyPhase};
 
 /// View-local UI state for the Tactic Generator.
 #[derive(Debug, Clone)]
@@ -112,7 +113,7 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
     let squad = &app.state.squad;
 
     if squad.len() < 11 {
-        return div().v_flex().w_full().child(empty_state_card(
+        return screen(lang, cx, div().v_flex().w_full().child(empty_state_card(
             lang.pick("Carregue o plantel primeiro", "Load your squad first"),
             lang.pick(
                 "O gerador monta uma tática completa à volta do teu plantel: formas IP/OOP, XI húngaro, 27 instruções com justificação, bolas paradas, profundidade, reforços e 3 alternativas.",
@@ -129,7 +130,7 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     .into_any_element(),
             ),
             cx,
-        ));
+        )));
     }
 
     let mut by_name: Vec<&Player> = squad.iter().collect();
@@ -249,21 +250,9 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         .flex_shrink_0()
         .gap_3()
         .child(
-            div()
-                .v_flex()
+            panel(cx)
                 .gap_3()
-                .p_4()
-                .rounded_md()
-                .border_1()
-                .border_color(theme.border)
-                .bg(theme.secondary)
-                .child(
-                    div()
-                        .text_sm()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(lang.pick("O teu contexto", "Your context")),
-                )
+                .child(panel_title(lang.pick("O teu contexto", "Your context"), cx))
                 .child(
                     div()
                         .v_flex()
@@ -369,21 +358,25 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         );
 
     let Some(res) = &app.gen_ui.result else {
-        return div()
-            .h_flex()
-            .w_full()
-            .items_start()
-            .gap_4()
-            .child(left_col)
-            .child(div().flex_1().child(empty_state_card(
-                lang.pick("Gerar tática à medida", "Generate a tailored tactic"),
-                lang.pick(
-                    "Escolha o objetivo, jogador-estrela, titulares obrigatórios ou jovens e clique em Gerar tática.",
-                    "Pick your objective, star player, mandatory starters or youngsters and click Generate tactic.",
-                ),
-                None,
-                cx,
-            )));
+        return screen(
+            lang,
+            cx,
+            div()
+                .h_flex()
+                .w_full()
+                .items_start()
+                .gap_4()
+                .child(left_col)
+                .child(div().flex_1().min_w_0().child(empty_state_card(
+                    lang.pick("Gerar tática à medida", "Generate a tailored tactic"),
+                    lang.pick(
+                        "Escolha o objetivo, jogador-estrela, titulares obrigatórios ou jovens e clique em Gerar tática.",
+                        "Pick your objective, star player, mandatory starters or youngsters and click Generate tactic.",
+                    ),
+                    None,
+                    cx,
+                ))),
+        );
     };
 
     // Candidate selector list on left column
@@ -396,21 +389,7 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
     let cand = all_candidates[picked_idx];
     let tac = &cand.tactic;
 
-    let mut cand_list = div()
-        .v_flex()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .child(
-            div()
-                .text_sm()
-                .font_semibold()
-                .text_color(theme.foreground)
-                .child(lang.pick("Opções geradas", "Generated options")),
-        );
+    let mut cand_list = panel(cx).child(panel_title(lang.pick("Opções geradas", "Generated options"), cx));
 
     for (i, c) in all_candidates.iter().enumerate() {
         let active = i == picked_idx;
@@ -427,11 +406,11 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                 .justify_between()
                 .gap_2()
                 .p_2()
-                .rounded_sm()
+                .rounded(px(3.0))
                 .cursor_pointer()
                 .border_1()
                 .border_color(if active { theme.primary } else { theme.border })
-                .bg(if active { theme.accent } else { theme.background })
+                .bg(if active { theme.muted } else { theme.background })
                 .on_click(cx.listener(move |this, _, _, cx| {
                     this.gen_ui.pick = i;
                     cx.notify();
@@ -439,6 +418,8 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                 .child(
                     div()
                         .v_flex()
+                        .flex_1()
+                        .min_w_0()
                         .gap(px(2.0))
                         .child(
                             div()
@@ -485,20 +466,15 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
     let tac_for_pitch = tac.clone();
     let sheet_txt = sheet_text(tac, lang);
 
-    let header = div()
+    let header = panel(cx)
         .h_flex()
         .flex_wrap()
         .items_center()
         .justify_between()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
         .child(
             div()
                 .v_flex()
+                .min_w_0()
                 .gap(px(2.0))
                 .child(
                     div()
@@ -575,25 +551,16 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         );
 
     // Section 1: Mentality
-    let sec1 = div()
-        .v_flex()
+    let sec1 = panel(cx)
         .gap_1()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .child(
-            div()
-                .text_sm()
-                .font_semibold()
-                .text_color(theme.foreground)
-                .child(format!(
-                    "1. {} — {}",
-                    lang.pick("Estilo e mentalidade", "Style & mentality"),
-                    mentality_name(tac.ment, lang)
-                )),
-        )
+        .child(panel_title(
+            format!(
+                "1. {} — {}",
+                lang.pick("Estilo e mentalidade", "Style & mentality"),
+                mentality_name(tac.ment, lang)
+            ),
+            cx,
+        ))
         .child(
             div()
                 .text_xs()
@@ -634,7 +601,8 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                 .border_color(theme.border)
                 .child(
                     div()
-                        .w(px(90.0))
+                        .w(px(80.0))
+                        .flex_shrink_0()
                         .text_xs()
                         .font_semibold()
                         .text_color(theme.foreground)
@@ -643,9 +611,11 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                 .child(
                     div()
                         .h_flex()
+                        .flex_wrap()
                         .items_center()
                         .gap_1()
-                        .w(px(180.0))
+                        .w(px(160.0))
+                        .flex_shrink_0()
                         .text_xs()
                         .text_color(theme.foreground)
                         .child(player.map(|p| p.name.clone()).unwrap_or_else(|| "—".into()))
@@ -659,6 +629,7 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                 .child(
                     div()
                         .flex_1()
+                        .min_w_0()
                         .text_xs()
                         .text_color(theme.muted_foreground)
                         .child(format!("IP: {} · OOP: {}", ip_r, oop_r)),
@@ -677,21 +648,11 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         );
     }
 
-    let sec2 = div()
-        .v_flex()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .child(
-            div()
-                .text_sm()
-                .font_semibold()
-                .text_color(theme.foreground)
-                .child(format!("2. {}", lang.pick("Formas e XI titular", "Formations & Starting XI"))),
-        )
+    let sec2 = panel(cx)
+        .child(panel_title(
+            format!("2. {}", lang.pick("Formas e XI titular", "Formations & Starting XI")),
+            cx,
+        ))
         .child(xi_rows);
 
     // Section 3: Synergy (with dual canvas maps)
@@ -709,31 +670,22 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
             .get(&ph)
             .map(|p| p.score)
             .unwrap_or(0);
-        phase_bars = phase_bars.child(div().flex_1().min_w(px(160.0)).child(suitability_bar(lbl, sc, 100, cx)));
+        phase_bars = phase_bars.child(div().flex_1().min_w(px(240.0)).child(suitability_bar(lbl, sc, 100, cx)));
     }
-    let sec3 = div()
-        .v_flex()
+    let sec3 = panel(cx)
         .gap_3()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
         .child(
             div()
                 .h_flex()
-                .items_center()
-                .justify_between()
-                .child(
-                    div()
-                        .text_sm()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(format!(
-                            "3. {}",
-                            lang.pick("Sinergia entre papéis", "Role synergy across phases")
-                        )),
-                )
+                .items_start()
+                .gap_3()
+                .child(div().flex_1().min_w_0().child(panel_title(
+                    format!(
+                        "3. {}",
+                        lang.pick("Sinergia entre papéis", "Role synergy across phases")
+                    ),
+                    cx,
+                )))
                 .child(score_ring(cand.synergy.score, 46.0, cx)),
         )
         .child(phase_bars)
@@ -763,7 +715,8 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                         .text_xs()
                         .child(
                             div()
-                                .w(px(170.0))
+                                .w(px(150.0))
+                                .flex_shrink_0()
                                 .text_color(if changed {
                                     theme.foreground
                                 } else {
@@ -773,7 +726,8 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                         )
                         .child(
                             div()
-                                .w(px(140.0))
+                                .w(px(120.0))
+                                .flex_shrink_0()
                                 .font_semibold()
                                 .text_color(if changed {
                                     theme.primary
@@ -785,6 +739,7 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                         .child(
                             div()
                                 .flex_1()
+                                .min_w_0()
                                 .text_color(theme.muted_foreground)
                                 .child(why),
                         ),
@@ -792,21 +747,11 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
             }
         }
     }
-    let sec4 = div()
-        .v_flex()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .child(
-            div()
-                .text_sm()
-                .font_semibold()
-                .text_color(theme.foreground)
-                .child(format!("4. {}", lang.pick("Instruções de equipa (27)", "Team instructions (27)"))),
-        )
+    let sec4 = panel(cx)
+        .child(panel_title(
+            format!("4. {}", lang.pick("Instruções de equipa (27)", "Team instructions (27)")),
+            cx,
+        ))
         .child(ti_body);
 
     // Section 5: Individual Instructions
@@ -833,20 +778,23 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                         .text_xs()
                         .child(
                             div()
-                                .w(px(160.0))
+                                .w(px(150.0))
+                                .flex_shrink_0()
                                 .font_semibold()
                                 .text_color(theme.foreground)
                                 .child(format!("{} {}", s.ip_code, p.name)),
                         )
                         .child(
                             div()
-                                .w(px(200.0))
+                                .w(px(170.0))
+                                .flex_shrink_0()
                                 .text_color(theme.primary)
                                 .child(pills),
                         )
                         .child(
                             div()
                                 .flex_1()
+                                .min_w_0()
                                 .text_color(theme.muted_foreground)
                                 .child(recs[0].why.clone()),
                         ),
@@ -854,21 +802,11 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
             }
         }
     }
-    let sec5 = div()
-        .v_flex()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .child(
-            div()
-                .text_sm()
-                .font_semibold()
-                .text_color(theme.foreground)
-                .child(format!("5. {}", lang.pick("Instruções individuais", "Player instructions"))),
-        )
+    let sec5 = panel(cx)
+        .child(panel_title(
+            format!("5. {}", lang.pick("Instruções individuais", "Player instructions")),
+            cx,
+        ))
         .child(if pi_count > 0 {
             pi_list.into_any_element()
         } else {
@@ -893,26 +831,16 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
             .map(|p| p.player_name.as_str())
             .collect::<Vec<_>>()
             .join(" → ");
-        div()
-            .v_flex()
-            .gap_2()
-            .p_4()
-            .rounded_md()
-            .border_1()
-            .border_color(theme.border)
-            .bg(theme.secondary)
+        panel(cx)
             .child(
                 div()
                     .h_flex()
-                    .items_center()
-                    .justify_between()
-                    .child(
-                        div()
-                            .text_sm()
-                            .font_semibold()
-                            .text_color(theme.foreground)
-                            .child(format!("6. {}", lang.pick("Bolas paradas e capitães", "Set pieces & captains"))),
-                    )
+                    .items_start()
+                    .gap_3()
+                    .child(div().flex_1().min_w_0().child(panel_title(
+                        format!("6. {}", lang.pick("Bolas paradas e capitães", "Set pieces & captains")),
+                        cx,
+                    )))
                     .child(
                         Button::new("gen-open-sp")
                             .outline()
@@ -955,7 +883,7 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
             .v_flex()
             .w(px(170.0))
             .p_2()
-            .rounded_sm()
+            .rounded(px(3.0))
             .border_1()
             .border_color(theme.border)
             .bg(theme.background)
@@ -973,8 +901,10 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     .h_flex()
                     .justify_between()
                     .text_xs()
+                    .gap_1()
                     .child(
                         div()
+                            .min_w_0()
                             .text_color(theme.muted_foreground)
                             .truncate()
                             .child(format!("{}. {}", i + 1, c.player_name)),
@@ -989,21 +919,11 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         }
         depth_grid = depth_grid.child(col);
     }
-    let sec7 = div()
-        .v_flex()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .child(
-            div()
-                .text_sm()
-                .font_semibold()
-                .text_color(theme.foreground)
-                .child(format!("7. {}", lang.pick("Profundidade por posição", "Depth chart"))),
-        )
+    let sec7 = panel(cx)
+        .child(panel_title(
+            format!("7. {}", lang.pick("Profundidade por posição", "Depth chart")),
+            cx,
+        ))
         .child(depth_grid);
 
     // Section 8: Weak spots
@@ -1021,6 +941,7 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         weak_list = weak_list.child(
             div()
                 .h_flex()
+                .flex_wrap()
                 .items_center()
                 .gap_2()
                 .text_xs()
@@ -1056,21 +977,11 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                 }),
         );
     }
-    let sec8 = div()
-        .v_flex()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .child(
-            div()
-                .text_sm()
-                .font_semibold()
-                .text_color(theme.foreground)
-                .child(format!("8. {}", lang.pick("Onde reforçar", "Weak spots to reinforce"))),
-        )
+    let sec8 = panel(cx)
+        .child(panel_title(
+            format!("8. {}", lang.pick("Onde reforçar", "Weak spots to reinforce")),
+            cx,
+        ))
         .child(if weak.is_empty() {
             div()
                 .text_xs()
@@ -1099,26 +1010,16 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                 .child(format!("• {} — {}", aname, why)),
         );
     }
-    let sec9 = div()
-        .v_flex()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
+    let sec9 = panel(cx)
         .child(
             div()
                 .h_flex()
-                .items_center()
-                .justify_between()
-                .child(
-                    div()
-                        .text_sm()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(format!("9. {}", lang.pick("Prioridades de treino", "Training priorities"))),
-                )
+                .items_start()
+                .gap_3()
+                .child(div().flex_1().min_w_0().child(panel_title(
+                    format!("9. {}", lang.pick("Prioridades de treino", "Training priorities")),
+                    cx,
+                )))
                 .child(
                     Button::new("gen-open-train")
                         .outline()
@@ -1149,11 +1050,35 @@ pub fn render_generator(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         .child(sec8)
         .child(sec9);
 
+    screen(
+        lang,
+        cx,
+        div()
+            .h_flex()
+            .w_full()
+            .items_start()
+            .gap_4()
+            .child(left_col)
+            .child(right_col),
+    )
+}
+
+/// Screen header (`.top h2` + subtitle) above the generator body.
+fn screen(lang: Lang, cx: &App, body: Div) -> Div {
+    let theme = cx.theme();
     div()
-        .h_flex()
+        .v_flex()
         .w_full()
-        .items_start()
         .gap_4()
-        .child(left_col)
-        .child(right_col)
+        .child(
+            div()
+                .v_flex()
+                .gap_1()
+                .child(page_title(lang.pick("Gerar tática", "Generate tactic"), cx))
+                .child(div().text_sm().text_color(theme.muted_foreground).child(lang.pick(
+                    "Uma tática completa feita à volta do teu plantel, pronta a copiar para o FM27.",
+                    "A complete tactic built around your squad, ready to copy into FM27.",
+                ))),
+        )
+        .child(body)
 }

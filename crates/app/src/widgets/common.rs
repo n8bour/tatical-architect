@@ -8,6 +8,83 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use std::f32::consts::{FRAC_PI_2, TAU};
 
+/// Fixed colors of the browser build's "Dark Paper" skin (`src/styles.css`) that the theme
+/// has no slot for. Theme-dependent colors come from `cx.theme()` (`fm27.json`): `primary`
+/// (accent red), `secondary` (panel), `muted` (panel2), `border` (line), `success` / `warning` /
+/// `danger` / `info` (good / warn / crit / info).
+pub mod pal {
+    /// Club-colored top bar (`--bar`).
+    pub const BAR: u32 = 0xb3131d;
+    pub const BAR_INK: u32 = 0xffffff;
+    pub const GOOD: u32 = 0x52b25a;
+    pub const WARN: u32 = 0xe3a83f;
+    pub const CRIT: u32 = 0xe5553f;
+    pub const INFO: u32 = 0xb8ab92;
+    /// Second accent (`--accent2`): fixes, links, highlights on dark paper.
+    pub const ACCENT2: u32 = 0xff8f96;
+    /// FM attribute tiers (`--att-hi` / `--att-mid`).
+    pub const ATT_HI: u32 = 0x2f9e4f;
+    pub const ATT_MID: u32 = 0xc9a227;
+    /// Connected-status dot in the top bar.
+    pub const DOT_OK: u32 = 0x8ef0a4;
+}
+
+/// Condensed heading face of the browser build (`--font-head`): Bahnschrift on Windows,
+/// Arial Narrow elsewhere (falls back to the system face when missing).
+pub fn head_font() -> SharedString {
+    if cfg!(windows) {
+        "Bahnschrift".into()
+    } else {
+        "Arial Narrow".into()
+    }
+}
+
+/// Corner radius of the paper skin (3px everywhere, like `.panel` / `.btn`).
+pub const RADIUS: f32 = 3.0;
+
+/// A "sheet of paper": panel background, line border, 3px corners, soft shadow (`.panel`).
+pub fn panel(cx: &App) -> Div {
+    let theme = cx.theme();
+    div()
+        .v_flex()
+        .min_w_0()
+        .p_4()
+        .gap_2()
+        .rounded(px(RADIUS))
+        .border_1()
+        .border_color(theme.border)
+        .bg(theme.secondary)
+        .shadow_md()
+}
+
+/// Panel heading (`.panel > h3`): condensed, uppercase, 15px, ruled underneath.
+pub fn panel_title(text: impl Into<SharedString>, cx: &App) -> Div {
+    let theme = cx.theme();
+    let text: SharedString = text.into();
+    div()
+        .w_full()
+        .pb(px(7.0))
+        .mb_1()
+        .border_b_1()
+        .border_color(theme.border)
+        .font_family(head_font())
+        .text_size(px(16.0))
+        .font_semibold()
+        .text_color(theme.foreground)
+        .child(SharedString::from(text.to_uppercase()))
+}
+
+/// Screen heading (`.top h2`): condensed, 24px, normal case.
+pub fn page_title(text: impl Into<SharedString>, cx: &App) -> Div {
+    div()
+        .font_family(head_font())
+        .text_size(px(26.0))
+        .font_semibold()
+        .line_height(px(30.0))
+        .text_color(cx.theme().foreground)
+        .child(text.into())
+}
+
 /// Semantic tone for pills and badges.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BadgeTone {
@@ -18,27 +95,28 @@ pub enum BadgeTone {
     Muted,
 }
 
-/// Maps a 0–100 tactical/suitability score to a clear semantic color.
+/// Maps a 0–100 tactical/suitability score to good / warn / crit.
 pub fn score_color(score: u8) -> Hsla {
     if score >= 75 {
-        rgb(0x16a34a).into()
+        rgb(pal::GOOD).into()
     } else if score >= 55 {
-        rgb(0xd97706).into()
+        rgb(pal::WARN).into()
     } else {
-        rgb(0xdc2626).into()
+        rgb(pal::CRIT).into()
     }
 }
 
-/// Maps an FM 1–20 attribute value to a classic FM color tier.
+/// FM 1–20 attribute tiers of the browser build (`.attr .v.v4…v1`): ≥16 green, ≥13 gold,
+/// ≥10 plain, below muted grey.
 pub fn attr_color(val: f32) -> Hsla {
     if val >= 16.0 {
-        rgb(0x10b981).into()
+        rgb(pal::ATT_HI).into()
     } else if val >= 13.0 {
-        rgb(0x22c55e).into()
+        rgb(pal::ATT_MID).into()
     } else if val >= 10.0 {
-        rgb(0xf59e0b).into()
+        rgb(0xa69e90).into()
     } else {
-        rgb(0xef4444).into()
+        rgb(0x6c6558).into()
     }
 }
 
@@ -501,28 +579,16 @@ pub fn attr_chip(code: &str, value: f32, cx: &App) -> impl IntoElement {
 /// Semantic pill badge (`Good`, `Warn`, `Crit`, `Info`, `Muted`).
 pub fn badge_pill(text: impl Into<SharedString>, tone: BadgeTone, cx: &App) -> Div {
     let theme = cx.theme();
+    let tone_col = |c: u32| -> (Hsla, Hsla, Hsla) {
+        let col: Hsla = rgb(c).into();
+        (with_alpha(col, 0.22), col, with_alpha(col, 0.45))
+    };
     let (bg, fg, border) = match tone {
-        BadgeTone::Good => (
-            with_alpha(rgb(0x16a34a).into(), 0.18),
-            rgb(0x22c55e).into(),
-            with_alpha(rgb(0x16a34a).into(), 0.45),
-        ),
-        BadgeTone::Warn => (
-            with_alpha(rgb(0xd97706).into(), 0.18),
-            rgb(0xf59e0b).into(),
-            with_alpha(rgb(0xd97706).into(), 0.45),
-        ),
-        BadgeTone::Crit => (
-            with_alpha(rgb(0xdc2626).into(), 0.18),
-            rgb(0xef4444).into(),
-            with_alpha(rgb(0xdc2626).into(), 0.45),
-        ),
-        BadgeTone::Info => (
-            with_alpha(rgb(0x2563eb).into(), 0.18),
-            rgb(0x60a5fa).into(),
-            with_alpha(rgb(0x2563eb).into(), 0.45),
-        ),
-        BadgeTone::Muted => (theme.secondary, theme.muted_foreground, theme.border),
+        BadgeTone::Good => tone_col(pal::GOOD),
+        BadgeTone::Warn => tone_col(pal::WARN),
+        BadgeTone::Crit => tone_col(pal::CRIT),
+        BadgeTone::Info => tone_col(pal::INFO),
+        BadgeTone::Muted => (theme.muted, theme.muted_foreground, theme.border),
     };
 
     div()
@@ -555,10 +621,11 @@ pub fn kpi_card(
         .min_w(px(140.0))
         .gap_1()
         .p_3()
-        .rounded_md()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.secondary)
+        .shadow_md()
         .child(
             div()
                 .text_xs()
@@ -601,10 +668,12 @@ where
     div()
         .v_flex()
         .w_full()
-        .rounded_md()
+        .min_w_0()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.secondary)
+        .shadow_md()
         .overflow_hidden()
         .child(
             div()
@@ -621,13 +690,15 @@ where
                 .child(
                     div()
                         .v_flex()
+                        .min_w_0()
                         .gap(px(2.0))
                         .child(
                             div()
-                                .text_sm()
+                                .font_family(head_font())
+                                .text_size(px(16.0))
                                 .font_semibold()
                                 .text_color(theme.foreground)
-                                .child(title.into()),
+                                .child(SharedString::from(title.into().to_uppercase())),
                         )
                         .when_some(subtitle, |d, sub| {
                             d.child(
@@ -640,12 +711,20 @@ where
                 )
                 .child(
                     div()
-                        .text_sm()
+                        .flex_none()
+                        .size(px(22.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded(px(RADIUS))
+                        .border_1()
+                        .border_color(theme.border)
+                        .text_xs()
                         .text_color(theme.muted_foreground)
                         .child(chevron),
                 ),
         )
-        .when(!collapsed, |d| d.child(div().p_4().child(body)))
+        .when(!collapsed, |d| d.child(div().p_4().min_w_0().child(body)))
 }
 
 /// Centered empty-state card with title, explanation, and optional action element.
@@ -663,13 +742,15 @@ pub fn empty_state_card(
         .justify_center()
         .gap_2()
         .p_6()
-        .rounded_md()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.secondary)
+        .shadow_md()
         .child(
             div()
-                .text_base()
+                .font_family(head_font())
+                .text_size(px(18.0))
                 .font_semibold()
                 .text_color(theme.foreground)
                 .child(title.into()),

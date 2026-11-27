@@ -7,7 +7,8 @@ use crate::views::fm_bridge_ui::{fm_button, spawn_bridge_tactic};
 use crate::views::tactic_sheet::spawn_print_sheet;
 use crate::views::team::{apply_tactic_to_app, sync_animated_pitch};
 use crate::widgets::common::{
-    attr_color, badge_pill, score_color, score_ring, suitability_bar, with_alpha, BadgeTone,
+    attr_color, badge_pill, head_font, page_title, pal, score_color, score_ring, suitability_bar,
+    with_alpha, BadgeTone, RADIUS,
 };
 use crate::widgets::pitch_interactive::{interactive_pitch, PitchPhaseMode};
 use crate::widgets::synergy_map::dual_synergy_maps;
@@ -58,10 +59,7 @@ pub struct AnalyseViewState {
     show_links: bool,
 }
 
-const GOOD: u32 = 0x16a34a;
-const WARN: u32 = 0xd97706;
-const CRIT: u32 = 0xdc2626;
-const INFO: u32 = 0x2563eb;
+use pal::{CRIT, GOOD, INFO, WARN};
 
 // ============================================================================
 // Mutation helpers
@@ -153,20 +151,29 @@ fn panel(theme: &Theme) -> Div {
     div()
         .v_flex()
         .w_full()
+        .min_w_0()
         .gap_3()
         .p_4()
-        .rounded_md()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.secondary)
+        .shadow_md()
 }
 
+/// Panel heading in the paper skin (`.panel > h3`): condensed, uppercase, ruled underneath.
 fn heading(text: impl Into<SharedString>, theme: &Theme) -> Div {
+    let text: SharedString = text.into();
     div()
-        .text_sm()
+        .w_full()
+        .pb(px(7.0))
+        .border_b_1()
+        .border_color(theme.border)
+        .font_family(head_font())
+        .text_size(px(16.0))
         .font_semibold()
         .text_color(theme.foreground)
-        .child(text.into())
+        .child(SharedString::from(text.to_uppercase()))
 }
 
 fn muted(text: impl Into<SharedString>, theme: &Theme) -> Div {
@@ -256,7 +263,7 @@ fn attr_tag(attr: Attr, player: Option<&Player>, lang: Lang, theme: &Theme) -> D
             div()
                 .px_2()
                 .py(px(2.0))
-                .rounded_sm()
+                .rounded(px(RADIUS))
                 .border_1()
                 .border_color(with_alpha(col, 0.45))
                 .bg(with_alpha(col, 0.16))
@@ -267,7 +274,7 @@ fn attr_tag(attr: Attr, player: Option<&Player>, lang: Lang, theme: &Theme) -> D
         None => div()
             .px_2()
             .py(px(2.0))
-            .rounded_sm()
+            .rounded(px(RADIUS))
             .border_1()
             .border_color(theme.border)
             .text_xs()
@@ -311,7 +318,7 @@ fn role_card(role: &Role, player: Option<&Player>, lang: Lang, theme: &Theme, cx
         .v_flex()
         .gap_2()
         .p_3()
-        .rounded_md()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.background)
@@ -551,14 +558,9 @@ pub fn render_tactic_analyse(
             div()
                 .v_flex()
                 .gap_1()
-                .min_w_0()
-                .child(
-                    div()
-                        .text_xl()
-                        .font_bold()
-                        .text_color(theme.foreground)
-                        .child(t_name(t, lang)),
-                )
+                .flex_1()
+                .min_w(px(240.0))
+                .child(page_title(t_name(t, lang), cx))
                 .child(muted(
                     l(
                         lang,
@@ -578,7 +580,7 @@ pub fn render_tactic_analyse(
             .justify_between()
             .gap_3()
             .p_3()
-            .rounded_md()
+            .rounded(px(RADIUS))
             .border_1()
             .border_color(with_alpha(rgb(GOOD).into(), 0.45))
             .bg(with_alpha(rgb(GOOD).into(), 0.10))
@@ -824,10 +826,9 @@ pub fn render_tactic_analyse(
 
     let left_col = div()
         .v_flex()
-        .w(px(440.0))
-        .flex_shrink_0()
+        .flex_1()
+        .min_w(px(400.0))
         .gap_3()
-        .child(form_panel)
         .child(pitch_panel)
         .children(slot_editor);
 
@@ -910,7 +911,7 @@ pub fn render_tactic_analyse(
     let right_col = div()
         .v_flex()
         .flex_1()
-        .min_w(px(420.0))
+        .min_w(px(580.0))
         .gap_3()
         .child(audit_panel)
         .child(findings_panel)
@@ -925,9 +926,12 @@ pub fn render_tactic_analyse(
         .gap_4()
         .child(header)
         .children(done_notice)
+        .child(form_panel)
         .child(
+            // Pitch + slot editor beside the audit on wide windows; stacked at 1000px.
             div()
                 .h_flex()
+                .flex_wrap()
                 .w_full()
                 .items_start()
                 .gap_4()
@@ -1095,32 +1099,32 @@ fn render_slot_editor(
             .iter()
             .filter_map(|c| role_by_id(c.role_id).map(|r| format!("{} {}", role_name(r, lang), c.score)))
             .collect();
-        ed = ed.child(
-            div()
-                .h_flex()
-                .flex_wrap()
-                .items_center()
-                .gap_2()
-                .child(muted(l(lang, "Adequação:", "Suitability:"), theme))
-                .child(
-                    div()
-                        .px_2()
-                        .rounded_full()
-                        .bg(score_color(sc))
-                        .text_xs()
-                        .font_bold()
-                        .text_color(rgb(0xffffff))
-                        .child(sc.to_string()),
-                )
-                .child(muted(
-                    format!(
-                        "· {} {}",
-                        l(lang, "melhores papéis IP aqui:", "best IP roles here:"),
-                        best_txt.join(" · ")
+        ed = ed
+            .child(
+                div()
+                    .h_flex()
+                    .items_center()
+                    .gap_2()
+                    .child(muted(l(lang, "Adequação:", "Suitability:"), theme))
+                    .child(
+                        div()
+                            .px_2()
+                            .rounded_full()
+                            .bg(score_color(sc))
+                            .text_xs()
+                            .font_bold()
+                            .text_color(rgb(pal::BAR_INK))
+                            .child(sc.to_string()),
                     ),
-                    theme,
-                )),
-        );
+            )
+            .child(muted(
+                format!(
+                    "{} {}",
+                    l(lang, "Melhores papéis IP aqui:", "Best IP roles here:"),
+                    best_txt.join(" · ")
+                ),
+                theme,
+            ));
     }
 
     if let Some(r) = ri {
@@ -1138,7 +1142,7 @@ fn render_slot_editor(
                 .v_flex()
                 .gap_2()
                 .p_3()
-                .rounded_md()
+                .rounded(px(RADIUS))
                 .border_1()
                 .border_color(theme.border)
                 .bg(theme.background)
@@ -1317,7 +1321,7 @@ fn render_synergy(
             .min_w(px(200.0))
             .gap_1()
             .p_3()
-            .rounded_md()
+            .rounded(px(RADIUS))
             .border_1()
             .border_color(theme.border)
             .bg(theme.background)
@@ -1587,10 +1591,11 @@ fn render_ti_editor(
 
             let card = div()
                 .v_flex()
-                .w(px(268.0))
+                .flex_1()
+                .min_w(px(240.0))
                 .gap_2()
                 .p_3()
-                .rounded_md()
+                .rounded(px(RADIUS))
                 .border_1()
                 .border_color(if changed { good } else { theme.border })
                 .bg(if changed { with_alpha(good, 0.08) } else { theme.background })

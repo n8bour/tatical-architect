@@ -8,9 +8,11 @@
 //!   comparison vs own XI, top 3 dangerous players + OIs, and 1-click game plan apply.
 
 use crate::state::{BackendBridgeTransport, NavSection, TacticTab, TeamTab, ToastKind};
+use crate::views::generator::render_generator;
 use crate::widgets::common::{
-    attr_chip, attr_color, badge_pill, collapsible_card, empty_state_card, score_color, score_ring,
-    suitability_bar, with_alpha, BadgeTone,
+    attr_chip, attr_color, badge_pill, collapsible_card, empty_state_card, head_font, page_title,
+    pal, panel, panel_title, score_color, score_ring, suitability_bar, with_alpha, BadgeTone,
+    RADIUS,
 };
 use crate::widgets::pitch_interactive::{interactive_pitch, PitchPhaseMode};
 use crate::ArchitectApp;
@@ -71,6 +73,8 @@ pub struct TeamViewState {
     pub search_query: String,
     pub search_input: Option<Entity<InputState>>,
     pub selected_player_id: Option<String>,
+    /// Language the search placeholder was last set in (re-applied when it changes).
+    search_placeholder_lang: Option<Lang>,
     _subs: Vec<Subscription>,
 }
 
@@ -78,7 +82,7 @@ impl TeamViewState {
     /// Initializes `TeamViewState` with a live GPUI search `InputState` bound to `search_query`.
     pub fn with_search_input(window: &mut Window, cx: &mut Context<ArchitectApp>) -> Self {
         let search_input = cx.new(|cx| {
-            InputState::new(window, cx).placeholder("Filter by player name or position…")
+            InputState::new(window, cx)
         });
         let sub = cx.subscribe(&search_input, |this, entity, ev: &InputEvent, cx| {
             if matches!(ev, InputEvent::Change | InputEvent::Blur) {
@@ -866,17 +870,12 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
         .child(
             div()
                 .v_flex()
+                .min_w_0()
                 .gap(px(2.0))
+                .child(page_title(club_title, cx))
                 .child(
                     div()
-                        .text_xl()
-                        .font_bold()
-                        .text_color(theme.foreground)
-                        .child(club_title),
-                )
-                .child(
-                    div()
-                        .text_xs()
+                        .text_sm()
                         .text_color(theme.muted_foreground)
                         .child(subtitle),
                 ),
@@ -1061,14 +1060,8 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
                 })),
         );
 
-    let controls_bar = div()
-        .v_flex()
-        .gap_2()
+    let controls_bar = panel(cx)
         .p_3()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
         .child(
             div()
                 .h_flex()
@@ -1152,7 +1145,7 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
         .border_b_1()
         .border_color(theme.border)
         .bg(theme.background)
-        .child(div().w(px(175.0)).child(sort_btn(
+        .child(div().w(px(150.0)).flex_shrink_0().child(sort_btn(
             ("sq-h-name", 0),
             l(lang, "Jogador", "Player").to_string(),
             SquadSortCol::Name,
@@ -1160,13 +1153,14 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
         )))
         .child(
             div()
-                .w(px(105.0))
+                .w(px(95.0))
+                .flex_shrink_0()
                 .text_xs()
                 .font_semibold()
                 .text_color(theme.muted_foreground)
                 .child(l(lang, "Pos", "Pos")),
         )
-        .child(div().w(px(54.0)).child(sort_btn(
+        .child(div().w(px(48.0)).flex_shrink_0().child(sort_btn(
             ("sq-h-age", 1),
             l(lang, "Idade", "Age").to_string(),
             SquadSortCol::Age,
@@ -1187,6 +1181,7 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
                 .child(
                     div()
                         .flex_1()
+                        .min_w_0()
                         .text_xs()
                         .font_semibold()
                         .text_color(theme.muted_foreground)
@@ -1195,6 +1190,7 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
                 .child(
                     div()
                         .flex_1()
+                        .min_w_0()
                         .text_xs()
                         .font_semibold()
                         .text_color(theme.muted_foreground)
@@ -1239,7 +1235,7 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
                 } else {
                     SquadSortCol::Pers(key)
                 };
-                thead = thead.child(div().w(px(56.0)).child(sort_btn(
+                thead = thead.child(div().w(px(48.0)).flex_shrink_0().child(sort_btn(
                     ("sq-h-pers", ci),
                     l(lang, pt, en).to_string(),
                     col,
@@ -1277,7 +1273,8 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
             }))
             .child(
                 div()
-                    .w(px(175.0))
+                    .w(px(150.0))
+                    .flex_shrink_0()
                     .text_xs()
                     .font_semibold()
                     .text_color(theme.foreground)
@@ -1286,7 +1283,8 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
             )
             .child(
                 div()
-                    .w(px(105.0))
+                    .w(px(95.0))
+                    .flex_shrink_0()
                     .text_xs()
                     .text_color(theme.muted_foreground)
                     .truncate()
@@ -1298,7 +1296,8 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
             )
             .child(
                 div()
-                    .w(px(54.0))
+                    .w(px(48.0))
+                    .flex_shrink_0()
                     .text_xs()
                     .text_color(theme.foreground)
                     .child(
@@ -1326,7 +1325,7 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
                 let ip_best = best_roles_across_positions(p, Phase::Ip, 3);
                 let oop_best = best_roles_across_positions(p, Phase::Oop, 3);
                 let render_role_list = |items: Vec<(&'static str, u8)>| {
-                    let mut col = div().v_flex().flex_1().gap(px(2.0));
+                    let mut col = div().v_flex().flex_1().min_w_0().gap(px(2.0));
                     for (rid, sc) in items {
                         let rname = role_by_id(rid)
                             .map(|r| role_name(r, lang))
@@ -1418,7 +1417,7 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
                     } else {
                         p.pers.get(key).copied()
                     };
-                    row = row.child(div().w(px(56.0)).child(pers_val_badge(val, inv, cx)));
+                    row = row.child(div().w(px(48.0)).flex_shrink_0().child(pers_val_badge(val, inv, cx)));
                 }
             }
         }
@@ -1450,10 +1449,11 @@ pub fn render_team_squad(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> 
     let table_card = div()
         .v_flex()
         .w_full()
-        .rounded_md()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.secondary)
+        .shadow_md()
         .overflow_hidden()
         .when_some(missing_rich_notice, |d, n| d.child(div().p_3().child(n)))
         .child(
@@ -1604,15 +1604,10 @@ fn render_player_profile(
 
     let is_gk = p.pos.iter().any(|x| x == "GK");
 
-    div()
-        .v_flex()
+    panel(cx)
         .w_full()
         .gap_3()
-        .p_4()
-        .rounded_md()
-        .border_1()
         .border_color(theme.primary)
-        .bg(theme.secondary)
         .child(
             div()
                 .h_flex()
@@ -1622,6 +1617,7 @@ fn render_player_profile(
                 .child(
                     div()
                         .v_flex()
+                        .min_w_0()
                         .gap(px(2.0))
                         .child(
                             div()
@@ -1752,15 +1748,10 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
         for (ti, tp) in TEMPLATES.iter().enumerate() {
             let tpl_id = tp.id;
             tpl_grid = tpl_grid.child(
-                div()
-                    .v_flex()
-                    .w(px(300.0))
-                    .gap_2()
+                panel(cx)
+                    .flex_1()
+                    .min_w(px(260.0))
                     .p_3()
-                    .rounded_md()
-                    .border_1()
-                    .border_color(theme.border)
-                    .bg(theme.secondary)
                     .child(
                         div()
                             .text_sm()
@@ -1845,13 +1836,7 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
                 div()
                     .v_flex()
                     .gap_2()
-                    .child(
-                        div()
-                            .text_base()
-                            .font_semibold()
-                            .text_color(theme.foreground)
-                            .child(l(lang, "Modelos disponíveis", "Available templates")),
-                    )
+                    .child(panel_title(l(lang, "Modelos disponíveis", "Available templates"), cx))
                     .child(tpl_grid),
             );
     }
@@ -1878,21 +1863,19 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
         .child(
             div()
                 .v_flex()
+                .min_w_0()
                 .gap(px(2.0))
+                .child(page_title(
+                    format!(
+                        "{} — {}",
+                        l(lang, "Melhor XI", "Best XI"),
+                        t_name(tactic, lang)
+                    ),
+                    cx,
+                ))
                 .child(
                     div()
-                        .text_xl()
-                        .font_bold()
-                        .text_color(theme.foreground)
-                        .child(format!(
-                            "{} — {}",
-                            l(lang, "Melhor XI", "Best XI"),
-                            t_name(tactic, lang)
-                        )),
-                )
-                .child(
-                    div()
-                        .text_xs()
+                        .text_sm()
                         .text_color(theme.muted_foreground)
                         .child(l(
                             lang,
@@ -1996,11 +1979,12 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
     let mut xi_table = div()
         .v_flex()
         .flex_1()
-        .min_w(px(520.0))
-        .rounded_md()
+        .min_w(px(480.0))
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.secondary)
+        .shadow_md()
         .overflow_hidden()
         .child(
             div()
@@ -2013,24 +1997,28 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
                 .border_color(theme.border)
                 .bg(theme.background)
                 .text_xs()
+                .font_family(head_font())
                 .font_semibold()
                 .text_color(theme.muted_foreground)
-                .child(div().w(px(46.0)).child(l(lang, "Pos", "Pos")))
+                .child(div().w(px(40.0)).flex_shrink_0().child(l(lang, "POS", "POS")))
                 .child(
                     div()
-                        .w(px(210.0))
-                        .child(l(lang, "Jogador & papéis", "Player & roles")),
+                        .w(px(170.0))
+                        .flex_shrink_0()
+                        .child(l(lang, "JOGADOR E PAPÉIS", "PLAYER AND ROLES")),
                 )
                 .child(
                     div()
                         .flex_1()
-                        .child(l(lang, "PIs recomendadas", "Recommended PIs")),
+                        .min_w(px(100.0))
+                        .child(l(lang, "INSTRUÇÕES RECOMENDADAS", "RECOMMENDED INSTRUCTIONS")),
                 )
-                .child(div().w(px(140.0)).child(l(lang, "Suplente", "Backup")))
+                .child(div().w(px(96.0)).flex_shrink_0().child(l(lang, "SUPLENTE", "BACK-UP")))
                 .child(
                     div()
-                        .w(px(145.0))
-                        .child(l(lang, "Sucessor (≤ 21)", "Successor (≤ 21)")),
+                        .w(px(96.0))
+                        .flex_shrink_0()
+                        .child(l(lang, "SUCESSOR (≤ 21)", "SUCCESSOR (≤ 21)")),
                 ),
         );
 
@@ -2081,7 +2069,7 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
             }
         });
 
-        let mut pi_col = div().h_flex().flex_wrap().flex_1().gap_1();
+        let mut pi_col = div().h_flex().flex_wrap().flex_1().min_w(px(100.0)).gap_1();
         if recs.is_empty() {
             pi_col = pi_col.child(
                 div()
@@ -2121,20 +2109,23 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
 
         let bench_cell = match bench_info.and_then(|b| b.bench.as_ref()) {
             Some(c) => div()
-                .h_flex()
-                .items_center()
-                .gap_1()
-                .w(px(140.0))
-                .child(fit_badge(c.score))
+                .v_flex()
+                .items_start()
+                .gap(px(2.0))
+                .w(px(96.0))
+                .flex_shrink_0()
                 .child(
                     div()
+                        .w_full()
                         .text_xs()
                         .text_color(theme.foreground)
                         .truncate()
                         .child(c.player_name.clone()),
-                ),
+                )
+                .child(fit_badge(c.score)),
             None => div()
-                .w(px(140.0))
+                .w(px(96.0))
+                .flex_shrink_0()
                 .text_xs()
                 .text_color(theme.muted_foreground)
                 .child("—"),
@@ -2142,13 +2133,14 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
 
         let succ_cell = match bench_info.and_then(|b| b.succ.as_ref()) {
             Some(c) => div()
-                .h_flex()
-                .items_center()
-                .gap_1()
-                .w(px(145.0))
-                .child(fit_badge(c.score))
+                .v_flex()
+                .items_start()
+                .gap(px(2.0))
+                .w(px(96.0))
+                .flex_shrink_0()
                 .child(
                     div()
+                        .w_full()
                         .text_xs()
                         .text_color(theme.foreground)
                         .truncate()
@@ -2159,9 +2151,11 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
                                 .map(|ag| format!(" ({})", ag.round() as i32))
                                 .unwrap_or_default()
                         )),
-                ),
+                )
+                .child(fit_badge(c.score)),
             None => div()
-                .w(px(145.0))
+                .w(px(96.0))
+                .flex_shrink_0()
                 .text_xs()
                 .text_color(theme.muted_foreground)
                 .child("—"),
@@ -2169,7 +2163,8 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
 
         let player_cell = div()
             .v_flex()
-            .w(px(210.0))
+            .w(px(170.0))
+            .flex_shrink_0()
             .gap(px(2.0))
             .child(match p {
                 Some(pl) => div()
@@ -2179,6 +2174,7 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
                     .child(fit_badge(sc))
                     .child(
                         div()
+                            .min_w_0()
                             .text_xs()
                             .font_semibold()
                             .text_color(theme.foreground)
@@ -2209,7 +2205,7 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
                 d.child(
                     div()
                         .text_xs()
-                        .text_color(rgb(0xf59e0b))
+                        .text_color(rgb(pal::WARN))
                         .truncate()
                         .child(hint),
                 )
@@ -2226,7 +2222,8 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
                 .border_color(theme.border)
                 .child(
                     div()
-                        .w(px(46.0))
+                        .w(px(40.0))
+                        .flex_shrink_0()
                         .text_xs()
                         .font_bold()
                         .text_color(theme.foreground)
@@ -2288,14 +2285,8 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
 
         let tactic_clone = s.tactic.clone();
         sugg_list = sugg_list.child(
-            div()
-                .v_flex()
+            panel(cx)
                 .gap_3()
-                .p_4()
-                .rounded_md()
-                .border_1()
-                .border_color(theme.border)
-                .bg(theme.secondary)
                 .child(
                     div()
                         .h_flex()
@@ -2305,6 +2296,8 @@ pub fn render_team_best_xi(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -
                         .child(
                             div()
                                 .v_flex()
+                                .flex_1()
+                                .min_w_0()
                                 .gap(px(2.0))
                                 .child(
                                     div()
@@ -2467,26 +2460,14 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
     let tactic = &app.state.tactic;
 
     if opp.is_empty() {
-        let left_card = div()
-            .v_flex()
+        let left_card = panel(cx)
             .flex_1()
             .min_w(px(300.0))
             .gap_3()
-            .p_4()
-            .rounded_md()
-            .border_1()
-            .border_color(theme.border)
-            .bg(theme.secondary)
+            .child(page_title(l(lang, "Relatório do adversário", "Opponent report"), cx))
             .child(
                 div()
-                    .text_base()
-                    .font_bold()
-                    .text_color(theme.foreground)
-                    .child(l(lang, "Relatório do adversário", "Opponent report")),
-            )
-            .child(
-                div()
-                    .text_xs()
+                    .text_sm()
                     .text_color(theme.muted_foreground)
                     .child(l(
                         lang,
@@ -2546,28 +2527,15 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
             ),
         ];
 
-        let mut right_card = div()
-            .v_flex()
+        let mut right_card = panel(cx)
             .flex_1()
             .min_w(px(300.0))
-            .gap_2()
-            .p_4()
-            .rounded_md()
-            .border_1()
-            .border_color(theme.border)
-            .bg(theme.secondary)
-            .child(
-                div()
-                    .text_sm()
-                    .font_semibold()
-                    .text_color(theme.foreground)
-                    .child(l(lang, "O que vai ver", "What you'll see")),
-            );
+            .child(panel_title(l(lang, "O que vai ver", "What you'll see"), cx));
         for b in bullets {
             right_card = right_card.child(
                 div()
                     .text_xs()
-                    .text_color(theme.muted_foreground)
+                    .text_color(theme.foreground)
                     .child(b),
             );
         }
@@ -2598,21 +2566,15 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
         .child(
             div()
                 .v_flex()
+                .min_w_0()
                 .gap(px(2.0))
+                .child(page_title(
+                    format!("{}: {}", l(lang, "Relatório", "Report"), club_label),
+                    cx,
+                ))
                 .child(
                     div()
-                        .text_xl()
-                        .font_bold()
-                        .text_color(theme.foreground)
-                        .child(format!(
-                            "{}: {}",
-                            l(lang, "Relatório", "Report"),
-                            club_label
-                        )),
-                )
-                .child(
-                    div()
-                        .text_xs()
+                        .text_sm()
                         .text_color(theme.muted_foreground)
                         .child(match lang {
                             Lang::Pt => format!(
@@ -2681,11 +2643,11 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
         let tv = s.them_val.unwrap_or(0.0);
         let pct = ((tv - 1.0) / 19.0).clamp(0.0, 1.0);
         let bar_col: Hsla = if tv >= 14.0 {
-            rgb(0xdc2626).into()
+            rgb(pal::CRIT).into()
         } else if tv <= 10.5 {
-            rgb(0x16a34a).into()
+            rgb(pal::GOOD).into()
         } else {
-            rgb(0xd97706).into()
+            rgb(pal::WARN).into()
         };
         let us_marker = s.us_val.map(|uv| ((uv - 1.0) / 19.0).clamp(0.0, 1.0));
         let cmp_txt = match (s.them_val, s.us_val) {
@@ -2704,7 +2666,8 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
                 .gap_2()
                 .child(
                     div()
-                        .w(px(165.0))
+                        .w(px(150.0))
+                        .flex_shrink_0()
                         .text_xs()
                         .text_color(theme.foreground)
                         .truncate()
@@ -2740,6 +2703,7 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
                 .child(
                     div()
                         .w(px(74.0))
+                        .flex_shrink_0()
                         .text_xs()
                         .font_semibold()
                         .text_right()
@@ -2844,7 +2808,7 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
                     .items_start()
                     .gap_2()
                     .p_2()
-                    .rounded_sm()
+                    .rounded(px(RADIUS))
                     .border_1()
                     .border_color(theme.border)
                     .bg(theme.background)
@@ -2865,6 +2829,7 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
                         div()
                             .v_flex()
                             .flex_1()
+                            .min_w_0()
                             .gap(px(2.0))
                             .child(
                                 div()
@@ -2936,7 +2901,7 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
                 .items_start()
                 .gap_2()
                 .p_2()
-                .rounded_sm()
+                .rounded(px(RADIUS))
                 .border_1()
                 .border_color(theme.border)
                 .bg(theme.background)
@@ -2945,6 +2910,7 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
                     div()
                         .v_flex()
                         .flex_1()
+                        .min_w_0()
                         .gap_1()
                         .child(
                             div()
@@ -3016,7 +2982,7 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
                 .gap_1()
                 .px_2()
                 .py(px(3.0))
-                .rounded_sm()
+                .rounded(px(RADIUS))
                 .border_1()
                 .border_color(theme.border)
                 .bg(theme.background)
@@ -3065,23 +3031,25 @@ pub fn render_team_opponent(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) 
         .child(xi_card)
 }
 
-/// Convenience dispatcher for the 3 Team tabs owned by `team.rs` (`Squad`, `BestXi`, `Opponent`).
-/// `TeamTab::Generator` is rendered by `views::generator`.
-pub fn render_team_tab(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> AnyElement {
+/// Dispatcher for the My Team tabs. Keeps the squad search placeholder in the UI language
+/// (needs the `Window`, which the per-tab renders don't get).
+pub fn render_team_tab(
+    app: &mut ArchitectApp,
+    window: &mut Window,
+    cx: &mut Context<ArchitectApp>,
+) -> AnyElement {
+    let lang = app.state.lang;
+    if app.team_ui.search_placeholder_lang != Some(lang) {
+        if let Some(inp) = app.team_ui.search_input.clone() {
+            let text = l(lang, "Filtrar por nome ou posição…", "Filter by player name or position…");
+            inp.update(cx, |s, cx| s.set_placeholder(text, window, cx));
+        }
+        app.team_ui.search_placeholder_lang = Some(lang);
+    }
     match app.team_tab {
         TeamTab::Squad => render_team_squad(app, cx).into_any_element(),
         TeamTab::BestXi => render_team_best_xi(app, cx).into_any_element(),
         TeamTab::Opponent => render_team_opponent(app, cx).into_any_element(),
-        TeamTab::Generator => empty_state_card(
-            TeamTab::Generator.label(app.state.lang),
-            l(
-                app.state.lang,
-                "Ligado via views::generator.",
-                "Wired via views::generator.",
-            ),
-            None,
-            cx,
-        )
-        .into_any_element(),
+        TeamTab::Generator => render_generator(app, cx).into_any_element(),
     }
 }

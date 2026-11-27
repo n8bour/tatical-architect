@@ -5,6 +5,7 @@
 //! One `Sheet` model feeds both the GPUI view and the printable HTML.
 
 use crate::state::{AppState, TacticTab, ToastKind};
+use crate::widgets::common::{head_font, page_title, RADIUS};
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::checkbox::Checkbox;
@@ -433,13 +434,24 @@ fn render_blocks(
         .min_w(px(380.0))
         .gap_1()
         .p_4()
-        .rounded_lg()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
-        .bg(theme.secondary);
+        .bg(theme.secondary)
+        .shadow_md();
     for (bi, b) in blocks.into_iter().enumerate() {
         col = col.child(if b.major {
-            div().pt_3().text_sm().font_semibold().text_color(theme.foreground).child(b.title)
+            div()
+                .w_full()
+                .pt_3()
+                .pb(px(7.0))
+                .border_b_1()
+                .border_color(theme.border)
+                .font_family(head_font())
+                .text_size(px(16.0))
+                .font_semibold()
+                .text_color(theme.foreground)
+                .child(SharedString::from(b.title.to_uppercase()))
         } else {
             div().pt_2().text_xs().font_semibold().text_color(theme.muted_foreground).child(b.title)
         });
@@ -454,9 +466,9 @@ fn render_blocks(
                 .text_xs()
                 .font_semibold()
                 .text_color(theme.muted_foreground)
-                .child(div().w(px(16.0)));
+                .child(div().w(px(16.0)).flex_shrink_0());
             for (ci, c) in cols.into_iter().enumerate() {
-                hdr = hdr.child(if ci == 0 { div().w(px(150.0)) } else { div().flex_1() }.child(c));
+                hdr = hdr.child(if ci == 0 { div().w(px(150.0)).flex_shrink_0() } else { div().flex_1().min_w_0() }.child(c));
             }
             col = col.child(hdr);
         }
@@ -471,7 +483,7 @@ fn render_blocks(
                 .border_b_1()
                 .border_color(theme.border)
                 .text_xs()
-                .child(div().w(px(16.0)).when(r.mark, |d| {
+                .child(div().w(px(16.0)).flex_shrink_0().when(r.mark, |d| {
                     let k = key.clone();
                     d.child(Checkbox::new(SharedString::from(format!("sheet-ck-{key}"))).checked(on).on_click(
                         cx.listener(move |this, _: &bool, _, cx| {
@@ -484,7 +496,8 @@ fn render_blocks(
                 }))
                 .child(
                     div()
-                        .w(px(if wide { 150.0 } else { 190.0 }))
+                        .w(px(if wide { 150.0 } else { 170.0 }))
+                        .flex_shrink_0()
                         .v_flex()
                         .child(div().text_color(fg).when(wide, |d| d.font_semibold()).child(r.label))
                         .children(r.note.map(|n| div().text_color(theme.muted_foreground).child(n))),
@@ -493,6 +506,7 @@ fn render_blocks(
                 line = line.child(
                     div()
                         .flex_1()
+                        .min_w_0()
                         .text_color(fg)
                         .when(r.strong, |d| d.font_semibold())
                         .when(on, |d| d.line_through())
@@ -543,8 +557,10 @@ pub fn render_sheet(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl 
         .child(
             div()
                 .v_flex()
+                .flex_1()
+                .min_w(px(240.0))
                 .gap(px(2.0))
-                .child(div().text_base().font_semibold().text_color(theme.foreground).child(sheet.title))
+                .child(page_title(sheet.title, cx))
                 .child(div().text_xs().text_color(theme.muted_foreground).child(sheet.intro)),
         )
         .child(

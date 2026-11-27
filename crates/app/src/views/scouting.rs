@@ -5,7 +5,8 @@
 
 use crate::state::{non_empty, BackendBridgeTransport, ToastKind};
 use crate::widgets::common::{
-    attr_chip, badge_pill, collapsible_card, empty_state_card, kpi_card, score_color, BadgeTone,
+    attr_chip, badge_pill, collapsible_card, empty_state_card, head_font, kpi_card, page_title,
+    panel, score_color, BadgeTone, RADIUS,
 };
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
@@ -604,20 +605,39 @@ pub fn render_scouting(
                     .w_full()
                     .pt_2()
                     .text_xs()
-                    .text_color(rgb(0xf59e0b))
+                    .text_color(theme.warning)
                     .text_center()
                     .child(err.clone()),
             );
         }
-        return div().v_flex().w_full().child(empty_state_card(
-            lang.pick("Carregar base de dados de prospeção", "Load scouting database"),
-            lang.pick(
-                "Lê todos os jogadores do save (100k+) via fmsave com cache automática, ou importe um CSV de jogadores.",
-                "Reads every player from your FM27 save (100k+) via cached fmsave, or import a players CSV directly.",
-            ),
-            Some(actions.into_any_element()),
-            cx,
-        ));
+        return div()
+            .v_flex()
+            .w_full()
+            .gap_3()
+            .child(
+                div()
+                    .v_flex()
+                    .gap_1()
+                    .child(page_title(lang.pick("Prospeção", "Scouting"), cx))
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .child(lang.pick(
+                                "Todos os jogadores do save, com atributos, CA/PA, personalidade, contrato e valor.",
+                                "Every player in your save, with attributes, CA/PA, personality, contract and value.",
+                            )),
+                    ),
+            )
+            .child(empty_state_card(
+                lang.pick("Carregar base de dados de prospeção", "Load scouting database"),
+                lang.pick(
+                    "Lê todos os jogadores do save (100k+) via fmsave com cache automática, ou importe um CSV de jogadores.",
+                    "Reads every player from your FM27 save (100k+) via cached fmsave, or import a players CSV directly.",
+                ),
+                Some(actions.into_any_element()),
+                cx,
+            ));
     };
 
     let ctx = build_scout_ctx(app);
@@ -657,14 +677,9 @@ pub fn render_scouting(
         .child(
             div()
                 .v_flex()
+                .min_w_0()
                 .gap(px(2.0))
-                .child(
-                    div()
-                        .text_base()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(lang.pick("Prospeção", "Scouting")),
-                )
+                .child(page_title(lang.pick("Prospeção", "Scouting"), cx))
                 .child(
                     div()
                         .text_xs()
@@ -1319,7 +1334,7 @@ pub fn render_scouting(
 
     let filters_col = div()
         .v_flex()
-        .w(px(300.0))
+        .w(px(260.0))
         .flex_shrink_0()
         .gap_2()
         .child(
@@ -1329,10 +1344,11 @@ pub fn render_scouting(
                 .justify_between()
                 .child(
                     div()
-                        .text_sm()
+                        .font_family(head_font())
+                        .text_size(px(16.0))
                         .font_semibold()
                         .text_color(theme.foreground)
-                        .child(lang.pick("Filtros", "Filters")),
+                        .child(lang.pick("FILTROS", "FILTERS")),
                 )
                 .child(
                     Button::new("sf-reset")
@@ -1390,20 +1406,20 @@ pub fn render_scouting(
     let table_head = div()
         .h_flex()
         .items_center()
-        .gap_2()
-        .pb_2()
+        .gap(px(6.0))
+        .pb_1()
         .border_b_1()
         .border_color(theme.border)
-        .child(div().w(px(26.0)).text_xs().text_color(theme.muted_foreground).child("☆"))
-        .child(div().w(px(170.0)).child(sort_btn("th-name", ScoutSort::Name, lang.pick("Nome", "Name"), cur_sort, cur_dir, cx)))
-        .child(div().w(px(46.0)).child(sort_btn("th-age", ScoutSort::Age, lang.pick("Id.", "Age"), cur_sort, cur_dir, cx)))
-        .child(div().w(px(74.0)).text_xs().text_color(theme.muted_foreground).child("Pos"))
-        .child(div().flex_1().text_xs().text_color(theme.muted_foreground).child(lang.pick("Clube", "Club")))
-        .child(div().w(px(46.0)).child(sort_btn("th-ca", ScoutSort::Ca, "CA", cur_sort, cur_dir, cx)))
-        .child(div().w(px(46.0)).child(sort_btn("th-pa", ScoutSort::Pa, "PA", cur_sort, cur_dir, cx)))
-        .child(div().w(px(64.0)).child(sort_btn("th-val", ScoutSort::Value, lang.pick("Valor", "Value"), cur_sort, cur_dir, cx)))
-        .child(div().w(px(62.0)).child(sort_btn("th-wage", ScoutSort::Wage, lang.pick("Sal.", "Wage"), cur_sort, cur_dir, cx)))
-        .child(div().w(px(76.0)).child(sort_btn("th-end", ScoutSort::End, lang.pick("Contr.", "End"), cur_sort, cur_dir, cx)));
+        .child(div().w(px(COL_STAR)).flex_shrink_0().text_xs().text_color(theme.muted_foreground).child("☆"))
+        .child(div().h_flex().flex_1().min_w(px(110.0)).overflow_hidden().child(sort_btn("th-name", ScoutSort::Name, lang.pick("Nome", "Name"), cur_sort, cur_dir, cx)))
+        .child(div().h_flex().w(px(COL_AGE)).flex_shrink_0().overflow_hidden().child(sort_btn("th-age", ScoutSort::Age, lang.pick("Id.", "Age"), cur_sort, cur_dir, cx)))
+        .child(div().w(px(COL_POS)).flex_shrink_0().text_xs().text_color(theme.muted_foreground).child("Pos"))
+        .child(div().flex_1().min_w_0().text_xs().text_color(theme.muted_foreground).truncate().child(lang.pick("Clube", "Club")))
+        .child(div().h_flex().w(px(COL_NUM)).flex_shrink_0().overflow_hidden().child(sort_btn("th-ca", ScoutSort::Ca, "CA", cur_sort, cur_dir, cx)))
+        .child(div().h_flex().w(px(COL_NUM)).flex_shrink_0().overflow_hidden().child(sort_btn("th-pa", ScoutSort::Pa, "PA", cur_sort, cur_dir, cx)))
+        .child(div().h_flex().w(px(COL_MONEY)).flex_shrink_0().overflow_hidden().child(sort_btn("th-val", ScoutSort::Value, lang.pick("Valor", "Value"), cur_sort, cur_dir, cx)))
+        .child(div().h_flex().w(px(COL_MONEY)).flex_shrink_0().overflow_hidden().child(sort_btn("th-wage", ScoutSort::Wage, lang.pick("Sal.", "Wage"), cur_sort, cur_dir, cx)))
+        .child(div().h_flex().w(px(COL_END)).flex_shrink_0().overflow_hidden().child(sort_btn("th-end", ScoutSort::End, lang.pick("Contr.", "End"), cur_sort, cur_dir, cx)));
 
     let mut rows_box = div().v_flex();
     if app.scout_ui.show_shortlist {
@@ -1415,7 +1431,7 @@ pub fn render_scouting(
                     .id(("sl-row", row_i))
                     .h_flex()
                     .items_center()
-                    .gap_2()
+                    .gap(px(6.0))
                     .py_1()
                     .border_b_1()
                     .border_color(theme.border)
@@ -1425,28 +1441,30 @@ pub fn render_scouting(
                         cx.notify();
                     }))
                     .child(
-                        Button::new(("sl-star", row_i))
-                            .ghost()
-                            .xsmall()
-                            .label("★")
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                this.state.shortlist_entries.retain(|x| x.id != pid_star);
-                                if let Ok(uid) = pid_star.parse::<i64>() {
-                                    this.state.shortlist.remove(&uid);
-                                }
-                                this.state.persist();
-                                cx.notify();
-                            })),
+                        div().w(px(COL_STAR)).flex_shrink_0().child(
+                            Button::new(("sl-star", row_i))
+                                .ghost()
+                                .xsmall()
+                                .label("★")
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.state.shortlist_entries.retain(|x| x.id != pid_star);
+                                    if let Ok(uid) = pid_star.parse::<i64>() {
+                                        this.state.shortlist.remove(&uid);
+                                    }
+                                    this.state.persist();
+                                    cx.notify();
+                                })),
+                        ),
                     )
-                    .child(div().w(px(170.0)).text_xs().font_semibold().truncate().child(entry.name.clone()))
-                    .child(div().w(px(46.0)).text_xs().child(entry.age.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
-                    .child(div().w(px(74.0)).text_xs().text_color(theme.muted_foreground).truncate().child(entry.pos_raw.clone()))
-                    .child(div().flex_1().text_xs().text_color(theme.muted_foreground).truncate().child(if entry.club.is_empty() { lang.pick("livre", "free").to_string() } else { entry.club.clone() }))
-                    .child(div().w(px(46.0)).text_xs().font_semibold().child(entry.ca.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
-                    .child(div().w(px(46.0)).text_xs().child(entry.pa.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
-                    .child(div().w(px(64.0)).text_xs().child(fmt_money(entry.value)))
-                    .child(div().w(px(62.0)).text_xs().child(fmt_money(entry.wage)))
-                    .child(div().w(px(76.0)).text_xs().text_color(theme.muted_foreground).truncate().child(entry.end.clone())),
+                    .child(div().flex_1().min_w(px(110.0)).text_xs().font_semibold().truncate().child(entry.name.clone()))
+                    .child(div().w(px(COL_AGE)).flex_shrink_0().text_xs().child(entry.age.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
+                    .child(div().w(px(COL_POS)).flex_shrink_0().text_xs().text_color(theme.muted_foreground).truncate().child(entry.pos_raw.clone()))
+                    .child(div().flex_1().min_w_0().text_xs().text_color(theme.muted_foreground).truncate().child(if entry.club.is_empty() { lang.pick("livre", "free").to_string() } else { entry.club.clone() }))
+                    .child(div().w(px(COL_NUM)).flex_shrink_0().text_xs().font_semibold().child(entry.ca.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
+                    .child(div().w(px(COL_NUM)).flex_shrink_0().text_xs().child(entry.pa.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
+                    .child(div().w(px(COL_MONEY)).flex_shrink_0().text_xs().child(fmt_money(entry.value)))
+                    .child(div().w(px(COL_MONEY)).flex_shrink_0().text_xs().child(fmt_money(entry.wage)))
+                    .child(div().w(px(COL_END)).flex_shrink_0().text_xs().text_color(theme.muted_foreground).truncate().child(entry.end.clone())),
             );
         }
     } else {
@@ -1466,7 +1484,7 @@ pub fn render_scouting(
                     .id(("sc-row", offset))
                     .h_flex()
                     .items_center()
-                    .gap_2()
+                    .gap(px(6.0))
                     .py_1()
                     .border_b_1()
                     .border_color(theme.border)
@@ -1476,62 +1494,57 @@ pub fn render_scouting(
                         cx.notify();
                     }))
                     .child(
-                        Button::new(("sc-star", offset))
-                            .ghost()
-                            .xsmall()
-                            .label(if starred { "★" } else { "☆" })
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                if let Some(pos) = this
-                                    .state
-                                    .shortlist_entries
-                                    .iter()
-                                    .position(|x| x.id == pid_star)
-                                {
-                                    this.state.shortlist_entries.remove(pos);
-                                    if let Ok(uid) = pid_star.parse::<i64>() {
-                                        this.state.shortlist.remove(&uid);
-                                    }
-                                } else {
-                                    if let Ok(uid) = entry_star
-                                        .uniq
-                                        .as_deref()
-                                        .unwrap_or(&entry_star.id)
-                                        .parse::<i64>()
+                        div().w(px(COL_STAR)).flex_shrink_0().child(
+                            Button::new(("sc-star", offset))
+                                .ghost()
+                                .xsmall()
+                                .label(if starred { "★" } else { "☆" })
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    if let Some(pos) = this
+                                        .state
+                                        .shortlist_entries
+                                        .iter()
+                                        .position(|x| x.id == pid_star)
                                     {
-                                        this.state.shortlist.insert(uid);
+                                        this.state.shortlist_entries.remove(pos);
+                                        if let Ok(uid) = pid_star.parse::<i64>() {
+                                            this.state.shortlist.remove(&uid);
+                                        }
+                                    } else {
+                                        if let Ok(uid) = entry_star
+                                            .uniq
+                                            .as_deref()
+                                            .unwrap_or(&entry_star.id)
+                                            .parse::<i64>()
+                                        {
+                                            this.state.shortlist.insert(uid);
+                                        }
+                                        this.state.shortlist_entries.push(entry_star.clone());
                                     }
-                                    this.state.shortlist_entries.push(entry_star.clone());
-                                }
-                                this.state.persist();
-                                cx.notify();
-                            })),
+                                    this.state.persist();
+                                    cx.notify();
+                                })),
+                        ),
                     )
-                    .child(div().w(px(170.0)).text_xs().font_semibold().truncate().child(p.name.clone()))
-                    .child(div().w(px(46.0)).text_xs().child(p.age.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
-                    .child(div().w(px(74.0)).text_xs().text_color(theme.muted_foreground).truncate().child(p.pos_raw.clone()))
-                    .child(div().flex_1().text_xs().text_color(theme.muted_foreground).truncate().child(if p.club.is_empty() { lang.pick("livre", "free").to_string() } else { p.club.clone() }))
-                    .child(div().w(px(46.0)).text_xs().font_semibold().child(p.ca.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
-                    .child(div().w(px(46.0)).text_xs().child(p.pa.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
-                    .child(div().w(px(64.0)).text_xs().child(fmt_money(p.value)))
-                    .child(div().w(px(62.0)).text_xs().child(fmt_money(p.wage)))
-                    .child(div().w(px(76.0)).text_xs().text_color(theme.muted_foreground).truncate().child(p.end.clone())),
+                    .child(div().flex_1().min_w(px(110.0)).text_xs().font_semibold().truncate().child(p.name.clone()))
+                    .child(div().w(px(COL_AGE)).flex_shrink_0().text_xs().child(p.age.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
+                    .child(div().w(px(COL_POS)).flex_shrink_0().text_xs().text_color(theme.muted_foreground).truncate().child(p.pos_raw.clone()))
+                    .child(div().flex_1().min_w_0().text_xs().text_color(theme.muted_foreground).truncate().child(if p.club.is_empty() { lang.pick("livre", "free").to_string() } else { p.club.clone() }))
+                    .child(div().w(px(COL_NUM)).flex_shrink_0().text_xs().font_semibold().child(p.ca.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
+                    .child(div().w(px(COL_NUM)).flex_shrink_0().text_xs().child(p.pa.map(|v| v.to_string()).unwrap_or_else(|| "—".into())))
+                    .child(div().w(px(COL_MONEY)).flex_shrink_0().text_xs().child(fmt_money(p.value)))
+                    .child(div().w(px(COL_MONEY)).flex_shrink_0().text_xs().child(fmt_money(p.wage)))
+                    .child(div().w(px(COL_END)).flex_shrink_0().text_xs().text_color(theme.muted_foreground).truncate().child(p.end.clone())),
             );
         }
     }
 
-    let table_panel = div()
-        .v_flex()
+    let table_panel = panel(cx)
         .flex_1()
-        .min_w_0()
-        .gap_2()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
         .child(
             div()
                 .h_flex()
+                .flex_wrap()
                 .items_center()
                 .justify_between()
                 .gap_2()
@@ -1641,6 +1654,14 @@ pub fn render_scouting(
         .when_some(focus_modal_el, |d, m| d.child(m))
 }
 
+// Scouting table column widths (sum fits next to the 260px filter column at 1000px).
+const COL_STAR: f32 = 24.0;
+const COL_AGE: f32 = 38.0;
+const COL_POS: f32 = 56.0;
+const COL_NUM: f32 = 46.0;
+const COL_MONEY: f32 = 58.0;
+const COL_END: f32 = 72.0;
+
 fn step_filter_btn(
     id: &'static str,
     label: &str,
@@ -1695,9 +1716,9 @@ fn render_player_profile_modal(
         [AttrCat::Technical, AttrCat::Mental, AttrCat::Physical]
     };
 
-    let mut attr_cols = div().h_flex().items_start().gap_3();
+    let mut attr_cols = div().h_flex().flex_wrap().items_start().gap_3();
     for cat in cats {
-        let mut col = div().v_flex().flex_1().gap_1().child(
+        let mut col = div().v_flex().flex_1().min_w(px(200.0)).gap_1().child(
             div()
                 .text_xs()
                 .font_semibold()
@@ -1719,7 +1740,7 @@ fn render_player_profile_modal(
         attr_cols = attr_cols.child(col);
     }
 
-    let mut roles_box = div().v_flex().flex_1().gap_1().child(
+    let mut roles_box = div().v_flex().flex_1().min_w(px(240.0)).gap_1().child(
         div()
             .text_xs()
             .font_semibold()
@@ -1746,7 +1767,7 @@ fn render_player_profile_modal(
         );
     }
 
-    let mut pers_box = div().v_flex().flex_1().gap_1().child(
+    let mut pers_box = div().v_flex().flex_1().min_w(px(240.0)).gap_1().child(
         div()
             .text_xs()
             .font_semibold()
@@ -1791,8 +1812,8 @@ fn render_player_profile_modal(
         .v_flex()
         .gap_3()
         .p_5()
-        .rounded_md()
-        .border_2()
+        .rounded(px(RADIUS))
+        .border_1()
         .border_color(theme.primary)
         .bg(theme.secondary)
         .shadow_lg()
@@ -1801,13 +1822,16 @@ fn render_player_profile_modal(
                 .h_flex()
                 .items_center()
                 .justify_between()
+                .gap_2()
                 .child(
                     div()
                         .v_flex()
+                        .min_w_0()
                         .gap(px(2.0))
                         .child(
                             div()
-                                .text_lg()
+                                .font_family(head_font())
+                                .text_size(px(22.0))
                                 .font_bold()
                                 .text_color(theme.foreground)
                                 .child(p.name.clone()),
@@ -1874,7 +1898,7 @@ fn render_player_profile_modal(
             )
         })
         .child(attr_cols)
-        .child(div().h_flex().items_start().gap_4().child(roles_box).child(pers_box))
+        .child(div().h_flex().flex_wrap().items_start().gap_4().child(roles_box).child(pers_box))
 }
 
 fn render_focus_modal(
@@ -1946,8 +1970,8 @@ fn render_focus_modal(
         .v_flex()
         .gap_3()
         .p_5()
-        .rounded_md()
-        .border_2()
+        .rounded(px(RADIUS))
+        .border_1()
         .border_color(theme.primary)
         .bg(theme.secondary)
         .shadow_lg()
@@ -1958,7 +1982,8 @@ fn render_focus_modal(
                 .items_center()
                 .child(
                     div()
-                        .text_base()
+                        .font_family(head_font())
+                        .text_size(px(18.0))
                         .font_semibold()
                         .text_color(theme.foreground)
                         .child(lang.pick(

@@ -82,7 +82,7 @@ pub fn synergy_map_canvas(
     div()
         .w_full()
         .h(px(210.0))
-        .rounded_md()
+        .rounded(px(crate::widgets::common::RADIUS))
         .overflow_hidden()
         .child(
             canvas(
@@ -98,8 +98,8 @@ pub fn synergy_map_canvas(
                     let pt = |vx: f32, vy: f32| point(px(ox + vx * sx), px(oy + vy * sy));
 
                     // Pitch surface
-                    window.paint_quad(fill(bounds, rgb(0x285532)));
-                    let line_col = rgba_f32(1.0, 1.0, 1.0, 0.55);
+                    window.paint_quad(fill(bounds, rgb(0x2c5a36)));
+                    let line_col = rgba_f32(1.0, 1.0, 1.0, 0.6);
 
                     paint_rect_stroke(window, pt(2.0, 2.0), 96.0 * sx, 60.0 * sy, 1.1, line_col, None);
                     let mut mid = PathBuilder::stroke(px(1.1));
@@ -213,12 +213,14 @@ pub fn dual_synergy_maps(tactic: &Tactic, report: &SynergyReport, lang: Lang, cx
 
     div()
         .h_flex()
+        .flex_wrap()
         .w_full()
         .gap_4()
         .child(
             div()
                 .v_flex()
                 .flex_1()
+                .min_w(px(260.0))
                 .gap_2()
                 .child(
                     div()
@@ -234,6 +236,7 @@ pub fn dual_synergy_maps(tactic: &Tactic, report: &SynergyReport, lang: Lang, cx
             div()
                 .v_flex()
                 .flex_1()
+                .min_w(px(260.0))
                 .gap_2()
                 .child(
                     div()

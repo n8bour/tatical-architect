@@ -5,7 +5,7 @@
 //! - Export JSON backup, Import JSON / legacy `.fm27tb.json` backup, Wipe local data with confirmation dialog
 
 use crate::state::{non_empty, ToastKind};
-use crate::widgets::common::{badge_pill, collapsible_card, BadgeTone};
+use crate::widgets::common::{badge_pill, collapsible_card, page_title, BadgeTone, RADIUS};
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{Input, InputEvent, InputState};
@@ -184,6 +184,8 @@ pub fn render_settings(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
                 .gap_2()
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .text_xs()
                         .text_color(theme.muted_foreground)
                         .child(lang.pick(
@@ -209,7 +211,7 @@ pub fn render_settings(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
                         .h_flex()
                         .items_center()
                         .gap_2()
-                        .child(div().flex_1().child(Input::new(&app.settings_inputs.save_dir)))
+                        .child(div().flex_1().min_w_0().child(Input::new(&app.settings_inputs.save_dir)))
                         .child(
                             Button::new("pick-save-dir")
                                 .outline()
@@ -253,10 +255,10 @@ pub fn render_settings(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
             d.child(
                 div()
                     .p_2()
-                    .rounded_sm()
+                    .rounded(px(RADIUS))
                     .border_1()
-                    .border_color(rgb(0xd97706))
-                    .bg(crate::widgets::common::with_alpha(rgb(0xd97706).into(), 0.14))
+                    .border_color(theme.warning)
+                    .bg(crate::widgets::common::with_alpha(theme.warning, 0.14))
                     .text_xs()
                     .text_color(theme.foreground)
                     .child(err),
@@ -447,6 +449,8 @@ pub fn render_settings(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
                 .gap_2()
                 .child(
                     div()
+                        .flex_1()
+                        .min_w_0()
                         .text_xs()
                         .font_semibold()
                         .text_color(theme.foreground)
@@ -478,7 +482,7 @@ pub fn render_settings(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
                         .h_flex()
                         .items_center()
                         .gap_2()
-                        .child(div().flex_1().child(Input::new(&app.settings_inputs.fm_dir)))
+                        .child(div().flex_1().min_w_0().child(Input::new(&app.settings_inputs.fm_dir)))
                         .child(
                             Button::new("pick-fm-dir")
                                 .outline()
@@ -896,13 +900,31 @@ pub fn render_settings(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
         .v_flex()
         .w_full()
         .gap_4()
+        .child(page_title(lang.pick("Definições", "Settings"), cx))
         .child(
             div()
                 .h_flex()
+                .flex_wrap()
                 .w_full()
                 .items_start()
                 .gap_4()
-                .child(div().v_flex().flex_1().gap_4().child(fmsave_card).child(club_card))
-                .child(div().v_flex().flex_1().gap_4().child(bridge_card).child(backup_card)),
+                .child(
+                    div()
+                        .v_flex()
+                        .flex_1()
+                        .min_w(px(380.0))
+                        .gap_4()
+                        .child(fmsave_card)
+                        .child(club_card),
+                )
+                .child(
+                    div()
+                        .v_flex()
+                        .flex_1()
+                        .min_w(px(380.0))
+                        .gap_4()
+                        .child(bridge_card)
+                        .child(backup_card),
+                ),
         )
 }

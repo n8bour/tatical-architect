@@ -1,19 +1,20 @@
 //! Central persisted & runtime application state for FM27 Tactical Architect.
 
-use gpui_kit::component::{Theme, ThemeMode};
+use gpui_kit::component::{Theme, ThemeMode, ThemeSet};
+use std::rc::Rc;
 use gpui_kit::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::Instant;
 use ta_backend::{
     bridge_call, import_legacy_file, latest_save, plugin_status, LegacyBackup, PluginStatus,
     SaveInfo, StateStore,
 };
-use ta_core::data::{default_role, formation_slots, slot_info, template_by_id, TEMPLATES};
+use ta_core::engine::new_tactic;
 use ta_core::types::{
     AppBackup, AutoSavePrefs, BridgeError, BridgeStatus, BridgeTransport, Lang, PersistedState,
-    Phase, Player, ScoutDb, ShortlistEntry, SlotAssignment, SquadPack, Tactic,
+    Player, ScoutDb, ShortlistEntry, SquadPack, Tactic,
 };
 
 /// `FmbClient` transport over the backend's TCP bridge (`127.0.0.1:27029`).
@@ -26,9 +27,9 @@ impl BridgeTransport for BackendBridgeTransport {
 }
 
 // Global keyboard actions bound at app startup.
-gpui_kit::actions!(ta_app, [ToggleSidebar, ReadSaveNow]);
+gpui_kit::actions!(ta_app, [ToggleCompactNav, ReadSaveNow]);
 
-/// Active primary sidebar section.
+/// Active top-bar section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NavSection {
     Home,
@@ -49,10 +50,19 @@ impl NavSection {
         NavSection::Settings,
     ];
 
+    /// Sections in the red top bar; Settings sits behind the gear on the right.
+    pub const MAIN: [NavSection; 5] = [
+        NavSection::Home,
+        NavSection::Team,
+        NavSection::Scouting,
+        NavSection::Tactic,
+        NavSection::Training,
+    ];
+
     pub fn label(self, lang: Lang) -> &'static str {
         match self {
             NavSection::Home => lang.pick("Início", "Home"),
-            NavSection::Team => lang.pick("O Meu Plantel", "My Team"),
+            NavSection::Team => lang.pick("A minha equipa", "My Team"),
             NavSection::Scouting => lang.pick("Prospeção", "Scouting"),
             NavSection::Tactic => lang.pick("Tática", "Tactic"),
             NavSection::Training => lang.pick("Treino", "Training"),
@@ -63,10 +73,10 @@ impl NavSection {
     pub fn icon(self) -> &'static str {
         match self {
             NavSection::Home => "⌂",
-            NavSection::Team => "◎",
+            NavSection::Team => "☰",
             NavSection::Scouting => "⌕",
-            NavSection::Tactic => "◈",
-            NavSection::Training => "⚡",
+            NavSection::Tactic => "◎",
+            NavSection::Training => "◷",
             NavSection::Settings => "⚙",
         }
     }
@@ -208,70 +218,16 @@ impl ToastState {
 pub struct StoredAppData {
     pub persisted: PersistedState,
     pub dark_mode: bool,
-    pub sidebar_collapsed: bool,
+    /// Top-bar menu shows icons only (Ctrl/Cmd+B), like the browser build's `navMini`.
+    pub nav_compact: bool,
     pub collapsed_panels: Vec<String>,
     pub shortlist_uids: Vec<i64>,
 }
 
-/// Builds a default valid 11-slot `Tactic` from the first built-in template.
-pub fn default_tactic() -> Tactic {
-    let tp = template_by_id("pos433").unwrap_or(&TEMPLATES[0]);
-    let ip_slots = formation_slots(tp.ip).map_or(&[][..], |v| v.as_slice());
-    let oop_slots = formation_slots(tp.oop)
-        .map(|v| v.as_slice())
-        .unwrap_or(ip_slots);
-    let mut slots = Vec::with_capacity(11);
-    for (i, &(ip_code, ip_role, oop_role)) in tp.roles.iter().enumerate() {
-        let oop_code = oop_slots
-            .get(i)
-            .map(|s| s.code)
-            .unwrap_or(ip_code);
-        slots.push(SlotAssignment {
-            ip_code: ip_code.to_string(),
-            oop_code: oop_code.to_string(),
-            ip: ip_role.to_string(),
-            oop: oop_role.to_string(),
-            pid: None,
-            pis: Vec::new(),
-        });
-    }
-    if slots.is_empty() {
-        for (i, s) in ip_slots.iter().enumerate() {
-            let oop_code = oop_slots.get(i).map(|o| o.code).unwrap_or(s.code);
-            let meta = slot_info(tp.ip, s.code);
-            let ip_r = meta
-                .as_ref()
-                .map(|m| default_role(m.group, Phase::Ip))
-                .unwrap_or("gk");
-            let oop_r = meta
-                .as_ref()
-                .map(|m| default_role(m.group, Phase::Oop))
-                .unwrap_or("gko");
-            slots.push(SlotAssignment {
-                ip_code: s.code.to_string(),
-                oop_code: oop_code.to_string(),
-                ip: ip_r.to_string(),
-                oop: oop_r.to_string(),
-                pid: None,
-                pis: Vec::new(),
-            });
-        }
-    }
-    let mut ti = BTreeMap::new();
-    for &(k, v) in tp.ti {
-        ti.insert(k.to_string(), v);
-    }
-    Tactic {
-        name: tp.name_pt.to_string(),
-        ment: tp.ment,
-        ip_form: tp.ip.to_string(),
-        oop_form: tp.oop.to_string(),
-        slots,
-        ti,
-        ois: 0,
-        source: "template".to_string(),
-        saved_at: None,
-    }
+/// The browser build's starting tactic (`newTactic()`): 4-3-3 DM Wide → 4-1-4-1 DM Wide,
+/// Balanced, default roles per slot.
+pub fn default_tactic(lang: Lang) -> Tactic {
+    new_tactic("4-3-3 DM Wide", "4-1-4-1 DM Wide", lang)
 }
 
 /// Central mutable state owned by the root GPUI view.
@@ -281,7 +237,7 @@ pub struct AppState {
     // Preferences & UI layout
     pub lang: Lang,
     pub dark_mode: bool,
-    pub sidebar_collapsed: bool,
+    pub nav_compact: bool,
     pub collapsed_panels: HashSet<String>,
 
     // Domain data
@@ -340,11 +296,11 @@ impl AppState {
     fn fresh(store: StateStore) -> Self {
         Self {
             store,
-            lang: Lang::Pt,
+            lang: Lang::En,
             dark_mode: true,
-            sidebar_collapsed: false,
+            nav_compact: false,
             collapsed_panels: HashSet::new(),
-            tactic: default_tactic(),
+            tactic: default_tactic(Lang::En),
             saved_tactics: Vec::new(),
             squad: Vec::new(),
             squad_source: String::new(),
@@ -386,7 +342,7 @@ impl AppState {
         } else {
             stored.dark_mode
         };
-        self.sidebar_collapsed = stored.sidebar_collapsed;
+        self.nav_compact = stored.nav_compact;
         self.collapsed_panels = stored.collapsed_panels.into_iter().collect();
 
         if !p.tactic.slots.is_empty() {
@@ -463,7 +419,7 @@ impl AppState {
         StoredAppData {
             persisted,
             dark_mode: self.dark_mode,
-            sidebar_collapsed: self.sidebar_collapsed,
+            nav_compact: self.nav_compact,
             collapsed_panels,
             shortlist_uids,
         }
@@ -515,12 +471,26 @@ impl AppState {
         self.toast = None;
     }
 
+    /// Applies the "Dark Paper" / "Paper" skin of the browser build (`src/styles.css`).
     pub fn apply_theme(&self, window: Option<&mut Window>, cx: &mut App) {
         let mode = if self.dark_mode {
             ThemeMode::Dark
         } else {
             ThemeMode::Light
         };
+        if !cx.has_global::<Theme>() {
+            Theme::change(mode, None, cx);
+        }
+        let set: ThemeSet = serde_json::from_str(include_str!("../assets/themes/fm27.json"))
+            .expect("bundled FM27 theme is valid");
+        let theme = Theme::global_mut(cx);
+        for config in set.themes {
+            if config.mode.is_dark() {
+                theme.dark_theme = Rc::new(config);
+            } else {
+                theme.light_theme = Rc::new(config);
+            }
+        }
         Theme::change(mode, window, cx);
     }
 
@@ -602,13 +572,13 @@ impl AppState {
                 let persisted: PersistedState = serde_json::from_value(val)
                     .map_err(|e| format!("Estado JSON inválido: {}", e))?;
                 let dark = self.dark_mode;
-                let sidebar = self.sidebar_collapsed;
+                let nav_compact = self.nav_compact;
                 let collapsed: Vec<String> = self.collapsed_panels.iter().cloned().collect();
                 let uids: Vec<i64> = self.shortlist.iter().copied().collect();
                 self.apply_stored(StoredAppData {
                     persisted,
                     dark_mode: dark,
-                    sidebar_collapsed: sidebar,
+                    nav_compact,
                     collapsed_panels: collapsed,
                     shortlist_uids: uids,
                 });
@@ -654,8 +624,8 @@ pub fn non_empty(s: &str) -> Option<&str> {
 /// Registers global keyboard shortcuts (`Cmd/Ctrl+B` collapse sidebar, `Cmd/Ctrl+Shift+L` read save).
 pub fn bind_global_keys(cx: &mut App) {
     cx.bind_keys([
-        KeyBinding::new("cmd-b", ToggleSidebar, None),
-        KeyBinding::new("ctrl-b", ToggleSidebar, None),
+        KeyBinding::new("cmd-b", ToggleCompactNav, None),
+        KeyBinding::new("ctrl-b", ToggleCompactNav, None),
         KeyBinding::new("cmd-shift-l", ReadSaveNow, None),
         KeyBinding::new("ctrl-shift-l", ReadSaveNow, None),
     ]);
@@ -691,7 +661,7 @@ mod tests {
         st.lang = Lang::En;
         st.dark_mode = false;
         st.my_club = "SL Benfica".into();
-        st.sidebar_collapsed = true;
+        st.nav_compact = true;
         st.toggle_panel("settings-about");
         st.persist();
 
@@ -699,7 +669,7 @@ mod tests {
         assert_eq!(reloaded.lang, Lang::En);
         assert!(!reloaded.dark_mode);
         assert_eq!(reloaded.my_club, "SL Benfica");
-        assert!(reloaded.sidebar_collapsed);
+        assert!(reloaded.nav_compact);
         assert!(reloaded.is_panel_collapsed("settings-about"));
 
         // Export + import roundtrip

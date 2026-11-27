@@ -67,7 +67,7 @@ Convenience npm scripts: `npm run app:dev` (`cargo run -p ta-app`) and `npm run 
 Double-click `app/index.html` (rebuilt via `node build.mjs`, tested with `npm test`). It has everything except native save polling and the FM plugin, which require the desktop app.
 
 ## Language
-The app opens in **English** by default. Portuguese is chosen with the **EN/PT** selector at the bottom of the menu, and the choice is remembered.
+The app opens in **English** by default. Portuguese is chosen with the **EN/PT** selector in the red top bar, and the choice is remembered.
 - **Full translation:** covers the interface, role/instruction descriptions and tips, training, and the messages from the diagnosis, generator, opponent report, and set pieces.
 - **Generator:** when switching language, the report's reasons are recalculated in the new language.
 - **FM names in Portuguese:** with the app in Portuguese, roles, instructions and their options, mentalities, player and opposition instructions, Tactical Tweaks and training areas appear with Portuguese names, also inside sentences. For roles, 34 names are **confirmed in the Portuguese FM26**, from tactics published by Salão de Jogos, and are marked with ✓ in `src/i18n/pt_terms.js` (and mirrored in `crates/core/src/data/i18n.rs`). The rest follow the game's same naming pattern. FM27 may have occasional differences.
@@ -76,7 +76,7 @@ The app opens in **English** by default. Portuguese is chosen with the **EN/PT**
 
 ## Interface
 - **Collapsible panels:** click the ▾ (or the title) of any panel to close or open it. The app remembers the state on each screen.
-- **Icon-only menu:** « button at the top of the menu or **Ctrl+B** / **Cmd+B**. In narrow windows the menu switches to icons automatically.
+- **Icon-only menu:** **Ctrl+B** / **Cmd+B** switches the top-bar menu to icons. In narrow windows the menu switches to icons automatically.
 - **Game data always at hand:** the top bar has the **Read the save now** button, and shows how long ago the squad was read. Shortcut: **Ctrl+Shift+L** / **Cmd+Shift+L**.
 - **Drag and drop** any file onto the window.
 - **Activity always visible:** long-running tasks run off the UI thread and display a top progress bar and floating top-right activity card (never covering content) with elapsed time and percentage.

@@ -4,8 +4,10 @@
 use crate::state::{BackendBridgeTransport, NavSection, TacticTab, ToastKind};
 use crate::views::fm_bridge_ui::{fm_button, spawn_refresh_bridge_status};
 use crate::views::team::sync_animated_pitch;
-use crate::widgets::common::{empty_state_card, BadgeTone, badge_pill};
-use crate::widgets::setpieces_diagram::setpieces_diagrams_pair;
+use crate::widgets::common::{
+    badge_pill, empty_state_card, head_font, page_title, BadgeTone, RADIUS,
+};
+use crate::widgets::setpieces_diagram::{setpiece_half_pitch, SetPieceDiagramKind};
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::{ActiveTheme, Sizable, StyledExt};
@@ -38,14 +40,15 @@ fn taker_row(
 ) -> Div {
     div()
         .h_flex()
+        .items_start()
         .gap_3()
         .py_1()
         .border_b_1()
         .border_color(theme.border)
         .text_xs()
-        .child(div().w(px(170.0)).text_color(theme.foreground).child(label))
+        .child(div().w(px(130.0)).flex_shrink_0().text_color(theme.foreground).child(label))
         .child(
-            div().w(px(190.0)).h_flex().gap_1().children(match who {
+            div().w(px(120.0)).flex_shrink_0().v_flex().children(match who {
                 Some((name, code)) => vec![
                     div().font_semibold().text_color(theme.foreground).child(name.to_string()),
                     div().text_color(theme.muted_foreground).child(code.to_string()),
@@ -53,36 +56,57 @@ fn taker_row(
                 None => vec![div().text_color(theme.muted_foreground).child("—")],
             }),
         )
-        .child(div().flex_1().text_color(theme.muted_foreground).child(extra))
+        .child(div().flex_1().min_w_0().text_color(theme.muted_foreground).child(extra))
 }
 
 fn routine_table(rows: &[SetPieceRole], theme: &gpui_kit::component::theme::Theme) -> Div {
     div().v_flex().children(rows.iter().map(|r| {
         div()
             .h_flex()
+            .items_start()
             .gap_3()
             .py_1()
             .border_b_1()
             .border_color(theme.border)
             .text_xs()
-            .child(div().w(px(150.0)).text_color(theme.foreground).child(r.label.clone()))
-            .child(div().w(px(160.0)).font_semibold().text_color(theme.foreground).child(r.player_name.clone()))
-            .child(div().flex_1().text_color(theme.muted_foreground).child(r.why.clone()))
+            .child(div().w(px(120.0)).flex_shrink_0().text_color(theme.foreground).child(r.label.clone()))
+            .child(
+                div()
+                    .w(px(110.0))
+                    .flex_shrink_0()
+                    .font_semibold()
+                    .text_color(theme.foreground)
+                    .child(r.player_name.clone()),
+            )
+            .child(div().flex_1().min_w_0().text_color(theme.muted_foreground).child(r.why.clone()))
     }))
 }
 
 fn panel(title: impl Into<SharedString>, theme: &gpui_kit::component::theme::Theme) -> Div {
+    let title: SharedString = title.into();
     div()
         .v_flex()
         .flex_1()
-        .min_w(px(360.0))
+        .min_w(px(380.0))
         .gap_2()
         .p_4()
-        .rounded_lg()
+        .rounded(px(RADIUS))
         .border_1()
         .border_color(theme.border)
         .bg(theme.secondary)
-        .child(div().text_sm().font_semibold().text_color(theme.foreground).child(title.into()))
+        .shadow_md()
+        .child(
+            div()
+                .w_full()
+                .pb(px(7.0))
+                .border_b_1()
+                .border_color(theme.border)
+                .font_family(head_font())
+                .text_size(px(16.0))
+                .font_semibold()
+                .text_color(theme.foreground)
+                .child(SharedString::from(title.to_uppercase())),
+        )
 }
 
 /// Applies the set-piece plan in FM27 via the bridge, off-thread.
@@ -199,12 +223,10 @@ pub fn render_setpieces(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         .child(
             div()
                 .v_flex()
+                .flex_1()
+                .min_w(px(240.0))
                 .gap(px(2.0))
-                .child(div().text_base().font_semibold().text_color(theme.foreground).child(l(
-                    lang,
-                    "Bolas paradas & capitães",
-                    "Set pieces & captains",
-                )))
+                .child(page_title(l(lang, "Bolas paradas & capitães", "Set pieces & captains"), cx))
                 .child(div().text_xs().text_color(theme.muted_foreground).child(format!(
                     "{} “{}”. {}",
                     l(lang, "Escolhidos entre o XI de", "Picked from the XI of"),
@@ -227,6 +249,7 @@ pub fn render_setpieces(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         .child(
             div()
                 .h_flex()
+                .flex_wrap()
                 .gap_2()
                 .child(
                     Button::new("sp-to-sheet")
@@ -354,6 +377,7 @@ pub fn render_setpieces(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
             .v_flex()
             .flex_1()
             .gap_1()
+            .min_w_0()
             .child(div().text_xs().text_color(theme.foreground).child(tp.text.clone()));
         if let (Some(d), Some(v), false) = (def, tp.value, on) {
             let key = d.key;
@@ -401,21 +425,33 @@ pub fn render_setpieces(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
 
     // Routines
     let attack = panel(l(lang, "Canto ofensivo", "Attacking corner"), &theme)
-        .child(div().text_xs().text_color(theme.muted_foreground).child(l(
-            lang,
-            "Canto do lado esquerdo; do outro lado é o espelho.",
-            "Corner from the left; the other side is the mirror image.",
-        )))
+        .child(setpiece_half_pitch(
+            &r.attack,
+            SetPieceDiagramKind::Attack,
+            l(
+                lang,
+                "Canto do lado esquerdo; do outro lado é o espelho.",
+                "Corner from the left; the other side is the mirror image.",
+            ),
+            false,
+            cx,
+        ))
         .child(routine_table(&r.attack, &theme));
     let defend = panel(
         format!("{} — {}", l(lang, "Canto defensivo", "Defending corner"), r.system),
         &theme,
     )
-    .child(div().text_xs().text_color(theme.muted_foreground).child(l(
-        lang,
-        "Posições sem bola no canto contra.",
-        "Off-ball positions when defending a corner.",
-    )))
+    .child(setpiece_half_pitch(
+        &r.defend,
+        SetPieceDiagramKind::Defend,
+        l(
+            lang,
+            "Posições sem bola no canto contra.",
+            "Off-ball positions when defending a corner.",
+        ),
+        true,
+        cx,
+    ))
     .child(routine_table(&r.defend, &theme));
 
     div()
@@ -423,7 +459,6 @@ pub fn render_setpieces(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         .gap_4()
         .child(header)
         .child(div().h_flex().flex_wrap().items_start().gap_4().child(takers).child(tips))
-        .child(setpieces_diagrams_pair(&r, lang, cx))
         .child(div().h_flex().flex_wrap().items_start().gap_4().child(attack).child(defend))
         .into_any_element()
 }

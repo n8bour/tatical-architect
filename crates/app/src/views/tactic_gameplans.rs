@@ -1,7 +1,7 @@
 //! Tactic › Game States (Match Situations) view wired to `ta_core::planning::gameplans`.
 
 use crate::state::{NavSection, TacticTab, ToastKind};
-use crate::widgets::common::{badge_pill, BadgeTone};
+use crate::widgets::common::{badge_pill, page_title, pal, panel, panel_title, BadgeTone};
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::{ActiveTheme, Sizable, StyledExt};
@@ -20,9 +20,9 @@ pub struct GamePlansViewState {
 fn delta_badge(before: u8, after: u8, cx: &App) -> impl IntoElement {
     let diff = after as i16 - before as i16;
     let col: Hsla = if diff > 0 {
-        rgb(0x22c55e).into()
+        rgb(pal::GOOD).into()
     } else if diff < 0 {
-        rgb(0xef4444).into()
+        rgb(pal::CRIT).into()
     } else {
         cx.theme().muted_foreground
     };
@@ -122,14 +122,10 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
         .child(
             div()
                 .v_flex()
+                .flex_1()
+                .min_w(px(240.0))
                 .gap(px(2.0))
-                .child(
-                    div()
-                        .text_base()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(lang.pick("Situações de jogo", "Game states")),
-                )
+                .child(page_title(lang.pick("Situações de jogo", "Game states"), cx))
                 .child(
                     div()
                         .text_xs()
@@ -216,16 +212,10 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
     }
 
     // Left panel: diffs
-    let mut left = div()
-        .v_flex()
+    let mut left = panel(cx)
         .flex_1()
-        .min_w_0()
+        .min_w(px(480.0))
         .gap_3()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
         .child(
             div()
                 .v_flex()
@@ -303,20 +293,23 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     .text_xs()
                     .child(
                         div()
-                            .w(px(160.0))
+                            .w(px(150.0))
+                            .flex_shrink_0()
                             .font_semibold()
                             .text_color(theme.foreground)
                             .child(c.label.clone()),
                     )
                     .child(
                         div()
-                            .w(px(170.0))
+                            .w(px(150.0))
+                            .flex_shrink_0()
                             .text_color(theme.primary)
                             .child(format!("{} → {}", c.from, c.to)),
                     )
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .text_color(theme.muted_foreground)
                             .child(c.why.clone()),
                     ),
@@ -372,20 +365,23 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     ))
                     .child(
                         div()
-                            .w(px(120.0))
+                            .w(px(110.0))
+                            .flex_shrink_0()
                             .text_color(theme.foreground)
                             .truncate()
                             .child(c.player.clone().unwrap_or_default()),
                     )
                     .child(
                         div()
-                            .w(px(180.0))
+                            .w(px(160.0))
+                            .flex_shrink_0()
                             .text_color(theme.primary)
                             .child(format!("{} → {}", c.from, c.to)),
                     )
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .text_color(theme.muted_foreground)
                             .child(c.why.clone()),
                     ),
@@ -419,6 +415,7 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     .child(
                         div()
                             .w(px(150.0))
+                            .flex_shrink_0()
                             .font_semibold()
                             .text_color(theme.foreground)
                             .child(format!(
@@ -443,6 +440,7 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .text_color(theme.muted_foreground)
                             .child(c.why.clone()),
                     ),
@@ -501,19 +499,22 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     .child(
                         div()
                             .w(px(55.0))
+                            .flex_shrink_0()
                             .font_semibold()
                             .text_color(theme.foreground)
                             .child(s.code.clone()),
                     )
                     .child(
                         div()
-                            .w(px(210.0))
+                            .w(px(190.0))
+                            .flex_shrink_0()
                             .text_color(theme.primary)
                             .child(format!("{} → {}", s.out_name, s.in_name)),
                     )
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .text_color(theme.muted_foreground)
                             .child(s.why.clone()),
                     ),
@@ -648,43 +649,18 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
 
     let right = div()
         .v_flex()
-        .w(px(300.0))
-        .flex_shrink_0()
+        .flex_1()
+        .min_w(px(280.0))
+        .max_w(px(360.0))
         .gap_3()
         .child(
-            div()
-                .v_flex()
-                .gap_2()
-                .p_4()
-                .rounded_md()
-                .border_1()
-                .border_color(theme.border)
-                .bg(theme.secondary)
-                .child(
-                    div()
-                        .text_sm()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(lang.pick("Impacto (Antes → Depois)", "Impact (Before → After)")),
-                )
+            panel(cx)
+                .child(panel_title(lang.pick("Impacto (Antes → Depois)", "Impact (Before → After)"), cx))
                 .child(impact_rows),
         )
         .child(
-            div()
-                .v_flex()
-                .gap_1()
-                .p_4()
-                .rounded_md()
-                .border_1()
-                .border_color(theme.border)
-                .bg(theme.secondary)
-                .child(
-                    div()
-                        .text_sm()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(lang.pick("No jogo (FM27)", "In game (FM27)")),
-                )
+            panel(cx)
+                .child(panel_title(lang.pick("No jogo (FM27)", "In game (FM27)"), cx))
                 .child(
                     div()
                         .text_xs()
@@ -706,7 +682,7 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
             d.child(
                 div()
                     .p_2()
-                    .rounded_sm()
+                    .rounded(px(crate::widgets::common::RADIUS))
                     .border_1()
                     .border_color(theme.border)
                     .bg(theme.secondary)
@@ -718,5 +694,14 @@ pub fn render_gameplans(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> i
                     )),
             )
         })
-        .child(div().h_flex().w_full().items_start().gap_4().child(left).child(right))
+        .child(
+            div()
+                .h_flex()
+                .flex_wrap()
+                .w_full()
+                .items_start()
+                .gap_4()
+                .child(left)
+                .child(right),
+        )
 }

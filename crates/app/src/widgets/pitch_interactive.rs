@@ -3,6 +3,7 @@
 
 use crate::widgets::common::{
     paint_arc_stroke, paint_arrow, paint_circle_fill, paint_rect_stroke, rgba_f32, score_color,
+    RADIUS,
 };
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::{ActiveTheme, Sizable, StyledExt};
@@ -118,9 +119,9 @@ pub fn interactive_pitch(
                 let bw: f32 = bounds.size.width.into();
                 let bh: f32 = bounds.size.height.into();
 
-                let grass1: Hsla = rgb(0x285532).into();
-                let grass2: Hsla = rgb(0x224a2b).into();
-                let line_col = rgba_f32(1.0, 1.0, 1.0, 0.58);
+                let grass1: Hsla = rgb(0x2c5a36).into();
+                let grass2: Hsla = rgb(0x275131).into();
+                let line_col = rgba_f32(1.0, 1.0, 1.0, 0.6);
 
                 // Base grass + horizontal stripes
                 window.paint_quad(fill(bounds, grass1));
@@ -258,7 +259,7 @@ pub fn interactive_pitch(
             },
         )
         .size_full()
-        .rounded_md()
+        .rounded(px(RADIUS))
         .overflow_hidden(),
     );
 
@@ -277,7 +278,6 @@ pub fn interactive_pitch(
         };
         let (cx_px, cy_px) = to_norm_px(x, y);
         let is_selected = selected_slot == Some(idx);
-        let is_gk = slot.ip_code == "GK";
 
         let ip_ab = role_by_id(&slot.ip).map(|r| r.ab).unwrap_or(&slot.ip);
         let oop_ab = role_by_id(&slot.oop).map(|r| r.ab).unwrap_or(&slot.oop);
@@ -298,22 +298,22 @@ pub fn interactive_pitch(
             .unwrap_or_default();
         let score = slot_scores.and_then(|s| s.get(idx).copied());
 
-        let token_bg: Hsla = if is_gk {
-            rgb(0x464a52).into()
-        } else if mode == PitchPhaseMode::Oop {
-            rgb(0x1d4ed8).into()
-        } else {
-            rgb(0x0f766e).into()
+        // Disc like the browser build: fit colour when a player is assigned, dark otherwise.
+        let token_bg: Hsla = match score {
+            Some(sc) if !surname.is_empty() => score_color(sc),
+            _ if mode == PitchPhaseMode::Oop => rgb(0x3d4a5a).into(),
+            _ => rgba_f32(0.0, 0.0, 0.0, 0.42),
         };
         let border_col: Hsla = if is_selected {
-            rgb(0xfacc15).into()
+            rgb(0xffe680).into()
         } else {
             rgba_f32(1.0, 1.0, 1.0, 0.85)
         };
 
         let on_sel = on_select.clone();
-        let token_w = 68.0_f32;
-        let token_h = 44.0_f32;
+        let token_w = 72.0_f32;
+        let token_h = 50.0_f32;
+        let disc = if is_selected { 36.0 } else { 32.0 };
 
         slot_overlay = slot_overlay.child(
             div()
@@ -329,32 +329,32 @@ pub fn interactive_pitch(
                 .on_click(move |_, window, cx| on_sel(&idx, window, cx))
                 .child(
                     div()
-                        .h_flex()
+                        .relative()
+                        .size(px(disc))
+                        .flex()
                         .items_center()
                         .justify_center()
-                        .gap_1()
-                        .px_2()
-                        .py(px(3.0))
                         .rounded_full()
                         .bg(token_bg)
-                        .border_2()
                         .border_color(border_col)
+                        .when(is_selected, |d| d.border_2())
+                        .when(!is_selected, |d| d.border_1())
                         .shadow_sm()
                         .child(
                             div()
-                                .text_xs()
+                                .text_size(px(if role_badge.len() > 4 { 9.0 } else { 11.0 }))
                                 .font_bold()
                                 .text_color(rgb(0xffffff))
                                 .child(role_badge),
                         )
-                        .when_some(score, |el, sc| {
+                        .when_some(score.filter(|_| !surname.is_empty()), |el, sc| {
                             el.child(
                                 div()
-                                    .px(px(4.0))
-                                    .rounded_full()
-                                    .bg(score_color(sc))
-                                    .text_xs()
-                                    .font_bold()
+                                    .absolute()
+                                    .top(px(-6.0))
+                                    .left(px(disc - 2.0))
+                                    .text_size(px(10.0))
+                                    .font_semibold()
                                     .text_color(rgb(0xffffff))
                                     .child(sc.to_string()),
                             )
@@ -362,12 +362,13 @@ pub fn interactive_pitch(
                 )
                 .child(
                     div()
-                        .px(px(4.0))
-                        .py(px(1.0))
+                        .max_w(px(token_w))
+                        .px(px(3.0))
                         .rounded_sm()
-                        .bg(rgba_f32(0.06, 0.08, 0.1, 0.78))
-                        .text_xs()
-                        .text_color(rgb(0xf8fafc))
+                        .bg(rgba_f32(0.0, 0.0, 0.0, 0.35))
+                        .text_size(px(11.0))
+                        .font_semibold()
+                        .text_color(rgb(0xffffff))
                         .truncate()
                         .child(if surname.is_empty() {
                             pos_code.to_string()
@@ -396,11 +397,6 @@ pub fn interactive_pitch(
         .v_flex()
         .items_center()
         .gap_2()
-        .p_3()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
         .child(phase_bar)
         .child(slot_overlay)
         .child(

@@ -4,7 +4,7 @@
 
 use crate::state::{NavSection, TacticTab, ToastKind};
 use crate::views::team::apply_tactic_to_app;
-use crate::widgets::common::{badge_pill, BadgeTone};
+use crate::widgets::common::{badge_pill, page_title, with_alpha, BadgeTone, RADIUS};
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::{ActiveTheme, Sizable, StyledExt};
@@ -127,8 +127,8 @@ fn kv(k: &str, v: String, cx: &App) -> Div {
         .h_flex()
         .gap_3()
         .text_xs()
-        .child(div().w(px(170.0)).text_color(theme.muted_foreground).child(k.to_string()))
-        .child(div().flex_1().font_semibold().text_color(theme.foreground).child(v))
+        .child(div().w(px(150.0)).flex_shrink_0().text_color(theme.muted_foreground).child(k.to_string()))
+        .child(div().flex_1().min_w_0().font_semibold().text_color(theme.foreground).child(v))
 }
 
 fn report_view(r: &FmfInspectReport, show_strings: bool, lang: Lang, cx: &mut Context<ArchitectApp>) -> Div {
@@ -195,7 +195,7 @@ fn report_view(r: &FmfInspectReport, show_strings: bool, lang: Lang, cx: &mut Co
                 .v_flex()
                 .gap_2()
                 .p_3()
-                .rounded_md()
+                .rounded(px(RADIUS))
                 .border_1()
                 .border_color(theme.border)
                 .bg(theme.muted)
@@ -275,6 +275,7 @@ fn report_view(r: &FmfInspectReport, show_strings: bool, lang: Lang, cx: &mut Co
     out = out.child(
         div()
             .h_flex()
+            .flex_wrap()
             .gap_2()
             .pt_2()
             .child(
@@ -307,7 +308,7 @@ fn report_view(r: &FmfInspectReport, show_strings: bool, lang: Lang, cx: &mut Co
                 .max_h(px(300.0))
                 .overflow_y_scroll()
                 .p_2()
-                .rounded_md()
+                .rounded(px(RADIUS))
                 .bg(theme.muted)
                 .font_family("monospace")
                 .text_xs()
@@ -329,10 +330,11 @@ pub fn render_import(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl
             .min_w(px(360.0))
             .gap_3()
             .p_4()
-            .rounded_lg()
+            .rounded(px(RADIUS))
             .border_1()
             .border_color(theme.border)
             .bg(theme.secondary)
+            .shadow_md()
     };
 
     let left = panel()
@@ -342,7 +344,7 @@ pub fn render_import(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl
                 .items_center()
                 .gap_2()
                 .p_6()
-                .rounded_lg()
+                .rounded(px(RADIUS))
                 .border_2()
                 .border_dashed()
                 .border_color(theme.border)
@@ -375,9 +377,10 @@ pub fn render_import(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl
         .child(
             div()
                 .p_3()
-                .rounded_md()
+                .rounded(px(RADIUS))
                 .border_1()
-                .border_color(rgb(0xd97706))
+                .border_color(theme.warning)
+                .bg(with_alpha(theme.warning, 0.10))
                 .text_xs()
                 .text_color(theme.foreground)
                 .child(l(
@@ -414,7 +417,7 @@ pub fn render_import(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl
         panel().child(
             div()
                 .text_sm()
-                .text_color(rgb(0xef4444))
+                .text_color(theme.danger)
                 .child(format!("{} {name}: {err}", l(lang, "Erro ao ler", "Error reading"))),
         )
     } else if let Some(r) = &st.report {
@@ -426,6 +429,6 @@ pub fn render_import(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl
     div()
         .v_flex()
         .gap_4()
-        .child(div().text_base().font_semibold().text_color(theme.foreground).child(l(lang, "Importar", "Import")))
+        .child(page_title(l(lang, "Importar", "Import"), cx))
         .child(div().h_flex().flex_wrap().items_start().gap_4().child(left).child(right))
 }

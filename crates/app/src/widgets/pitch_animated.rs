@@ -229,10 +229,11 @@ impl AnimatedPitchView {
             .v_flex()
             .gap_2()
             .p_3()
-            .rounded_md()
+            .rounded(px(crate::widgets::common::RADIUS))
             .border_1()
             .border_color(theme.border)
             .bg(theme.secondary)
+            .shadow_md()
             .child(
                 div()
                     .h_flex()
@@ -333,13 +334,13 @@ impl Render for AnimatedPitchView {
             .v_flex()
             .w_full()
             .gap_3()
-            .child(self.render_controls(cx))
             .child(
                 div()
                     .id("animated-pitch-surface")
                     .w_full()
                     .h(px(440.0))
-                    .rounded_md()
+                    .rounded(px(crate::widgets::common::RADIUS))
+                    .shadow_md()
                     .overflow_hidden()
                     .cursor_pointer()
                     .on_mouse_down(
@@ -376,6 +377,7 @@ impl Render for AnimatedPitchView {
                         .size_full(),
                     ),
             )
+            .child(self.render_controls(cx))
     }
 }
 
@@ -422,7 +424,7 @@ fn paint_animated_frame(
     }
 
     // Pitch lines, boxes, circles, arcs, goals
-    let pline = rgba_f32(1.0, 1.0, 1.0, 0.65);
+    let pline = rgba_f32(1.0, 1.0, 1.0, 0.6);
     paint_rect_stroke(window, pt(3.0, 2.0), 104.0 * sx, 68.0 * sy, (0.36 * sc).max(1.0), pline, None);
     let mut mid = PathBuilder::stroke(px((0.36 * sc).max(1.0)));
     mid.move_to(pt(55.0, 2.0));

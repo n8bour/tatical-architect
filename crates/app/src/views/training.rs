@@ -4,7 +4,8 @@
 use crate::state::{NavSection, TeamTab, ToastKind};
 use crate::views::team::sync_animated_pitch;
 use crate::widgets::common::{
-    attr_chip, badge_pill, collapsible_card, score_color, with_alpha, BadgeTone,
+    attr_chip, badge_pill, collapsible_card, page_title, score_color, with_alpha, BadgeTone,
+    RADIUS,
 };
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
@@ -31,7 +32,7 @@ fn fit_pill(score: u8) -> Div {
     div()
         .px_2()
         .py(px(1.0))
-        .rounded_sm()
+        .rounded(px(RADIUS))
         .bg(col)
         .text_xs()
         .font_bold()
@@ -55,17 +56,14 @@ pub fn render_training(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
     let header = div()
         .v_flex()
         .gap_1()
-        .child(
-            div()
-                .text_xl()
-                .font_bold()
-                .text_color(theme.foreground)
-                .child(format!(
-                    "{} “{}”",
-                    l(lang, "Plano de treino para", "Training plan for"),
-                    t_name(tactic, lang)
-                )),
-        )
+        .child(page_title(
+            format!(
+                "{} “{}”",
+                l(lang, "Plano de treino para", "Training plan for"),
+                t_name(tactic, lang)
+            ),
+            cx,
+        ))
         .child(
             div()
                 .text_xs()
@@ -99,26 +97,25 @@ pub fn render_training(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
                 .h_flex()
                 .items_start()
                 .gap_2()
-                .p_2()
-                .rounded_sm()
-                .border_1()
-                .border_color(theme.border)
-                .bg(theme.background)
+                .py_2()
+                .when(idx > 0, |d| d.border_t_1().border_color(theme.border))
                 .child(badge_pill(format!("{}", idx + 1), tone, cx))
                 .child(
                     div()
                         .v_flex()
                         .flex_1()
+                        .min_w_0()
                         .gap(px(2.0))
                         .child(
                             div()
-                                .text_xs()
+                                .text_sm()
                                 .font_semibold()
                                 .text_color(theme.foreground)
                                 .child(area_display(area.key, lang)),
                         )
                         .child(
                             div()
+                                .w_full()
                                 .text_xs()
                                 .text_color(theme.muted_foreground)
                                 .child(reasons.join(" · ")),
@@ -131,10 +128,10 @@ pub fn render_training(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
         prio_body = prio_body.child(
             div()
                 .p_2()
-                .rounded_sm()
+                .rounded(px(RADIUS))
                 .border_1()
-                .border_color(rgb(0xd97706))
-                .bg(with_alpha(rgb(0xd97706).into(), 0.14))
+                .border_color(theme.warning)
+                .bg(with_alpha(theme.warning, 0.14))
                 .text_xs()
                 .text_color(theme.foreground)
                 .child(l(
@@ -195,23 +192,21 @@ pub fn render_training(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
         ),
     ];
 
-    let mut week_body = div().v_flex().gap_1();
+    let mut week_body = div().v_flex();
     for (day, session) in week_rows {
         week_body = week_body.child(
             div()
                 .h_flex()
-                .items_center()
-                .justify_between()
+                .items_start()
                 .gap_3()
-                .px_3()
+                .px_1()
                 .py_2()
-                .rounded_sm()
-                .border_1()
+                .border_b_1()
                 .border_color(theme.border)
-                .bg(theme.background)
                 .child(
                     div()
-                        .w(px(140.0))
+                        .w(px(120.0))
+                        .flex_shrink_0()
                         .text_xs()
                         .font_semibold()
                         .text_color(theme.foreground)
@@ -220,8 +215,9 @@ pub fn render_training(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
                 .child(
                     div()
                         .flex_1()
+                        .min_w_0()
                         .text_xs()
-                        .text_color(theme.muted_foreground)
+                        .text_color(theme.foreground)
                         .child(session),
                 ),
         );
@@ -349,7 +345,7 @@ pub fn render_training(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
             let role_lbl = role_by_id(x.role_id)
                 .map(|r| role_name(r, lang))
                 .unwrap_or_else(|| x.role_id.to_string());
-            let mut weak_row = div().h_flex().flex_wrap().flex_1().gap_1();
+            let mut weak_row = div().h_flex().flex_wrap().flex_1().min_w_0().gap_1();
             if x.weak.is_empty() {
                 weak_row = weak_row.child(
                     div()
@@ -370,7 +366,6 @@ pub fn render_training(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> im
                     .gap_2()
                     .px_3()
                     .py_2()
-                    .rounded_sm()
                     .border_b_1()
                     .border_color(theme.border)
                     .child(

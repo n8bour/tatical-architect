@@ -9,7 +9,7 @@ use crate::widgets::common::{
 use gpui_kit::component::{ActiveTheme, StyledExt};
 use gpui_kit::*;
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
-use ta_core::types::{Lang, SetPiecePlan, SetPieceRole};
+use ta_core::types::SetPieceRole;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SetPieceDiagramKind {
@@ -98,7 +98,7 @@ pub fn setpiece_half_pitch(
             div()
                 .w_full()
                 .h(px(230.0))
-                .rounded_md()
+                .rounded(px(crate::widgets::common::RADIUS))
                 .overflow_hidden()
                 .child(
                     canvas(
@@ -116,8 +116,8 @@ pub fn setpiece_half_pitch(
                                 point(px(ox + vx * sx), px(oy + (vy + 1.0) * sy))
                             };
 
-                            window.paint_quad(fill(bounds, rgb(0x285532)));
-                            let line_col = rgba_f32(1.0, 1.0, 1.0, 0.62);
+                            window.paint_quad(fill(bounds, rgb(0x2c5a36)));
+                            let line_col = rgba_f32(1.0, 1.0, 1.0, 0.6);
 
                             // Goal line
                             let mut gl = PathBuilder::stroke(px(1.2));
@@ -265,64 +265,5 @@ pub fn setpiece_half_pitch(
                 .text_xs()
                 .text_color(theme.muted_foreground)
                 .child(caption),
-        )
-}
-
-/// Side-by-side attacking and defending corner diagrams for a `SetPiecePlan`.
-pub fn setpieces_diagrams_pair(plan: &SetPiecePlan, lang: Lang, cx: &App) -> impl IntoElement {
-    let theme = cx.theme();
-    div()
-        .h_flex()
-        .w_full()
-        .gap_4()
-        .child(
-            div()
-                .v_flex()
-                .flex_1()
-                .gap_2()
-                .child(
-                    div()
-                        .text_sm()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(lang.pick("Canto ofensivo", "Attacking corner")),
-                )
-                .child(setpiece_half_pitch(
-                    &plan.attack,
-                    SetPieceDiagramKind::Attack,
-                    lang.pick(
-                        "Canto do lado esquerdo; do outro lado é o espelho.",
-                        "Left-side corner; right side is mirrored.",
-                    ),
-                    false,
-                    cx,
-                )),
-        )
-        .child(
-            div()
-                .v_flex()
-                .flex_1()
-                .gap_2()
-                .child(
-                    div()
-                        .text_sm()
-                        .font_semibold()
-                        .text_color(theme.foreground)
-                        .child(format!(
-                            "{} — {}",
-                            lang.pick("Canto defensivo", "Defending corner"),
-                            plan.system
-                        )),
-                )
-                .child(setpiece_half_pitch(
-                    &plan.defend,
-                    SetPieceDiagramKind::Defend,
-                    lang.pick(
-                        "Posições sem bola no canto contra.",
-                        "Out-of-possession positions on corners against.",
-                    ),
-                    true,
-                    cx,
-                )),
         )
 }

@@ -14,11 +14,11 @@ mod widgets;
 
 use crate::state::{
     bind_global_keys, non_empty, AppState, BackendBridgeTransport, NavSection, ReadSaveNow,
-    TacticTab, TeamTab, ToastKind, ToggleSidebar,
+    TacticTab, TeamTab, ToastKind, ToggleCompactNav,
 };
 use crate::views::fm_bridge_ui::spawn_refresh_bridge_status;
 use crate::views::tactic_sheet::SheetViewState;
-use crate::views::generator::{render_generator, GeneratorViewState};
+use crate::views::generator::GeneratorViewState;
 use crate::views::home::render_home;
 use crate::views::scouting::{render_scouting, ScoutingViewState};
 use crate::views::settings::{render_settings, SettingsInputs};
@@ -30,16 +30,17 @@ use crate::views::tactic_setpieces::render_setpieces;
 use crate::views::tactic_sheet::render_sheet;
 use crate::views::training::render_training;
 use crate::views::scouting::{is_full_save_export, spawn_ingest_scout_path};
-use crate::widgets::common::{busy_floating_card, busy_top_bar, toast_banner};
+use crate::widgets::common::{
+    busy_floating_card, busy_top_bar, head_font, pal, toast_banner, with_alpha, RADIUS,
+};
 use crate::widgets::pitch_animated::AnimatedPitchView;
 use crate::widgets::pitch_interactive::PitchPhaseMode;
-use gpui_kit::component::button::{Button, ButtonVariants};
-use gpui_kit::component::tab::{Tab, TabBar};
-use gpui_kit::component::{ActiveTheme, Sizable, StyledExt};
+use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::component::{ActiveTheme, StyledExt};
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::*;
 use std::path::PathBuf;
-use ta_backend::{export_save, latest_save, plugin_install, plugin_status, PLUGIN_VERSION};
+use ta_backend::{export_save, latest_save, plugin_install, plugin_status};
 use ta_core::live::sim_model::sim_model;
 use ta_core::live::FmbClient;
 use ta_core::types::Lang;
@@ -373,241 +374,337 @@ impl ArchitectApp {
         cx.notify();
     }
 
-    fn render_sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.theme();
+    /// Red club-colored top bar (browser build `#nav .tb-row`): FM27 badge, main sections in
+    /// condensed capitals, status lights, read-save, EN|PT and the Settings gear. Narrow windows
+    /// drop the labels first (status, brand, button text), as the browser build's media queries.
+    fn render_topbar(&self, width: f32, cx: &mut Context<Self>) -> impl IntoElement {
         let lang = self.state.lang;
-        let current = self.section;
-        let collapsed = self.state.sidebar_collapsed;
+        let ink: Hsla = rgb(pal::BAR_INK).into();
+        let ink_soft = with_alpha(ink, 0.86);
+        let shade = |a: f32| -> Hsla { with_alpha(rgb(0x000000).into(), a) };
+        let compact = self.state.nav_compact || width < 760.0;
+        let show_status_labels = width >= 1560.0;
+        let show_brand_label = width >= 1366.0;
+        let tight = width < 1180.0;
 
-        let mut nav_list = div().v_flex().gap_1().flex_1();
-        for section in NavSection::ALL {
-            let active = section == current;
-            let label = if collapsed {
-                section.icon().to_string()
-            } else {
-                format!("{}  {}", section.icon(), section.label(lang))
-            };
-            let btn = Button::new(("nav", section as usize))
-                .w_full()
-                .when(!collapsed, |b| b.justify_start())
-                .label(label)
-                .when(active, |b| b.primary())
-                .when(!active, |b| b.ghost())
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.section = section;
-                    cx.notify();
-                }));
-            nav_list = nav_list.child(btn);
+        let mut nav = div().h_flex().h_full().min_w_0().overflow_hidden();
+        for section in NavSection::MAIN {
+            let active = section == self.section;
+            nav = nav.child(
+                div()
+                    .id(("nav", section as usize))
+                    .relative()
+                    .h_full()
+                    .flex()
+                    .flex_none()
+                    .items_center()
+                    .px(px(if tight { 9.0 } else { 13.0 }))
+                    .cursor_pointer()
+                    .font_family(head_font())
+                    .text_size(px(if tight { 15.0 } else { 16.0 }))
+                    .font_semibold()
+                    .text_color(if active { ink } else { ink_soft })
+                    .when(active, |d| d.bg(shade(0.24)))
+                    .hover(|s| s.bg(shade(0.14)).text_color(ink))
+                    .child(if compact {
+                        section.icon().to_string()
+                    } else {
+                        section.label(lang).to_uppercase()
+                    })
+                    .when(active, |d| {
+                        d.child(div().absolute().left(px(10.0)).right(px(10.0)).bottom_0().h(px(3.0)).bg(ink))
+                    })
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.section = section;
+                        cx.notify();
+                    })),
+            );
         }
 
+        let dot = |on: bool| {
+            div()
+                .flex_none()
+                .size(px(8.0))
+                .rounded_full()
+                .bg(if on { rgb(pal::DOT_OK).into() } else { with_alpha(ink, 0.35) })
+        };
+        let stat = |id: &'static str, on: bool, label: String, tip: String| {
+            div()
+                .id(id)
+                .h_flex()
+                .items_center()
+                .gap(px(6.0))
+                .text_xs()
+                .text_color(ink)
+                .child(dot(on))
+                .when(show_status_labels, |d| d.child(label))
+                .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
+        };
+        let squad_n = self.state.squad.len();
+        let squad_label = if squad_n > 0 {
+            let mut s = format!("{squad_n} {}", lang.pick("jogadores", "players"));
+            if !self.state.my_club.is_empty() {
+                s.push_str(" · ");
+                s.push_str(&self.state.my_club);
+            }
+            s
+        } else {
+            lang.pick("Sem plantel", "No squad").to_string()
+        };
+        let save_tip = match (&self.state.last_save_err, &self.state.last_save_read) {
+            (Some(_), _) => lang.pick("Save: erro (ver Definições)", "Save: error (see Settings)").to_string(),
+            (None, Some(msg)) => format!("Save: {msg}"),
+            (None, None) => lang.pick("Save: ainda não lido", "Save: not read yet").to_string(),
+        };
+        let has_opp = !self.state.opponent.is_empty();
+        let bst = &self.state.bridge_status;
+        let fm_tip = if bst.ok && bst.ready {
+            lang.pick("FM ligado (Tactical Bible Bridge)", "FM connected (Tactical Bible Bridge)")
+        } else if bst.ok {
+            lang.pick("FM aberto, à espera do jogo", "FM open, waiting for the game")
+        } else {
+            lang.pick(
+                "FM não ligado (plugin opcional, ver Definições)",
+                "FM not connected (optional plugin, see Settings)",
+            )
+        };
+
+        let bar_btn = |id: &'static str, label: String, on: bool| {
+            div()
+                .id(id)
+                .h(px(30.0))
+                .px(px(10.0))
+                .flex()
+                .flex_none()
+                .items_center()
+                .gap(px(6.0))
+                .rounded(px(RADIUS))
+                .border_1()
+                .cursor_pointer()
+                .text_sm()
+                .when(on, |d| d.bg(ink).border_color(ink).text_color(rgb(pal::BAR)))
+                .when(!on, |d| {
+                    d.bg(shade(0.2))
+                        .border_color(with_alpha(ink, 0.28))
+                        .text_color(ink)
+                        .hover(|s| s.border_color(ink))
+                })
+                .child(label)
+        };
+        let read_label = if show_brand_label {
+            format!("📂  {}", lang.pick("Ler save agora", "Read save now"))
+        } else {
+            "📂".to_string()
+        };
+        let lang_seg = div()
+            .h_flex()
+            .flex_none()
+            .rounded(px(RADIUS))
+            .border_1()
+            .border_color(with_alpha(ink, 0.3))
+            .overflow_hidden()
+            .children([(Lang::En, "EN"), (Lang::Pt, "PT")].map(|(l, n)| {
+                let on = lang == l;
+                div()
+                    .id(n)
+                    .h(px(28.0))
+                    .px(px(12.0))
+                    .flex()
+                    .items_center()
+                    .cursor_pointer()
+                    .text_sm()
+                    .when(on, |d| d.bg(ink).text_color(rgb(pal::BAR)))
+                    .when(!on, |d| d.text_color(ink).hover(|s| s.bg(shade(0.14))))
+                    .child(n)
+                    .on_click(cx.listener(move |this, _, _, cx| this.set_lang(l, cx)))
+            }));
+        let settings_on = self.section == NavSection::Settings;
+
         div()
-            .v_flex()
-            .w(px(if collapsed { 64.0 } else { 232.0 }))
-            .h_full()
-            .p_3()
-            .gap_3()
-            .bg(theme.secondary)
-            .border_r_1()
-            .border_color(theme.border)
+            .h_flex()
+            .flex_none()
+            .w_full()
+            .h(px(48.0))
+            .pl(px(6.0))
+            .pr(px(10.0))
+            .gap_1()
+            .items_center()
+            .bg(rgb(pal::BAR))
+            .text_color(ink)
+            .shadow_md()
             .child(
                 div()
+                    .id("brand")
                     .h_flex()
+                    .flex_none()
+                    .h_full()
                     .items_center()
-                    .justify_between()
-                    .pb_3()
-                    .border_b_1()
-                    .border_color(theme.border)
-                    .when(!collapsed, |d| {
+                    .gap(px(9.0))
+                    .pl(px(6.0))
+                    .pr(px(10.0))
+                    .cursor_pointer()
+                    .child(
+                        div()
+                            .size(px(34.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .rounded(px(RADIUS))
+                            .bg(ink)
+                            .text_color(rgb(pal::BAR))
+                            .font_family(head_font())
+                            .text_size(px(12.0))
+                            .font_bold()
+                            .child("FM27"),
+                    )
+                    .when(show_brand_label, |d| {
                         d.child(
                             div()
-                                .v_flex()
-                                .gap(px(2.0))
-                                .child(
-                                    div()
-                                        .text_base()
-                                        .font_semibold()
-                                        .text_color(theme.foreground)
-                                        .child("FM27 Tactical Architect"),
-                                )
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(theme.muted_foreground)
-                                        .child(format!("v{} · GPUI Native", APP_VERSION)),
-                                ),
+                                .font_family(head_font())
+                                .text_size(px(17.0))
+                                .font_bold()
+                                .child("TACTICAL ARCHITECT"),
                         )
                     })
+                    .tooltip(|window, cx| {
+                        Tooltip::new(format!("FM27 Tactical Architect v{APP_VERSION}")).build(window, cx)
+                    })
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.section = NavSection::Home;
+                        cx.notify();
+                    })),
+            )
+            .child(nav)
+            .child(
+                div()
+                    .ml_auto()
+                    .h_flex()
+                    .flex_none()
+                    .items_center()
+                    .gap_2()
                     .child(
-                        Button::new("collapse-sidebar")
-                            .ghost()
-                            .xsmall()
-                            .label(if collapsed { "»" } else { "«" })
+                        div()
+                            .h_flex()
+                            .items_center()
+                            .gap(px(if show_status_labels { 12.0 } else { 8.0 }))
+                            .child(stat("st-squad", squad_n > 0, squad_label, save_tip))
+                            .child(stat(
+                                "st-opp",
+                                has_opp,
+                                lang.pick(
+                                    if has_opp { "Adversário carregado" } else { "Sem adversário" },
+                                    if has_opp { "Opponent loaded" } else { "No opponent" },
+                                )
+                                .to_string(),
+                                lang.pick("Adversário", "Opponent").to_string(),
+                            ))
+                            .child(stat("st-fm", bst.ok && bst.ready, "FM".into(), fm_tip.to_string())),
+                    )
+                    .child(
+                        bar_btn("read-save-now", read_label, false)
+                            .tooltip(move |window, cx| {
+                                Tooltip::new(lang.pick(
+                                    "Ler o save mais recente do FM27 (Ctrl+Shift+L)",
+                                    "Read the latest FM27 save (Ctrl+Shift+L)",
+                                ))
+                                .build(window, cx)
+                            })
+                            .on_click(cx.listener(|this, _, _, cx| this.spawn_read_save_now(cx))),
+                    )
+                    .child(lang_seg)
+                    .child(
+                        div()
+                            .id("nav-settings")
+                            .size(px(34.0))
+                            .flex()
+                            .flex_none()
+                            .items_center()
+                            .justify_center()
+                            .rounded(px(RADIUS))
+                            .cursor_pointer()
+                            .text_size(px(18.0))
+                            .text_color(ink)
+                            .when(settings_on, |d| d.bg(shade(0.24)))
+                            .hover(|s| s.bg(shade(0.24)))
+                            .child("⚙")
+                            .tooltip(move |window, cx| {
+                                Tooltip::new(NavSection::Settings.label(lang)).build(window, cx)
+                            })
                             .on_click(cx.listener(|this, _, _, cx| {
-                                this.state.sidebar_collapsed = !this.state.sidebar_collapsed;
-                                this.state.persist();
+                                this.section = NavSection::Settings;
                                 cx.notify();
                             })),
                     ),
             )
-            .child(nav_list)
-            .when(!collapsed, |d| {
-                d.child(
-                    div()
-                        .v_flex()
-                        .gap_1()
-                        .pt_2()
-                        .border_t_1()
-                        .border_color(theme.border)
-                        .child(
-                            div()
-                                .text_xs()
-                                .text_color(theme.muted_foreground)
-                                .child(format!("Bridge DLL v{}", PLUGIN_VERSION)),
-                        )
-                        .child(
-                            div()
-                                .text_xs()
-                                .text_color(theme.muted_foreground)
-                                .child(if self.state.plugin_info.installed {
-                                    lang.pick("Plugin: instalado", "Plugin: installed")
-                                } else {
-                                    lang.pick("Plugin: não detetado", "Plugin: not detected")
-                                }),
-                        ),
-                )
-            })
     }
 
-    fn render_topbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.theme();
+    /// Screen tabs or breadcrumb under the top bar (browser build `.tb-sub`).
+    fn render_subbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.theme().clone();
         let lang = self.state.lang;
-
-        let save_summary = match (&self.state.last_save_read, &self.state.last_save_info) {
-            (Some(msg), _) => msg.clone(),
-            (None, Some(info)) => format!("{} ({:.1} MB)", info.name, info.size as f64 / 1_048_576.0),
-            (None, None) => lang
-                .pick("Sem save carregado", "No save loaded")
-                .to_string(),
-        };
-
-        let mut bar = div()
-            .v_flex()
+        let bar = div()
+            .h_flex()
+            .flex_none()
             .w_full()
+            .h(px(36.0))
+            .px_4()
+            .gap(px(2.0))
+            .items_stretch()
+            .bg(theme.tab_bar)
             .border_b_1()
-            .border_color(theme.border)
-            .bg(theme.background)
-            .when_some(self.state.busy.as_ref(), |d, busy| {
-                d.child(busy_top_bar(busy, cx))
-            })
-            .child(
-                div()
-                    .h_flex()
-                    .w_full()
-                    .items_center()
-                    .justify_between()
-                    .px_4()
-                    .py_2()
-                    .gap_3()
-                    .child(
-                        div()
-                            .h_flex()
-                            .items_center()
-                            .gap_3()
-                            .child(
-                                div()
-                                    .text_base()
-                                    .font_semibold()
-                                    .text_color(theme.foreground)
-                                    .child(self.section.label(lang)),
-                            )
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .text_color(theme.muted_foreground)
-                                    .child(save_summary),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .h_flex()
-                            .items_center()
-                            .gap_2()
-                            .child(
-                                Button::new("read-save-now")
-                                    .primary()
-                                    .small()
-                                    .label(lang.pick("Ler save agora", "Read save now"))
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        this.spawn_read_save_now(cx);
-                                    })),
-                            )
-                            .child(
-                                Button::new("toggle-lang")
-                                    .outline()
-                                    .small()
-                                    .label(match lang {
-                                        Lang::Pt => "PT → EN",
-                                        Lang::En => "EN → PT",
-                                    })
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        let next = this.state.lang.toggle();
-                                        this.set_lang(next, cx);
-                                    })),
-                            )
-                            .child(
-                                Button::new("toggle-theme")
-                                    .outline()
-                                    .small()
-                                    .label(if self.state.dark_mode {
-                                        lang.pick("Claro", "Light")
-                                    } else {
-                                        lang.pick("Escuro", "Dark")
-                                    })
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.set_dark_mode(!this.state.dark_mode, window, cx);
-                                    })),
-                            ),
-                    ),
-            );
-
+            .border_color(theme.border);
+        let tab = |id: (&'static str, usize), label: &'static str, on: bool| {
+            div()
+                .id(id)
+                .relative()
+                .flex()
+                .flex_none()
+                .items_center()
+                .px(px(12.0))
+                .cursor_pointer()
+                .text_sm()
+                .when(on, |d| {
+                    d.text_color(theme.foreground)
+                        .font_semibold()
+                        .child(div().absolute().left_0().right_0().bottom_0().h(px(2.0)).bg(rgb(pal::BAR)))
+                })
+                .when(!on, |d| d.text_color(theme.muted_foreground).hover(|s| s.text_color(theme.foreground)))
+                .child(label)
+        };
         match self.section {
-            NavSection::Team => {
-                let mut tabs = TabBar::new("team-tabs")
-                    .selected_index(self.team_tab.index())
-                    .on_click(cx.listener(|this, ix: &usize, _, cx| {
-                        this.team_tab = TeamTab::from_index(*ix);
+            NavSection::Team => bar.children(TeamTab::ALL.map(|t| {
+                tab(("team-tab", t.index()), t.label(lang), t == self.team_tab).on_click(cx.listener(
+                    move |this, _, _, cx| {
+                        this.team_tab = t;
                         cx.notify();
-                    }));
-                for tab in TeamTab::ALL {
-                    tabs = tabs.child(Tab::new().label(tab.label(lang)));
-                }
-                bar = bar.child(div().px_4().pb_1().child(tabs));
-            }
-            NavSection::Tactic => {
-                let mut tabs = TabBar::new("tactic-tabs")
-                    .selected_index(self.tactic_tab.index())
-                    .on_click(cx.listener(|this, ix: &usize, _, cx| {
-                        this.tactic_tab = TacticTab::from_index(*ix);
+                    },
+                ))
+            })),
+            NavSection::Tactic => bar.children(TacticTab::ALL.map(|t| {
+                tab(("tactic-tab", t.index()), t.label(lang), t == self.tactic_tab).on_click(cx.listener(
+                    move |this, _, _, cx| {
+                        this.tactic_tab = t;
                         cx.notify();
-                    }));
-                for tab in TacticTab::ALL {
-                    tabs = tabs.child(Tab::new().label(tab.label(lang)));
-                }
-                bar = bar.child(div().px_4().pb_1().child(tabs));
-            }
-            _ => {}
+                    },
+                ))
+            })),
+            section => bar.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .font_family(head_font())
+                    .text_size(px(14.0))
+                    .font_semibold()
+                    .text_color(theme.muted_foreground)
+                    .child(section.label(lang).to_uppercase()),
+            ),
         }
-
-        bar
     }
 
     fn render_content(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         match self.section {
             NavSection::Home => render_home(self, cx).into_any_element(),
-            NavSection::Team if self.team_tab == TeamTab::Generator => {
-                render_generator(self, cx).into_any_element()
-            }
-            NavSection::Team => render_team_tab(self, cx),
+            NavSection::Team => render_team_tab(self, window, cx),
             NavSection::Scouting => render_scouting(self, window, cx).into_any_element(),
             NavSection::Tactic => match self.tactic_tab {
                 TacticTab::Analyse => render_tactic_analyse(self, window, cx).into_any_element(),
@@ -625,15 +722,18 @@ impl ArchitectApp {
 
 impl Render for ArchitectApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let width = f32::from(window.viewport_size().width);
         let content = self.render_content(window, cx);
+        let topbar = self.render_topbar(width, cx).into_any_element();
+        let subbar = self.render_subbar(cx).into_any_element();
         let theme = cx.theme();
 
         div()
             .id("architect-root")
             .key_context("ArchitectApp")
             .track_focus(&self.focus_handle)
-            .on_action(cx.listener(|this, _: &ToggleSidebar, _, cx| {
-                this.state.sidebar_collapsed = !this.state.sidebar_collapsed;
+            .on_action(cx.listener(|this, _: &ToggleCompactNav, _, cx| {
+                this.state.nav_compact = !this.state.nav_compact;
                 this.state.persist();
                 cx.notify();
             }))
@@ -644,27 +744,24 @@ impl Render for ArchitectApp {
                 this.handle_dropped_paths(paths.paths(), window, cx);
             }))
             .relative()
-            .h_flex()
+            .v_flex()
             .size_full()
             .bg(theme.background)
             .text_color(theme.foreground)
-            .child(self.render_sidebar(cx))
+            .child(topbar)
+            .child(subbar)
+            .when_some(self.state.busy.as_ref(), |d, busy| d.child(busy_top_bar(busy, cx)))
             .child(
                 div()
-                    .v_flex()
+                    .id("main-scroll-area")
                     .flex_1()
-                    .h_full()
-                    .min_w_0()
-                    .child(self.render_topbar(cx))
-                    .child(
-                        div()
-                            .id("main-scroll-area")
-                            .flex_1()
-                            .size_full()
-                            .overflow_y_scroll()
-                            .p_5()
-                            .child(content),
-                    ),
+                    .w_full()
+                    .min_h_0()
+                    .overflow_y_scroll()
+                    .px(px(22.0))
+                    .pt(px(18.0))
+                    .pb(px(60.0))
+                    .child(div().w_full().min_w_0().child(content)),
             )
             .when_some(self.state.busy.as_ref(), |d, busy| {
                 d.child(busy_floating_card(busy, cx))
@@ -683,7 +780,8 @@ impl Render for ArchitectApp {
 }
 
 fn main() {
-    gpui_kit::application().run(|cx| {
+    // gpui-kit's bundled icons (select chevrons, checkbox ticks, …) render only with its assets.
+    gpui_kit::application().with_assets(gpui_kit::assets::Assets).run(|cx| {
         gpui_kit::init(cx);
         bind_global_keys(cx);
 
@@ -774,6 +872,103 @@ mod tests {
             }
         }
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// Visual review: renders every screen with the real Metal renderer into
+    /// `target/screens/<w>x<h>-<lang>-<screen>.png` (dark theme, sample squad).
+    /// Run with `cargo test -p ta-app screenshots -- --ignored`.
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn screenshots() {
+        use gpui_kit::{px, size, HeadlessAppContext};
+        let text = std::sync::Arc::new(gpui_apple::AppleTextSystem::new());
+        let mut cx = HeadlessAppContext::with_platform(
+            text,
+            std::sync::Arc::new(gpui_kit::assets::Assets),
+            gpui_kit::platform::current_headless_renderer,
+        );
+        cx.update(gpui_kit::init);
+        let out = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/screens");
+        std::fs::create_dir_all(&out).unwrap();
+        let dir = std::env::temp_dir().join(format!("ta-app-shots-{}", std::process::id()));
+        let only = std::env::var("TA_SHOTS").ok();
+        for (w, h) in [(1000.0, 680.0), (1000.0, 2400.0), (1440.0, 2400.0)] {
+            for lang in [Lang::En, Lang::Pt] {
+                let mut state = AppState::load_from(StateStore::new(dir.join("state.json")));
+                state.lang = lang;
+                state.dark_mode = true;
+                cx.update(|cx| state.apply_theme(None, cx));
+                let mut app = None;
+                let win = cx
+                    .open_window(size(px(w), px(h)), |window, cx| {
+                        let v = cx.new(|cx| ArchitectApp::with_state(state, window, cx));
+                        app = Some(v.clone());
+                        cx.new(|cx| gpui_kit::base::Root::new(v, window, cx))
+                    })
+                    .unwrap();
+                let app = app.unwrap();
+                for (name, section, team_tab, tactic_tab) in screen_list() {
+                    if only.as_deref().is_some_and(|o| !name.contains(o)) {
+                        continue;
+                    }
+                    cx.update_window(win.into(), |_, window, cx| {
+                        app.update(cx, |app, cx| {
+                            if app.state.squad.is_empty() {
+                                load_sample_squad(app, cx);
+                            }
+                            app.state.toast = None;
+                            app.section = section;
+                            if let Some(t) = team_tab {
+                                app.team_tab = t;
+                            }
+                            if let Some(t) = tactic_tab {
+                                app.tactic_tab = t;
+                            }
+                            app.team_ui.squad_mode = if name == "team-Squad-personality" {
+                                crate::views::team::SquadTableMode::Personality
+                            } else {
+                                crate::views::team::SquadTableMode::Roles
+                            };
+                            app.gen_ui.result = (name == "team-Generator-result")
+                                .then(|| {
+                                    ta_core::planning::generate_tactic(
+                                        &app.state.squad,
+                                        &app.gen_ui.config,
+                                        app.state.lang,
+                                        |_| {},
+                                    )
+                                })
+                                .flatten();
+                        });
+                        window.refresh();
+                        window.draw(cx).clear(cx);
+                    })
+                    .unwrap();
+                    cx.run_until_parked();
+                    cx.update_window(win.into(), |_, window, cx| {
+                        window.refresh();
+                        window.draw(cx).clear(cx);
+                    })
+                    .unwrap();
+                    let img = cx.capture_screenshot(win.into()).unwrap();
+                    img.save(out.join(format!("{w}x{h}-{lang:?}-{name}.png"))).unwrap();
+                }
+            }
+        }
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    fn screen_list() -> Vec<(String, NavSection, Option<TeamTab>, Option<TacticTab>)> {
+        let mut v = vec![("home".to_string(), NavSection::Home, None, None)];
+        v.extend(TeamTab::ALL.iter().map(|t| (format!("team-{t:?}"), NavSection::Team, Some(*t), None)));
+        v.push(("team-Generator-result".into(), NavSection::Team, Some(TeamTab::Generator), None));
+        v.push(("team-Squad-personality".into(), NavSection::Team, Some(TeamTab::Squad), None));
+        v.push(("scouting".into(), NavSection::Scouting, None, None));
+        v.extend(TacticTab::ALL.iter().map(|t| (format!("tactic-{t:?}"), NavSection::Tactic, None, Some(*t))));
+        v.push(("training".into(), NavSection::Training, None, None));
+        v.push(("settings".into(), NavSection::Settings, None, None));
+        v
     }
 
     #[test]

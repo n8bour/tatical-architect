@@ -5,7 +5,9 @@ use crate::state::{NavSection, TacticTab, TeamTab, ToastKind};
 use crate::views::team::{
     apply_tactic_to_app, import_squad_from_picker, load_sample_squad, spawn_next_opponent_from_fm,
 };
-use crate::widgets::common::{badge_pill, collapsible_card, score_ring, BadgeTone};
+use crate::widgets::common::{
+    badge_pill, collapsible_card, page_title, pal, panel, score_ring, BadgeTone,
+};
 use crate::ArchitectApp;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::{ActiveTheme, Sizable, StyledExt};
@@ -29,9 +31,9 @@ fn step_card(
 ) -> impl IntoElement {
     let theme = cx.theme();
     let badge_bg: Hsla = if done {
-        rgb(0x16a34a).into()
+        rgb(pal::GOOD).into()
     } else {
-        theme.border
+        theme.muted
     };
     let badge_fg: Hsla = if done {
         rgb(0xffffff).into()
@@ -39,20 +41,10 @@ fn step_card(
         theme.muted_foreground
     };
 
-    div()
-        .v_flex()
+    panel(cx)
         .flex_1()
         .min_w(px(260.0))
         .gap_3()
-        .p_4()
-        .rounded_md()
-        .border_1()
-        .border_color(if done {
-            crate::widgets::common::with_alpha(rgb(0x16a34a).into(), 0.45)
-        } else {
-            theme.border
-        })
-        .bg(theme.secondary)
         .child(
             div()
                 .h_flex()
@@ -79,13 +71,14 @@ fn step_card(
                 )
                 .child(
                     div()
-                        .text_sm()
+                        .min_w_0()
+                        .text_base()
                         .font_semibold()
                         .text_color(theme.foreground)
                         .child(title),
                 ),
         )
-        .child(div().flex_1().child(body))
+        .child(div().flex_1().min_w_0().child(body))
         .child(div().h_flex().flex_wrap().gap_2().child(actions))
 }
 
@@ -134,20 +127,17 @@ pub fn render_home(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl I
     let header = div()
         .v_flex()
         .gap_1()
+        .child(page_title(
+            l(
+                lang,
+                "Olá! Vamos preparar o próximo jogo.",
+                "Hello! Let's prepare for the next match.",
+            ),
+            cx,
+        ))
         .child(
             div()
-                .text_xl()
-                .font_bold()
-                .text_color(theme.foreground)
-                .child(l(
-                    lang,
-                    "Olá! Vamos preparar o próximo jogo.",
-                    "Hello! Let's prepare for the next match.",
-                )),
-        )
-        .child(
-            div()
-                .text_xs()
+                .text_sm()
                 .text_color(theme.muted_foreground)
                 .child(l(
                     lang,
@@ -480,7 +470,7 @@ pub fn render_home(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl I
                 .items_start()
                 .gap_2()
                 .p_2()
-                .rounded_sm()
+                .rounded(px(3.0))
                 .border_1()
                 .border_color(theme.border)
                 .bg(theme.background)
@@ -488,6 +478,7 @@ pub fn render_home(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl I
             let mut details = div()
                 .v_flex()
                 .flex_1()
+                .min_w_0()
                 .gap(px(2.0))
                 .child(
                     div()
@@ -569,6 +560,8 @@ pub fn render_home(app: &ArchitectApp, cx: &mut Context<ArchitectApp>) -> impl I
                     .child(
                         div()
                             .v_flex()
+                            .flex_1()
+                            .min_w_0()
                             .gap(px(2.0))
                             .child(
                                 div()
