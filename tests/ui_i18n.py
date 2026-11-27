@@ -48,8 +48,6 @@ with sync_playwright() as p:
             if (v, t) == ('tactic', 'analyze'): pg.evaluate("A.sel(3)"); [texts.add(x) for x in pg.evaluate(GRAB)]; pg.evaluate("A.sel(3)")
             if (v, t) == ('tactic', 'sim'):
                 for i in range(6): pg.evaluate(f"A.simPhase({i})"); [texts.add(x) for x in pg.evaluate(GRAB)]
-        pg.evaluate("() => { ST.openClips = {}; ROLES.forEach(r => ST.openClips['role:' + r.id] = 1); SIM_TI.forEach(k => ST.openClips['ti:' + k] = 1); }")
-        for t in ('roles', 'ti'): pg.evaluate(f"A.go('bible','{t}')"); pg.wait_for_timeout(200); [texts.add(x) for x in pg.evaluate(GRAB)]
         if not desktop:
             src = ''.join(open(f, encoding='utf8').read() for f in glob.glob(os.path.join(HERE, '..', 'src', 'ui', '*.js')))
             lits = sorted({m.group(1)[1:-1] for m in re.finditer(r"(?:toast|busyStart|confirm|withBusy|T)\(\s*(?:'[^']*',\s*)?('(?:[^'\\]|\\.)*')", src)})

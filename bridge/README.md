@@ -13,9 +13,10 @@ dotnet build bridge/TacticalBibleBridge -c Release -p:GamePath="C:\...\Football 
 The build copies the DLL to `BepInEx\plugins\TacticalBibleBridge`. CI can't build it (the interop DLLs come from the game).
 Any .NET SDK ≥ 6 works (tested with 8.0.428). Restart FM after building: the plugin is loaded at launch.
 
-**Shipping:** the app carries the plugin inside its executable (`include_bytes!` in `src-tauri/src/main.rs`) and installs it
+**Shipping:** the app carries the plugin inside its executable (`include_bytes!` in `crates/backend/src/plugin.rs`) and installs it
 from *Settings › Integrations* (`plugin_status` / `plugin_install`). CI can't build the plugin, so after changing `Plugin.cs`:
-build, copy `bin/Release/TacticalBibleBridge.dll` to `bridge/dist/`, and bump `PLUGIN_VERSION` in `main.rs` (same as `Plugin.Version`).
+build, copy `bin/Release/TacticalBibleBridge.dll` to `bridge/dist/`, and bump `PLUGIN_VERSION` in `crates/backend/src/plugin.rs` (same as `Plugin.Version`).
+The desktop app re-checks the bridge (`PING`/`VERSION`) every 15 s, so the "… in FM" buttons turn primary as soon as FM has loaded a game; while disconnected they open *Settings* instead.
 BepInEx 6 (IL2CPP) itself is not installed by the app: install it from builds.bepinex.dev.
 
 ## Testing without the app

@@ -1,4 +1,4 @@
-# Portão de layout da FM27 Tactical Bible.
+# Portão de layout do FM27 Tactical Architect.
 # Uso: python3 tests/ui_layout.py   (precisa de: pip install playwright && python -m playwright install chromium)
 # Percorre todos os ecrãs em 6 larguras e 3 modos (normal, menu recolhido, painéis fechados)
 # com um plantel realista de 62 jogadores e falha (código 1) se encontrar:
@@ -20,7 +20,7 @@ MODES = ['normal', 'menu recolhido', 'painéis fechados']
 if os.environ.get('LAYOUT_QUICK'): WIDTHS, MODES = [1024, 1366, 1920], ['normal']   # passagem rápida (ex.: segunda língua no CI)
 VIEWS = [('home', None), ('team', 'squad'), ('team', 'gen'), ('team', 'xi'), ('team', 'opp'),
          ('scout', None), ('tactic', 'analyze'), ('tactic', 'sim'), ('tactic', 'plans'), ('tactic', 'setpieces'), ('tactic', 'sheet'), ('tactic', 'import'),
-         ('training', None), ('bible', 'roles'), ('bible', 'ti'), ('bible', 'concepts'), ('bible', 'btraining'), ('settings', None)]
+         ('training', None), ('settings', None)]
 
 CHECK = r"""() => {
   const out = [], R = e => e.getBoundingClientRect(), main = document.querySelector('main');

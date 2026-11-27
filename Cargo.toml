@@ -1,0 +1,36 @@
+[workspace]
+members = [
+    "crates/core",
+    "crates/backend",
+    "crates/app",
+]
+resolver = "2"
+
+[workspace.package]
+version = "5.3.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+flate2 = "1"
+thiserror = "2"
+rfd = "0.18"
+# gpui-kit 0.11 bundles gpui-pre 0.3.14 (with runtime_shaders enabled on gpui_platform,
+# so macOS builds work without full Xcode / xcrun metal) + gpui-component 0.11 + assets.
+# Heavy optional features (tree-sitter-*, syntect, speech, inspector) remain disabled.
+gpui-kit = { version = "0.11.0", default-features = false, features = ["component", "assets"] }
+
+# Release profile tuned for fast CI builds and lean binaries.
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 16
+incremental = false
+panic = "abort"
+strip = true
+debug = false
+
+[profile.release.package."*"]
+opt-level = 1

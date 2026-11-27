@@ -1,0 +1,4 @@
+# Windows MSVC: reserve an 8 MiB main thread stack to avoid stack overflows
+# in deep GPUI layout trees (safe with both link.exe and lld-link).
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/STACK:8388608"]

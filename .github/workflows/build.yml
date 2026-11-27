@@ -1,19 +1,16 @@
-# Build da app instalável — optimizado para ser rápido.
-# Os runners Linux estão fixados (ubuntu-24.04 / 22.04) para uma mudança do ubuntu-latest não partir o build.
-#  • por defeito só Windows (instalador .exe + executável portátil)
-#  • cache do Rust entre execuções (2.ª execução em ~2–3 min)
-#  • perfil de release sem LTO e dependências com opt-level 1
-#  • a CLI do Tauri vem pré-compilada via npx (sem npm install)
-# A cada push para o main: lê a versão de src-tauri/tauri.conf.json e, se o Release v<versão>
-# ainda não existir, compila e publica-o com as notas de .github/RELEASE_NOTES.md.
-# Se a versão já foi publicada, nada é compilado (subir a versão = publicar).
+# Build and release pipeline for FM27 Tactical Architect (native Rust + GPUI desktop app).
+# Linux runners are pinned to ubuntu-24.04 so runner image upgrades don't break builds.
+#  - Default target: Windows (portable .exe + NSIS setup .exe via packaging/installer.nsi)
+#  - Optional all_platforms dispatch: adds macOS (.app / .dmg) and Linux (.tar.gz)
+#  - On push to main: reads [workspace.package] version from Cargo.toml (must match package.json
+#    and src/ui/state.js) and publishes GitHub Release v<version> if it does not already exist.
 name: Build desktop app
 
 on:
   workflow_dispatch:
     inputs:
       all_platforms:
-        description: 'Incluir também macOS e Linux (mais lento)'
+        description: 'Also build macOS and Linux packages (slower)'
         type: boolean
         default: false
   push:
@@ -33,44 +30,56 @@ jobs:
       exists: ${{ steps.v.outputs.exists }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - id: v
-        name: Versão
+        name: Check version sync
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          VER=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          CARGO=$(awk '/^\[workspace\.package\]/{f=1; next} /^\[/{f=0} f && /^version =/{gsub(/"/, "", $3); print $3; exit}' Cargo.toml)
           PKG=$(node -p "require('./package.json').version")
-          CARGO=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)
           UI=$(sed -n "s/^const VERSION = '\(.*\)';/\1/p" src/ui/state.js)
-          if [ "$VER" != "$PKG" ] || [ "$VER" != "$CARGO" ] || [ "$VER" != "$UI" ]; then
-            echo "::error::Versões diferentes: tauri.conf.json=$VER package.json=$PKG Cargo.toml=$CARGO src/ui/state.js=$UI"; exit 1
+          if [ -z "$CARGO" ] || [ "$CARGO" != "$PKG" ] || [ "$CARGO" != "$UI" ]; then
+            echo "::error::Version mismatch: Cargo.toml=$CARGO package.json=$PKG src/ui/state.js=$UI"
+            exit 1
           fi
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
-          if gh release view "v$VER" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"; echo "v$VER já publicada — nada a fazer."
+          echo "version=$CARGO" >> "$GITHUB_OUTPUT"
+          if gh release view "v$CARGO" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v$CARGO already published — skipping release build."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-node@v4
+      - name: Install Linux GPUI build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config libxkbcommon-dev libxkbcommon-x11-dev libxcb1-dev \
+            libwayland-dev libvulkan-dev libfontconfig1-dev libasound2-dev \
+            libssl-dev libgtk-3-dev
+      - uses: dtolnay/rust-toolchain@master
+      - uses: Swatinem/rust-cache@v2
         with:
-          node-version: 22
-      - name: Testes do motor
-        run: node tests/engine.test.cjs
-      - name: Gerar app/index.html
-        run: node build.mjs
+          key: test-ubuntu-24.04
+      - name: Rust workspace tests (ta-core, ta-backend, ta-app)
+        run: cargo test --workspace
+      - name: Build single-file HTML and run JS engine tests
+        run: node build.mjs && npm test
       - id: p
-        name: Escolher plataformas
+        name: Choose target platforms
         run: |
           if [ "${{ github.event.inputs.all_platforms }}" = "true" ]; then
-            echo 'platforms=["windows-latest","macos-latest","ubuntu-22.04"]' >> "$GITHUB_OUTPUT"
+            echo 'platforms=["windows-latest","macos-latest","ubuntu-24.04"]' >> "$GITHUB_OUTPUT"
           else
             echo 'platforms=["windows-latest"]' >> "$GITHUB_OUTPUT"
           fi
 
   build:
     needs: test
-    timeout-minutes: 20
+    timeout-minutes: 60
     if: needs.test.outputs.exists == 'false'
     strategy:
       fail-fast: false
@@ -81,47 +90,81 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
-          key: ${{ matrix.platform }}
-      - name: Dependências Linux
-        if: matrix.platform == 'ubuntu-22.04'
+          key: build-${{ matrix.platform }}
+      - name: Install Linux GPUI dependencies
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - name: Gerar app/index.html
-        run: node build.mjs
-      - name: Compilar
+          sudo apt-get install -y \
+            pkg-config libxkbcommon-dev libxkbcommon-x11-dev libxcb1-dev \
+            libwayland-dev libvulkan-dev libfontconfig1-dev libasound2-dev \
+            libssl-dev libgtk-3-dev
+      - name: Build ta-app (release)
+        run: cargo build --release -p ta-app
+      - name: Package Windows portable EXE & NSIS installer
+        if: matrix.platform == 'windows-latest'
         shell: bash
         run: |
-          case "${{ matrix.platform }}" in
-            windows-latest) B=nsis ;;
-            macos-latest)   B=dmg ;;
-            *)              B=appimage ;;
-          esac
-          npx --yes @tauri-apps/cli@2 build --bundles "$B"
-      - name: Juntar ficheiros
-        shell: bash
-        run: |
+          VER="${{ needs.test.outputs.version }}"
           mkdir -p dist
-          cp src-tauri/target/release/bundle/nsis/*.exe dist/ 2>/dev/null || true
-          cp src-tauri/target/release/fm27-tactical-bible.exe "dist/FM27-Tactical-Bible-portatil.exe" 2>/dev/null || true
-          cp src-tauri/target/release/bundle/dmg/*.dmg dist/ 2>/dev/null || true
-          cp src-tauri/target/release/bundle/appimage/*.AppImage dist/ 2>/dev/null || true
+          cp target/release/fm27-tactical-architect.exe "dist/FM27-Tactical-Architect-portable.exe"
+          export PATH="$PATH:/c/Program Files (x86)/NSIS:/c/Program Files/NSIS"
+          makensis -DVERSION="$VER" packaging/installer.nsi
+          ls -la dist
+      - name: Package macOS .app & .dmg
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        run: |
+          VER="${{ needs.test.outputs.version }}"
+          APP="FM27 Tactical Architect.app"
+          mkdir -p dist "stage/${APP}/Contents/MacOS" "stage/${APP}/Contents/Resources"
+          cp target/release/fm27-tactical-architect "stage/${APP}/Contents/MacOS/fm27-tactical-architect"
+          chmod +x "stage/${APP}/Contents/MacOS/fm27-tactical-architect"
+          cp assets/icons/icon.icns "stage/${APP}/Contents/Resources/icon.icns"
+          cat > "stage/${APP}/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>FM27 Tactical Architect</string>
+            <key>CFBundleDisplayName</key><string>FM27 Tactical Architect</string>
+            <key>CFBundleIdentifier</key><string>com.fm27.tactical-architect</string>
+            <key>CFBundleVersion</key><string>${VER}</string>
+            <key>CFBundleShortVersionString</key><string>${VER}</string>
+            <key>CFBundleExecutable</key><string>fm27-tactical-architect</string>
+            <key>CFBundleIconFile</key><string>icon.icns</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          EOF
+          ln -s /Applications stage/Applications
+          hdiutil create -volname "FM27 Tactical Architect ${VER}" \
+            -srcfolder stage -ov -format UDZO \
+            "dist/FM27-Tactical-Architect-${VER}-macos.dmg"
+          ls -la dist
+      - name: Package Linux tarball
+        if: matrix.platform == 'ubuntu-24.04'
+        shell: bash
+        run: |
+          VER="${{ needs.test.outputs.version }}"
+          PKG="FM27-Tactical-Architect-${VER}-linux-x86_64"
+          mkdir -p dist "stage/${PKG}"
+          cp target/release/fm27-tactical-architect "stage/${PKG}/fm27-tactical-architect"
+          chmod +x "stage/${PKG}/fm27-tactical-architect"
+          cp assets/icons/icon.png "stage/${PKG}/icon.png"
+          tar -C stage -czf "dist/${PKG}.tar.gz" "${PKG}"
           ls -la dist
       - uses: actions/upload-artifact@v4
         with:
-          name: FM27-Tactical-Bible-${{ matrix.platform }}
+          name: FM27-Tactical-Architect-${{ matrix.platform }}
           path: dist/*
           if-no-files-found: error
 
-  # Testes de interface (Playwright), em paralelo com o build (~3 min vs ~4 min: não atrasam o release).
-  # Limite de 10 min: se algo encravar, falha em vez de bloquear.
+  # Browser/HTML UI gates (Playwright), in parallel with the native Rust build.
   layout:
     needs: test
     if: needs.test.outputs.exists == 'false'
@@ -135,31 +178,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      # Fixado em ubuntu-24.04: o ubuntu-latest passou a 26.04, que o Playwright 1.56 ainda não suporta.
-      - name: Instalar Chromium (Playwright)
+      - name: Install Chromium (Playwright)
         run: |
           pip install playwright==1.56.0
           python -m playwright install --with-deps chromium
-      - name: Gerar app/index.html
+      - name: Build app/index.html
         run: node build.mjs
-      - name: Verificar layout em inglês (sem sobreposições)
+      - name: Layout check (English)
         run: python tests/ui_layout.py
-      - name: Verificar layout em português (passagem rápida)
+      - name: Layout check (Portuguese quick pass)
         run: python tests/ui_layout.py
         env:
           LAYOUT_LANG: pt
           LAYOUT_QUICK: '1'
-      - name: Verificar indicadores de actividade
+      - name: Activity indicator checks
         run: python tests/ui_busy.py
-      - name: Verificar cobertura de idioma (nada em português com a app em inglês)
+      - name: Language coverage check (EN)
         run: python tests/ui_i18n.py
-      - name: Verificar nomes do FM em português (nada em inglês com a app em português)
+      - name: FM terms check (PT)
         run: python tests/ui_pt_terms.py
-      - name: Auditoria de idioma nos dois sentidos (vocabulário tirado do código)
+      - name: Bidirectional language audit
         run: python tests/ui_lang_audit.py
 
-
-  # Publica o Release v<versão> (só se ainda não existir; testes, build e layout têm de passar).
+  # Publish Release v<version> only when all tests, native builds, and layout checks pass.
   release:
     needs: [test, build, layout]
     runs-on: ubuntu-24.04
@@ -169,10 +210,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: FM27-Tactical-Bible-*
+          pattern: FM27-Tactical-Architect-*
           path: out
           merge-multiple: true
-      - name: Publicar o Release
+      - name: Publish Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -180,4 +221,4 @@ jobs:
           VER="${{ needs.test.outputs.version }}"
           ls -la out
           gh release create "v$VER" out/* --target "${{ github.sha }}" \
-            --title "FM27 Tactical Bible $VER" --notes-file .github/RELEASE_NOTES.md
+            --title "FM27 Tactical Architect $VER" --notes-file .github/RELEASE_NOTES.md

@@ -1,0 +1,11 @@
+[package]
+name = "ta-backend"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Native OS backend (FM27 save discovery/fmsave, TCP bridge, BepInEx plugin installer, JSON storage, dialogs) for FM27 Tactical Architect"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+rfd.workspace = true

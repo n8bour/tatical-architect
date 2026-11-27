@@ -212,7 +212,7 @@ const A = {
   focusArea(nat) { const d = scoutState().focus; if (!d) return; d.areas = d.areas.includes(nat) ? d.areas.filter(x => x !== nat) : [...d.areas, nat]; render(); },
   async focusCreate() {
     const d = scoutState().focus; if (!d || !d.areas.length) return;
-    const o = { name: d.name || 'Tactical Bible', ageMin: d.ageMin, ageMax: d.ageMax, caStars: d.caStars, paStars: d.paStars,
+    const o = { name: d.name || 'Tactical Architect', ageMin: d.ageMin, ageMax: d.ageMax, caStars: d.caStars, paStars: d.paStars,
       areas: d.areas.map(n => ({ id: FMB_IDS.focus.nation(n), label: SCOUT.nations[n] || '' })) };
     try {
       const made = await withBusy('bridge-focus', L('A criar a observação no FM', 'Creating the scouting assignment in FM'), (prog) => FMB.createFocus(o, (t) => prog(null, t)));
@@ -243,7 +243,6 @@ const A = {
     const txt = lines.join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(L('Plano copiado', 'Plan copied')), () => download('plano.txt', txt, 'text/plain')); },
   navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
-  clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
   /** Next opponent from the running FM (bridge): FM gives the fixture and the opponent's players (unique_id), the save
    *  database gives their attributes. silent: background check, only acts if the opponent changed. */
@@ -271,26 +270,15 @@ const A = {
   saveToggle() { ST.auto.save = !ST.auto.save; save(); render(); if (ST.auto.save) savePoll(); },
   saveDir(v) { ST.auto.saveDir = v.trim(); ST.auto.saveMtime = 0; save(); savePoll(true); },
   // campo animado
-  simOpen() { const s = simDefaults(); Object.assign(s, { src: 'tactic', t: null, focus: null, hl: null, title: '' }); A.go('tactic', 'sim'); },
-  roleDemo(id) {
-    const r = ROLE_BY_ID[id], d = demoTacticForRole(r), s = simDefaults();
-    Object.assign(s, { src: 'demo', t: d.t, focus: d.idx, hl: null, title: L('Como joga: ', 'How it plays: ') + r.name, phase: r.phase === 'IP' ? 0 : 4, u: 0 });
-    A.go('tactic', 'sim');
-  },
-  tiDemo(k) {
-    const s = simDefaults();
-    Object.assign(s, { src: 'demo', t: JSON.parse(JSON.stringify(ST.tactic)), focus: null, hl: k, title: L('Instrução: ', 'Instruction: ') + TI_BY_KEY[k].n, phase: TI_PHASE[k] ?? 0, u: 0 });
-    A.go('tactic', 'sim');
-  },
-  simBack() { Object.assign(ST.sim, { src: 'tactic', t: null, focus: null, hl: null }); render(true); },
+  simOpen() { const s = simDefaults(); Object.assign(s, { focus: null, hl: null }); A.go('tactic', 'sim'); },
   simPlay(v) { ST.sim.playing = v == null ? !ST.sim.playing : !!v; const tg = document.getElementById('sim-play-tg'); if (tg && tg.pressed !== ST.sim.playing) tg.pressed = ST.sim.playing; },
   simPhase(i) { ST.sim.phase = +i; ST.sim.u = 0; const el = document.getElementById('sim-phases'); if (el && el.value !== String(ST.sim.phase)) el.value = String(ST.sim.phase); simCaption(simTactic()); simFrame(); },
   simSpeed(v) { ST.sim.speed = +v; const el = document.getElementById('sim-speed'); if (el && el.value !== String(ST.sim.speed)) el.value = String(ST.sim.speed); },
   simFocus(i) { ST.sim.focus = ST.sim.focus === i ? null : i; render(); },
   simToggle(k, v) { ST.sim[k] = v == null ? !ST.sim[k] : !!v; simFrame(); },
-  simTI(k, v) { const t = simTactic(), d = TI_BY_KEY[k].def; v = +v; if (v === d) delete t.ti[k]; else t.ti[k] = v; if (ST.sim.src === 'tactic') save(); simRebuild(); },
-  simMent(v) { simTactic().ment = v; if (ST.sim.src === 'tactic') save(); simRebuild(); },
-  simRole(phase, id) { simTactic().slots[ST.sim.focus][phase === 'IP' ? 'ip' : 'oop'] = id; if (ST.sim.src === 'tactic') save(); render(); },
+  simTI(k, v) { const t = simTactic(), d = TI_BY_KEY[k].def; v = +v; if (v === d) delete t.ti[k]; else t.ti[k] = v; save(); simRebuild(); },
+  simMent(v) { simTactic().ment = v; save(); simRebuild(); },
+  simRole(phase, id) { simTactic().slots[ST.sim.focus][phase === 'IP' ? 'ip' : 'oop'] = id; save(); render(); },
   // .fmf
   async fmf(input) {
     const f = input.files ? input.files[0] : input; if (!f) return;
@@ -312,9 +300,6 @@ const A = {
   sampleSquad() { ST.squad = { ...EMPTY_SQUAD(), players: makeSample(), source: L('exemplo (fictício)', 'sample (fictional)') }; ST.myClub = null; ST.sugg = null; autoPickXI(ST.tactic, ST.squad.players); save(); render(); toast('Plantel de exemplo carregado (fictício)'); },
   clearSquad() { ST.squad = EMPTY_SQUAD(); ST.myClub = null; ST.tactic.slots.forEach(s => s.pid = null); ST.sugg = null; save(); render(); },
   runSuggest() { ST.sugg = suggestTactics(players()); render(); },
-  // bíblia
-  rq(v) { ST.rq = v; render(); const el = document.getElementById('rq'); if (el) { el.focus(); el.setSelectionRange(v.length, v.length); } },
-  rg(v) { ST.rg = v; render(); }, rp(v) { ST.rp = v; render(); },
   // dados
   exportAll() { download('fm27tb_backup.json', JSON.stringify({ kind: 'fm27tb-all', v: 1, tactic: ST.tactic, squad: ST.squad, saved: ST.saved }, null, 2)); },
   wipe() { if (!confirm(T('Apagar tática, plantel e táticas guardadas deste computador?'))) return; localStorage.removeItem(STORE_KEY); location.reload(); },

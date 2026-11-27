@@ -114,7 +114,6 @@ ul.clean{margin:.3em 0;padding-left:18px} ul.clean li{margin:.25em 0}
 .simgrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
 .simwrap{border-radius:12px;overflow:hidden;box-shadow:var(--shadow);background:var(--pitch)}
 canvas.simpitch,svg.simpitch{display:block;width:100%;height:auto;aspect-ratio:110/72}
-canvas.clip-canvas{display:block;width:100%;height:auto;aspect-ratio:110/72}
 .simbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;justify-content:space-between}
 .simbar-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;justify-content:space-between}
 .simbar [data-slot="toggle"]{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:6px 12px;border-radius:8px;height:auto;font-weight:600;cursor:pointer}
@@ -250,26 +249,6 @@ svg.pitch{max-width:420px;margin-inline:auto}
 .pill.no{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
 .pill:empty{display:none}
 a.btn{text-decoration:none;color:inherit;display:inline-block}
-
-/* ---------- clips da Bíblia ---------- */
-.clip{margin:10px 0 0}
-.clip-box{border-radius:10px;overflow:hidden;background:var(--pitch);max-width:420px}
-.clip-svg{display:block;width:100%;height:auto}
-.clip figcaption{margin-top:5px;color:var(--muted)}
-.clip-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-.clip-pair .clip{margin:0}.clip-pair .clip-box{max-width:none}
-tr.cliprow td{background:var(--panel2)}
-.clip-tg [data-slot="toggle"]{height:auto;padding:4px 9px;font-size:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;cursor:pointer}
-.clip-tg [data-slot="toggle"][data-pressed]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-.opp-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
-.concept-viz{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);min-width:0}
-.cv-row{display:grid;grid-template-columns:64px minmax(48px,96px) minmax(0,1fr);gap:8px;align-items:center}
-.cv-lbl{font-size:12px;font-weight:700}
-.cv-bar{height:7px;background:var(--panel2);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
-.cv-bar i{display:block;height:100%;border-radius:4px}
-.cv-pillars{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.cv-pill{background:var(--panel2);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:2px;font-size:12px;min-width:0;overflow-wrap:anywhere}
-.btn.ghost{background:transparent}
 
 /* ---------- sinergia ofensiva ---------- */
 .syn-top{display:flex;gap:14px;align-items:center}

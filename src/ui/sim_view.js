@@ -1,8 +1,8 @@
 const SIM = { raf: 0, last: 0, model: null, ro: null, hits: [] };
 const X_ = (y) => 3 + y * 1.04, Y_ = (x) => 2 + x * 0.68;
 
-function simTactic() { return ST.sim && ST.sim.src === 'demo' ? ST.sim.t : ST.tactic; }
-function simDefaults() { if (!ST.sim) ST.sim = { src: 'tactic', phase: 0, u: 0, playing: !matchMedia('(prefers-reduced-motion: reduce)').matches, speed: 1, opp: true, trails: false, focus: null, hl: null }; return ST.sim; }
+function simTactic() { return ST.tactic; }
+function simDefaults() { if (!ST.sim) ST.sim = { phase: 0, u: 0, playing: !matchMedia('(prefers-reduced-motion: reduce)').matches, speed: 1, opp: true, trails: false, focus: null, hl: null }; return ST.sim; }
 
 function simBallState(path, bu) {
   if (!path || !path.length) return { x: 50, y: 50, z: 0, kind: 'pass' };
@@ -347,11 +347,9 @@ function vSim() {
   const ctl = (k) => { const d = TI_BY_KEY[k]; return `<ui-field class="${sim.hl === k ? 'hl' : ''}"><ui-field-label>${esc(d.n)}</ui-field-label>${selectHTML(d.opts.map((o, i) => [i, o]), tiVal(t, k), `A.simTI('${k}',this.value)`)}</ui-field>`; };
   const fr = sim.focus != null ? t.slots[sim.focus] : null;
   const fRole = fr ? [ROLE_BY_ID[fr.ip], ROLE_BY_ID[fr.oop]] : null;
-  return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : '<span>' + L('Campo animado', 'Animated pitch') + '</span> — ' + esc(tName(t))}</h2>
+  return `<div class="top"><div><h2><span>${L('Campo animado', 'Animated pitch')}</span> — ${esc(tName(t))}</h2>
       <p class="muted small" style="margin:0">${esc(t.ipForm)} <span>com bola</span> → ${esc(t.oopForm)} <span>sem bola</span> · ${esc(t.ment)}. <span>Clique num jogador para o seguir.</span></p></div>
-    <div class="row">${sim.src === 'demo'
-      ? `<ui-button id="sim-back"><button type="button" class="btn">${L('Voltar à minha tática', 'Back to my tactic')}</button></ui-button>`
-      : `<ui-button id="sim-edit"><button type="button" class="btn">${L('Editar no analisador', 'Edit in analyser')}</button></ui-button>`}</div></div>
+    <div class="row"><ui-button id="sim-edit"><button type="button" class="btn">${L('Editar no analisador', 'Edit in analyser')}</button></ui-button></div></div>
   <div class="simgrid">
     <div>
       <div class="simwrap"><canvas class="simpitch" id="sim-canvas" role="img" aria-label="${L('Campo animado da tática', 'Animated tactic pitch')}"></canvas></div>
@@ -381,15 +379,15 @@ function vSim() {
     <div class="grid simside">
       ${fr ? `<div class="panel"><h3>${esc(fr.ipCode)} → ${esc(fr.oopCode)}</h3>
         ${fRole.map(r => r ? `<p class="small"><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> <b>${esc(roleName(r))}</b> — ${esc(r.desc)}</p>` : '').join('')}
-        ${sim.src === 'demo' ? '' : `<div class="grid g2">
+        <div class="grid g2">
           <ui-field><ui-field-label>${L('Papel com bola', 'In possession role')}</ui-field-label>${selectHTML(rolesFor(slotInfo(t.ipForm, fr.ipCode).group, 'IP', slotInfo(t.ipForm, fr.ipCode)).map(r => [r.id, roleName(r)]), fr.ip, `A.simRole('IP',this.value)`)}</ui-field>
-          <ui-field><ui-field-label>${L('Papel sem bola', 'Out of possession role')}</ui-field-label>${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode)).map(r => [r.id, roleName(r)]), fr.oop, `A.simRole('OOP',this.value)`)}</ui-field></div>`}
+          <ui-field><ui-field-label>${L('Papel sem bola', 'Out of possession role')}</ui-field-label>${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode)).map(r => [r.id, roleName(r)]), fr.oop, `A.simRole('OOP',this.value)`)}</ui-field></div>
         <ui-button id="sim-unfocus"><button type="button" class="btn sm">${L('Deixar de seguir', 'Stop following')}</button></ui-button></div>` : ''}
       <div class="panel grid">
         <h3>Experimente as instruções</h3>
-        <p class="small muted" style="margin:0">${sim.src === 'demo' ? L('Cada mudança redesenha o movimento na hora (só nesta demonstração).', 'Every change redraws the movement instantly (in this demo only).') : L('Cada mudança redesenha o movimento na hora e fica gravada na tática.', 'Every change redraws the movement instantly and is saved to the tactic.')}</p>
+        <p class="small muted" style="margin:0">${L('Cada mudança redesenha o movimento na hora e fica gravada na tática.', 'Every change redraws the movement instantly and is saved to the tactic.')}</p>
         <ui-field><ui-field-label>${L('Mentalidade', 'Mentality')}</ui-field-label>${selectHTML(MENTALITIES.map(m => [m, m]), t.ment, 'A.simMent(this.value)')}</ui-field>
-        ${sim.src === 'demo' ? '' : `<div class="grid g2"><ui-field><ui-field-label>${L('Formação com bola', 'In possession formation')}</ui-field-label>${selectHTML(forms, t.ipForm, "A.setForm('IP',this.value)")}</ui-field><ui-field><ui-field-label>${L('Sem bola', 'Out of possession')}</ui-field-label>${selectHTML(forms, t.oopForm, "A.setForm('OOP',this.value)")}</ui-field></div>`}
+        <div class="grid g2"><ui-field><ui-field-label>${L('Formação com bola', 'In possession formation')}</ui-field-label>${selectHTML(forms, t.ipForm, "A.setForm('IP',this.value)")}</ui-field><ui-field><ui-field-label>${L('Sem bola', 'Out of possession')}</ui-field-label>${selectHTML(forms, t.oopForm, "A.setForm('OOP',this.value)")}</ui-field></div>
         <ui-accordion id="sim-acc" multiple default-value="ip,oop" aria-label="${L('Instruções de equipa', 'Team instructions')}">
           <ui-accordion-item value="ip">
             <ui-accordion-header><h4><ui-accordion-trigger><button type="button" aria-expanded="true">${L('Com bola', 'In possession')}</button></ui-accordion-trigger></h4></ui-accordion-header>
@@ -454,7 +452,6 @@ function simBindUI(canvas) {
     el.addEventListener('action', fn);
     el.addEventListener('click', () => { if (!customElements.get('ui-button')) fn(); });
   };
-  bindBtn('sim-back', () => A.simBack());
   bindBtn('sim-edit', () => A.tab('tactic', 'analyze'));
   bindBtn('sim-unfocus', () => A.simFocus(ST.sim.focus));
 

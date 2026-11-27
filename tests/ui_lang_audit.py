@@ -45,7 +45,7 @@ for a, b in P: pt_w |= words(a); en_w |= words(b)
 terms = open(os.path.join(SRC, 'i18n', 'pt_terms.js'), encoding='utf8').read()
 fm_en = set(); fm_pt = set()
 for m in re.finditer(r"'([^']+)':'([^']+)'", terms): fm_en |= words(m.group(1)); fm_pt |= words(m.group(2))
-ALLOW = set('fmsave steam tactics lab fm27 fm26 view exporter pypi github windows csv json html xml tsv zstd aes gcm nonce fmf uvx winget astral clean slate box ok pwb iwb'.split()) | \
+ALLOW = set('fmsave steam tactics lab fm27 fm26 view exporter pypi github windows csv json html xml tsv zstd aes gcm nonce fmf uvx winget astral clean slate box ok pwb iwb architect'.split()) | \
         set('wide flat diamond narrow dm wb deep'.split()) | set('player club country test tactic db'.split())
 PT_ONLY = {w for w in pt_w - en_w - fm_en - ALLOW if not w.isdigit()}
 EN_ONLY = {w for w in en_w - pt_w - fm_pt - fm_en - ALLOW if not w.isdigit()}
@@ -57,7 +57,7 @@ GRAB = r"""(lang) => { const out = []; const skip = (n) => { const e = n.parentE
   return out; }"""
 DB = subprocess.run(['node', os.path.join(U.HERE, 'gen_scout_db.cjs'), '1500'], capture_output=True, text=True).stdout
 SQ = subprocess.run(['node', '-e', "const {gen}=require(process.argv[1]); const L=gen(30,7).split('\\n'); const h=L[0].split(','), c=h.indexOf('club_name'); console.log([L[0],...L.slice(1).map(l=>{const x=l.split(',');x[c]='My Club';return x.join(',');})].join('\\n'))", os.path.join(U.HERE, 'gen_scout_db.cjs')], capture_output=True, text=True).stdout
-NAMES = re.compile(r"^(Player \d+|Club \d+( \"B\")?|Country \d+|My Club|Tactical Bible)$")
+NAMES = re.compile(r"^(Player \d+|Club \d+( \"B\")?|Country \d+|My Club|Tactical Architect|Tactical Bible)$")
 
 def collect(lang):
     texts = set(); errs = []
@@ -91,8 +91,6 @@ def collect(lang):
                     for k in ('interested', 'cheap_wonder', 'reach', 'expiring', 'free', 'bargain', 'upgrade', 'veteran', 'hidden', 'elite_pers', 'weak_spot'):
                         pg.evaluate(f"() => {{ A.scoutPreset('{k}'); const r = scoutResults(); if (r[0]) A.scoutOpen(r[0].id); }}"); g(); pg.evaluate("A.scoutClose()")
                     pg.evaluate("A.scoutTab('list')"); g(); pg.evaluate("A.scoutTab('results')")
-            pg.evaluate("() => { ST.openClips = {}; ROLES.slice(0, 20).forEach(r => ST.openClips['role:' + r.id] = 1); SIM_TI.forEach(k => ST.openClips['ti:' + k] = 1); }")
-            for t in ('roles', 'ti', 'concepts', 'btraining'): pg.evaluate(f"A.go('bible','{t}')"); pg.wait_for_timeout(120); g()
             pg.evaluate("() => { busyStart('x', L('A ler o save ', 'Reading save ') + 'T.fm', { p: .4, detail: L('lê uma cópia, o save não é alterado', 'reads a copy, the save is not changed') }); }"); g(); pg.evaluate("busyEnd('x')")
             pg.close()
         b.close()

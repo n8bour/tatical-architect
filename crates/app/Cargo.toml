@@ -1,0 +1,20 @@
+[package]
+name = "ta-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "FM27 Tactical Architect native desktop UI built with GPUI and gpui-kit"
+
+[[bin]]
+name = "fm27-tactical-architect"
+path = "src/main.rs"
+
+[dependencies]
+gpui-kit.workspace = true
+ta-backend = { path = "../backend" }
+ta-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+gpui-kit = { workspace = true, features = ["test-support"] }

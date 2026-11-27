@@ -1,7 +1,7 @@
 // ============================================================
 // Idiomas: inglês por defeito, português como alternativa.
 //  • L(pt, en): texto dinâmico escrito nas duas línguas na origem (motor, mensagens com nomes)
-//  • T(texto): dicionário PT→EN para texto fixo (interface, Bíblia); números são substituídos
+//  • T(texto): dicionário PT→EN para texto fixo da interface; números são substituídos
 //    por '#' na chave e repostos na tradução (ex.: 'Plantel: # jogadores')
 //  • translateDOM(raiz): aplica T a todos os textos e atributos visíveis depois de desenhar
 // ============================================================

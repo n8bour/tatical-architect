@@ -12,9 +12,9 @@ const fitColor = (s) => s == null ? 'var(--muted)' : s >= 70 ? '#1c8a4d' : s >= 
 
 const EMPTY_SQUAD = () => ({ players: [], source: '', warnings: [], mapped: [], at: null });
 const ST = {
-  view: 'home', tabs: { team: 'squad', tactic: 'analyze', bible: 'roles' },
+  view: 'home', tabs: { team: 'squad', tactic: 'analyze' },
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
-  saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'dark',
+  saved: [], sel: null, pitchMode: 'IP', fmf: null, sugg: null, theme: 'dark',
   auto: { on: false, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 45 },   // carregamento automático (app instalada)
   lastSave: null, gen: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
@@ -40,7 +40,7 @@ function load() {
       if (!d.auto.v || d.auto.v < 45) ST.auto.on = false;     // v4.5: carregar o F9 sozinho também passa a ser opcional
       ST.auto.v = 45;
     }
-    if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
+    if (d.tabs) { delete d.tabs.bible; ST.tabs = Object.assign(ST.tabs, d.tabs); }
     if (d.gen) ST.gen = d.gen;
     if (d.bridge) ST.bridge = d.bridge;
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;

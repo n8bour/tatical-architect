@@ -1,16 +1,12 @@
 {
-  "name": "fm27-tactical-bible",
+  "name": "fm27-tactical-architect",
   "private": true,
   "version": "5.3.0",
-  "description": "Bíblia tática e analisador para o Football Manager 27 — funciona offline",
+  "description": "Tactical analyser, generator, scouting tool and animated pitch for Football Manager 27 — works offline",
   "scripts": {
     "build": "node build.mjs",
     "test": "node tests/engine.test.cjs",
-    "app:dev": "node build.mjs && tauri dev",
-    "app:build": "node build.mjs && tauri build --bundles nsis",
-    "tauri": "tauri"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "app:dev": "cargo run -p ta-app",
+    "app:build": "cargo build --release -p ta-app"
   }
 }

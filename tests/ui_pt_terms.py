@@ -17,7 +17,6 @@ with sync_playwright() as p:
       while (w.nextNode()) { const n = w.currentNode; if (n.parentElement.closest('[data-gameterms="en"]')) continue; const v = n.nodeValue.trim(); if (v) out.push(v); }
       document.querySelectorAll('main option').forEach(o => out.push(o.textContent)); return out; }"""
     found = {}
-    pg.evaluate("() => { ST.openClips = {}; ROLES.forEach(r => ST.openClips['role:' + r.id] = 1); }")
     for v, t in U.VIEWS:
         pg.evaluate(f"A.go('{v}'{', ' + repr(t) if t else ''})"); pg.wait_for_timeout(100)
         if (v, t) == ('tactic', 'analyze'): pg.evaluate("A.sel(3)")
@@ -31,8 +30,7 @@ with sync_playwright() as p:
     pg.evaluate("A.sheetNames('pt')"); pg.wait_for_timeout(100); sheet_pt = pg.locator('.sheet').inner_text()
     if 'Passing Directness' not in sheet_en and 'Goalkeeper' not in sheet_en: fails.append('Ficha (nomes do jogo) sem termos em inglês')
     if 'Guarda-Redes' not in sheet_pt: fails.append('Ficha em português sem nomes portugueses')
-    pg.evaluate("A.sheetNames('en'); A.go('bible','roles')"); pg.wait_for_timeout(200)
-    pg.screenshot(path=os.path.join('/tmp', 'pt_roles.png'))
+    pg.evaluate("A.sheetNames('en')")
     b.close()
 for f in fails[:40]: print('  ' + f)
 print('termos do FM em português:', 'OK' if not fails and not errors else f'{len(fails)} problemas, {len(errors)} erros JS')

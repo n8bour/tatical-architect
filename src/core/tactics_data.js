@@ -1,5 +1,5 @@
 // ============================================================
-// Formações, instruções de equipa/jogador/adversário, treino, conceitos
+// Formações, instruções de equipa/jogador, treino e modelos
 // ============================================================
 
 // Papéis cujos pesos de atributos foram confirmados em fontes públicas FM26
@@ -173,13 +173,6 @@ const PLAYER_INSTRUCTIONS = [
   { n:'Target Far Post', g:'Área (FM27)', d:'Ataca o segundo poste nos cruzamentos.', tip:'Extremo do lado oposto, Wide Forward.', fm27:true },
 ];
 
-const OPPOSITION_INSTRUCTIONS = [
-  { n:'Show onto (weaker) foot', d:'Força o adversário para o pé mais fraco.', tip:'Default útil contra extremos que cortam para dentro (mostre-os para fora).' },
-  { n:'Close down (more/less)', d:'Pressiona mais ou menos um jogador específico.', tip:'Mais no criativo/construtor; menos no central fraco com bola (deixe-o conduzir).' },
-  { n:'Tight marking', d:'Marcação em cima.', tip:'No médio ofensivo/falso 9; cuidado com arrastar centrais para fora.' },
-  { n:'Tackle harder', d:'Desarmes mais agressivos sobre esse jogador.', tip:'Contra driblers com pouca Bravura/Equilíbrio; evite com o seu defesa amarelado.' },
-];
-
 // ---- Tactical Tweaks (FM27, confirmados em antevisões; o jogo mostra as TIs exactas ao passar o rato)
 const TACTICAL_TWEAKS = [
   { n:'More Urgency', d:'Aumenta a urgência: tipicamente sobe ritmo e verticalidade.', when:'A perder ou empatado contra bloco baixo nos últimos 20–30 min.' },
@@ -189,18 +182,8 @@ const TACTICAL_TWEAKS = [
   { n:'Wingers Swap Sides', d:'Troca os extremos de flanco.', when:'Para atacar o lateral mais fraco, ou para meter o extremo no pé forte/fraco conforme o objectivo.' },
 ];
 
-// ---- Treino FM27 (Tactical Effectiveness)
+// ---- Áreas de Tactical Understanding (treino FM27)
 const TRAINING = {
-  effectiveness: [
-    { n:'Tactical Understanding', d:'Quanto a equipa compreende cada área da tática: IP Shape, OOP Shape, Passing Style, Build Up, Chance Creation e Pressing (Trigger Press, Pressing Trap, Line of Engagement). Influenciado por contributo do treino, exposição a jogos, capacidade tática dos jogadores e complexidade da tática.',
-      fix:'Sessões de Tactical Understanding focadas na área mais fraca; simplificar a tática (menos instruções não-default).' },
-    { n:'Player Ability', d:'Adequação ao papel (Player Role Suitability) e capacidade pura (Current Ability/atributos).',
-      fix:'Individual Development com Role Training no papel exacto da tática; recrutar para o papel.' },
-    { n:'Player Buy-In', d:'Managerial Support (personalidade, desempenho e respeito pelo treinador), relações com colegas/staff e tendências do treinador.',
-      fix:'Team Cohesion; conversas individuais; cumprir promessas; evitar muitas mudanças de plantel de uma vez.' },
-    { n:'Next Match Information', d:'Qualidade do relatório do próximo adversário (analistas) e conhecimento dos jogadores adversários.',
-      fix:'Match Preparation; atribuir o relatório ao melhor analista; observar a divisão e o adversário.' },
-  ],
   areas: {
     ip_shape:{ n:'In-Possession Shape', s:'Tactical Understanding: posse/estrutura ofensiva' },
     oop_shape:{ n:'Out-of-Possession Shape', s:'Tactical Understanding: estrutura defensiva' },
@@ -211,50 +194,7 @@ const TRAINING = {
     trap:{ n:'Pressing Trap', s:'Tactical Understanding: pressing' },
     loe:{ n:'Line of Engagement', s:'Tactical Understanding: pressing' },
   },
-  principles: [
-    'Treine a ideia, não só os atributos: no FM27 o treino está ligado à compreensão da tática. Uma área com compreensão baixa = sessões dessa área na semana.',
-    'Equilibre: ao focar uma área, outras descem ligeiramente. O objectivo é ter todas em níveis semelhantes, não uma perfeita.',
-    'Pré-época: carga física + Tactical Understanding de IP/OOP Shape primeiro; pressing e chance creation depois.',
-    'Semana com 2 jogos: Recuperação + Match Preparation; sem sessões pesadas.',
-    'Individual Development: Role Training no papel EXACTO da tática (IP ou OOP mais exigente para esse jogador).',
-    'Jovens: minutos > tudo. Se não joga, empréstimo a um clube que use papel parecido.',
-    'Mentoria: grupos pequenos com 1–2 líderes de alta Determinação/profissionalismo e jovens com personalidade a moldar.',
-    'Team Cohesion após muitas contratações ou mudança de treinador (Player Buy-In baixo).',
-    'Complexidade: cada instrução fora do default aumenta o tempo de adaptação. Comece simples, adicione uma instrução quando resolver um problema identificado.',
-  ],
-  periodization: [
-    { p:'Pré-época (sem 1–2)', f:'Físico + IP/OOP Shape', n:'Base aeróbica; estrutura de posse e bloco.' },
-    { p:'Pré-época (sem 3–4)', f:'Pressing (Trigger/Trap/LoE) + Build Up', n:'Ligar a pressão à estrutura; construção contra pressão.' },
-    { p:'Pré-época (sem 5–6)', f:'Chance Creation + Match Prep', n:'Último terço; amigáveis com o 11 provável.' },
-    { p:'Época — semana normal', f:'Área mais fraca + Match Prep + Recuperação', n:'1 sessão para a área com menor compreensão.' },
-    { p:'Época — 2 jogos/semana', f:'Recuperação + Match Prep', n:'Evitar lesões; rotação.' },
-    { p:'Pausa internacional', f:'Tactical Understanding + Cohesion', n:'Bom momento para introduzir mudanças táticas.' },
-  ],
 };
-
-// ---- Conceitos / princípios (bíblia)
-const CONCEPTS = [
-  { k:'ip_oop', n:'In / Out of Possession', t:'Desde o FM26, cada jogador tem um papel com bola (IP) e outro sem bola (OOP), e a equipa tem uma formação para cada fase. Não existem duties nem fluidez: o comportamento vem do papel + instruções. O jogo avisa se a distância entre a posição IP e OOP de um jogador é demasiado grande — isso cria buracos nas transições.' },
-  { k:'rest_def', n:'Rest-defence', t:'Jogadores que ficam atrás da linha da bola durante o ataque para travar o contra-ataque. Regra prática: 3 a 5 (sem contar o GR) com mentalidade Positive/Attacking — tipicamente 2 centrais + 1 médio defensivo, ou um lateral que fecha por dentro (IFB/IWB).' },
-  { k:'width', n:'Largura', t:'Cada flanco precisa de UM jogador a dar largura no último terço (W, WF, WB, AWB, WCM, OCB). Se o extremo entra por dentro, a largura tem de vir de trás. Dois jogadores abertos no mesmo corredor atropelam-se.' },
-  { k:'box', n:'Ocupação da área', t:'Pelo menos 2–3 jogadores a atacar a área (avançado + extremo interior/AM/BBM). Com um falso 9 ou DLF, alguém tem de atacar a profundidade (IF, CHM, SS). No FM27 as novas instruções de ataque à área (near/centre/far post, arrive late) permitem coordenar quem vai a cada zona.' },
-  { k:'press_coh', n:'Coerência da pressão', t:'Linha de pressão (LoE) e linha defensiva devem andar juntas. LoE alta + linha baixa = buraco entre linhas. LoE baixa + linha alta = espaço nas costas sem pressão sobre o passe. Pressing Trap Outside precisa de quem feche o corredor (Pressing FB/WB, Tracking Winger).' },
-  { k:'outlets', n:'Outlets', t:'Papéis OOP "Outlet" ficam na frente para o contra-ataque e não defendem. 1–2 dão uma saída; 3+ deixam o bloco em inferioridade.' },
-  { k:'creativity', n:'Criatividade', t:'1–2 criadores principais (DLP, MP, AP, FR, PW, PWB). Demasiados criadores = todos pedem a bola, ninguém ataca o espaço.' },
-  { k:'asymmetry', n:'Assimetria', t:'Lados diferentes não são um defeito: lateral seguro (IFB) num lado e ala ofensivo (WB/AWB) no outro é das estruturas mais estáveis. Faça corresponder o lado ofensivo ao seu melhor jogador.' },
-  { k:'complexity', n:'Complexidade (FM27)', t:'O FM27 mede a complexidade (instruções de equipa, individuais e de adversário). Quanto mais complexa, mais capazes os jogadores e mais tempo de treino precisam. Em divisões baixas, simplicidade ganha jogos.' },
-  { k:'effectiveness', n:'Tactical Effectiveness (FM27)', t:'Substitui a Familiaridade Tática. Quatro pilares: Tactical Understanding, Player Ability, Player Buy-In e Next Match Information. Visível em Treino, no ecrã de tácticas, plantel, base de dados e relatórios de observação ("Projected Effectiveness").' },
-];
-
-// ---- Contra formações adversárias
-const OPPONENTS = [
-  { k:'442', f:'4-4-2', t:'Superioridade central com 3 médios (4-3-3/4-2-3-1). Ataque os meios-espaços nas costas dos médios ala. OOP: 4-4-2 compacto ou 4-1-4-1 cobrindo os dois avançados com 2 centrais + DM.' },
-  { k:'4231', f:'4-2-3-1', t:'O AMC é a ameaça: Stopping CB, Screening DM, ou OI de marcação apertada. Os dois pivots podem ser pressionados com dois homens (4-4-2 OOP com AM a pressionar).' },
-  { k:'433', f:'4-3-3', t:'Decida onde quer superioridade: meio (losango/4-2-2-2) ou corredores (alas). Os laterais adversários sobem — explore com Wide Outlet ou Splitting Outlet.' },
-  { k:'352', f:'3-5-2 / 3-4-3', t:'Proteja os meios-espaços (central do lado + ala). Alas adversários dão largura: Pressing Trap Outside com Pressing FB. Use extremos para prender os alas atrás.' },
-  { k:'541', f:'5-3-2 / 5-4-1 (bloco baixo)', t:'Paciência alta, largura, remates de longe se tiver qualidade, sobrecarga num flanco. Counter-press para não ser apanhado em transição. Cruzamentos baixos e ataques ao segundo poste.' },
-  { k:'diamond', f:'4-4-2 losango', t:'É estreito: Exploit Width, alas/laterais ofensivos. OOP: feche o meio, deixe-os ir para fora e defenda o cruzamento.' },
-];
 
 // ---- Modelos táticos (usados pelas sugestões)
 // slots: [IPcode, IProle, OOPcode, OOProle] — IP/OOP formações indicadas
@@ -303,17 +243,3 @@ const STYLE_PROFILES = {
   counter:{ n:'Contra-ataque', a:['pac','acc','otb','fin','pos','tea','str'] },
   low_block:{ n:'Bloco baixo', a:['pos','cnt','mar','hea','str','tea','cmp'] },
 };
-
-const GLOSSARY = [
-  ['IP / OOP','In Possession / Out of Possession — com e sem bola.'],
-  ['LoE','Line of Engagement: onde começa a pressão.'],
-  ['Meio-espaço','Corredor entre o centro e a ala (half-space).'],
-  ['Zona 14','Zona central imediatamente à frente da área adversária.'],
-  ['Rest-defence','Jogadores que ficam atrás para travar o contra-ataque.'],
-  ['Outlet','Jogador que fica à frente sem bola para receber em transição.'],
-  ['Overlap / Underlap','Apoio por fora / por dentro do colega da ala.'],
-  ['Counter-press','Pressão imediata após a perda da bola.'],
-  ['Bloco baixo/médio/alto','Altura onde a equipa defende organizada.'],
-  ['Tactical Tweaks','Atalhos do FM27 que mudam várias instruções de uma vez durante o jogo.'],
-  ['Tactical Complexity','Medida do FM27 de quão difícil a tática é de aprender.'],
-];

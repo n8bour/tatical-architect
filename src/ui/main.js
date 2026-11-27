@@ -7,13 +7,11 @@ const NAV = [
   ['scout', 'Prospeção', '🔭'],
   ['tactic', 'Tática', '◎'],
   ['training', 'Treino', '◷'],
-  ['bible', 'Bíblia', '◆'],
   ['settings', 'Definições', '⚙'],
 ];
 const TABS = {
   team: [['squad', 'Plantel'], ['gen', 'Gerar tática'], ['xi', 'Melhor XI & sistemas'], ['opp', 'Adversário']],
   tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['plans', 'Situações de jogo'], ['setpieces', 'Bolas paradas'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
-  bible: [['roles', 'Papéis'], ['ti', 'Instruções'], ['concepts', 'Conceitos & adversários'], ['btraining', 'Treino & Effectiveness']],
 };
 
 // Barra de topo ao estilo do FM: menu principal + estado + dados do jogo; por baixo, os separadores do ecrã (como no FM).
@@ -27,7 +25,7 @@ function renderNav() {
   const tabs = TABS[v] ? TABS[v].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[v] === k}" class="${ST.tabs[v] === k ? 'on' : ''}" onclick="A.tab('${v}','${k}')">${n}</button>`).join('')
     : `<span class="tb-crumb">${(NAV.find(([id]) => id === v) || [, ''])[1]}</span>`;
   return `<div class="tb-row">
-      <button class="tb-brand" onclick="A.go('home')" title="FM27 Tactical Bible v${VERSION}${DESKTOP ? ' · app' : ' · browser'}" aria-label="FM27 Tactical Bible"><span class="logo">FM27</span><span class="lbl">Tactical Bible</span></button>
+      <button class="tb-brand" onclick="A.go('home')" title="FM27 Tactical Architect v${VERSION}${DESKTOP ? ' · app' : ' · browser'}" aria-label="FM27 Tactical Architect"><span class="logo">FM27</span><span class="lbl">Tactical Architect</span></button>
       <nav class="tb-nav" aria-label="${L('Menu', 'Menu')}">${main.map(([id, label, ic]) => `<button class="nav-btn ${v === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"${v === id ? ' aria-current="page"' : ''}><span class="ic" aria-hidden="true">${ic}</span><span class="lbl">${label}</span></button>`).join('')}</nav>
       <div class="tb-right">
         <div class="tb-status">
@@ -56,7 +54,6 @@ function render(scrollTop) {
   else if (v === 'tactic') body = (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
   else if (v === 'scout') body = vScout();
-  else if (v === 'bible') body = (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
   document.querySelector('.app').classList.toggle('mini', !!ST.ui.navMini);
@@ -67,7 +64,6 @@ function render(scrollTop) {
   document.documentElement.lang = LANG;
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
-  if (v === 'bible') initClips(); else stopClips();
 }
 
 // ---------- actividade: tudo o que demora mostra que está a trabalhar ----------

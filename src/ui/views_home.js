@@ -22,7 +22,7 @@ function vHome() {
   <div class="grid g2" style="margin-top:16px">
     <div class="panel"><h3>O que corrigir primeiro</h3>${top.length ? top.map(f => `<div class="finding"><div class="sev ${f.sev}">${f.sev === 'crit' ? '!' : '▲'}</div><div><b>${esc(f.title)}</b><span class="small">${esc(f.text)}</span>${f.fix ? `<div class="fix">→ ${esc(f.fix)}</div>` : ''}</div></div>`).join('') : '<p class="muted">Nada grave na tática. 👍</p>'}
       <button class="btn" onclick="A.tab('tactic','analyze')">Ver diagnóstico completo</button></div>
-    <div class="grid">${sugg}${oppBox}${!sugg && !oppBox ? `<div class="panel"><h3>Bíblia tática</h3><p class="small muted">${ROLES.length} papéis com animação, ${TEAM_INSTRUCTIONS.length} instruções, conceitos e treino FM27.</p><button class="btn" onclick="A.go('bible')">Abrir</button></div>` : ''}</div>
+    <div class="grid">${sugg}${oppBox}${!sugg && !oppBox ? `<div class="panel"><h3>${L('Campo animado', 'Animated pitch')}</h3><p class="small muted">${L('Veja a sua tática em movimento nas 6 fases de jogo e teste instruções em tempo real.', 'Watch your tactic move across all 6 match phases and test instructions in real time.')}</p><button class="btn" onclick="A.simOpen()">${L('Abrir', 'Open')}</button></div>` : ''}</div>
   </div>
   ${ST.saved.length ? `<div class="panel" style="margin-top:16px"><h3>Táticas guardadas</h3><div class="row">${ST.saved.slice(0, 8).map((s, i) => `<button class="btn sm" onclick="A.loadSaved(${i})">${esc(s.name)}</button>`).join('')}</div></div>` : ''}`;
 }

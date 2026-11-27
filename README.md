@@ -1,6 +1,6 @@
-# FM27 Tactical Bible
+# FM27 Tactical Architect
 
-Tactical analyser, animated pitch and a bible of roles and instructions for Football Manager 27. Works offline and needs no account.
+Native Rust + GPUI tactical analyser, generator, scouting tool and animated pitch for Football Manager 27 (plus a single-file offline browser build). Works offline and needs no account.
 
 ## How to use (3 steps)
 
@@ -9,7 +9,7 @@ Tactical analyser, animated pitch and a bible of roles and instructions for Foot
 
    **Squad, read from the save:**
    The app always runs the **latest fmsave** (`uvx fmsave@latest`). When FM27 gets a patch, as soon as an fmsave version that supports it is released, the app uses it automatically. Without internet, it uses the version already cached. If you installed fmsave with pip, update it with `python -m pip install --upgrade fmsave`.
-   - **Installed app:** save the game in FM27 and the app reads the save by itself (it checks every 10 seconds). The first time, you need to install the reader:
+   - **Desktop app:** save the game in FM27 and the app reads the save by itself (it checks every 10 seconds). The first time, you need to install the reader:
      ```
      winget install --id=astral-sh.uv -e
      ```
@@ -18,7 +18,7 @@ Tactical analyser, animated pitch and a bible of roles and instructions for Foot
 2. **Tactic.** In **My team › Generate tactic** the app builds a complete tactic for your squad. You can also create your own in **Tactic › Analyse**. In **Tactic › Analyse**, click a player to change roles and instructions. **Animated pitch** shows the tactic in motion.
 3. **Opponent.** With FM open and the optional plugin installed, the app finds your **next match** and reads the opponent's squad from the save (**Next opponent from FM**). Without it, drag a CSV/HTML of their squad in. The report is in **My team › Opponent**. The game plan is applied to the tactic with one click.
 
-To take the tactic into the game, use **Tactic › FM27 sheet**. The sheet follows the order of the tactics screen and has checkboxes to tick as you go.
+To take the tactic into the game, use **Tactic › FM27 sheet**. The sheet follows the order of the tactics screen and has checkboxes to tick as you go. **Print/PDF** (on the sheet and in **Tactic › Analyse**, which adds the diagnosis and synergy) opens a printable page in your browser, where you can print it or save it as PDF.
 
 ## What's inside
 
@@ -38,71 +38,78 @@ To take the tactic into the game, use **Tactic › FM27 sheet**. The sheet follo
 | Tactic › Set pieces | Takers (corners with the right foot, direct and crossed free kicks, penalties, long throws), captain and vice-captain, attacking and defending corners in a diagram (zones, marking the opponent's strongest in the air, who stays back and who stays up) and applicable tips |
 | Tactic › FM27 sheet | Step-by-step guide to recreate the tactic in the game, including the *Set Pieces & Captains* section |
 | Training | Tactical Understanding priorities, typical week, Role Training and focus per player |
-| **Apply in FM** (optional, Windows) | With the Tactical Bible Bridge plugin inside FM27 (installed from *Settings › Integrations*; needs BepInEx 6 IL2CPP installed first, from builds.bepinex.dev; it is the only plugin the app talks to): **Place XI in FM** (Tactic › Analyse), **Apply in FM** for the tactic (formations, XI, roles, mentality, team and player instructions; can also create a new tactic) and for Set pieces (corner and free-kick takers per foot, corner delivery, and the attacking and defending corner routines slot by slot), **Shortlist → FM**, **Scout in FM** (creates a Recruitment Focus), **Next opponent from FM** and **Refresh squad from FM** (live squad). Verified on FM27 27.1.1. See `bridge/README.md`. |
-| Bible | 77 roles and instructions (including the new FM27 ones), concepts and Tactical Effectiveness. Each role has a **clip** showing that player's individual movement. Each animated instruction has a **dual clip** showing, side by side, the effect of the minimum and maximum option |
+| **Apply in FM** (optional, Windows) | With the optional bridge plugin (`TacticalBibleBridge.dll`, kept under that filename for FM27/BepInEx compatibility, installed from *Settings › Integrations*; needs BepInEx 6 IL2CPP installed first, from builds.bepinex.dev; it is the only plugin the app talks to): **Place XI in FM** (Tactic › Analyse), **Apply in FM** for the tactic (formations, XI, roles, mentality, team and player instructions; can also create a new tactic) and for Set pieces (corner and free-kick takers per foot, corner delivery, and the attacking and defending corner routines slot by slot), **Shortlist → FM**, **Scout in FM** (creates a Recruitment Focus), **Next opponent from FM** and **Refresh squad from FM** (live squad). Verified on FM27 27.1.1. See `bridge/README.md`. |
 
 You can drag any file anywhere onto the window. Your club's squads go to Squad; another club's squads go to Opponent; `.fmf` files go to the inspector; `.json` backups are restored.
 
-## Install
+## Install & Build
 
-**Without installing anything.** Double-click `app/index.html`. It has everything except the save reading and the FM plugin, which need the installed app.
+**Native desktop app (Rust + GPUI — GitHub Actions, nothing to install on your PC):**
+1. Push the repository to GitHub. The workflow in `.github/workflows/build.yml` runs on every push to `main` (or via **Actions › Build desktop app › Run workflow**).
+2. It reads `[workspace.package] version` from `Cargo.toml` (verifying it matches `package.json` and `src/ui/state.js`) and, if release `v<version>` doesn't exist yet, runs all Rust & JS tests, compiles the native GPUI desktop binary (`ta-app`), and publishes the release with `.github/RELEASE_NOTES.md`.
+3. Open **Releases** and download from *Assets*:
+   - `FM27-Tactical-Architect-<version>-setup.exe` (Windows NSIS installer)
+   - `FM27-Tactical-Architect-portable.exe` (Windows portable binary, runs without installing)
+   - Optional macOS `.dmg` and Linux `.tar.gz` when running with `all_platforms` enabled in *Run workflow*.
 
-**Windows app (GitHub Actions, nothing to install on your PC):**
-1. Create a repository and push these files **to the root**. Make sure you see `.github/`, `app/`, `src/`, `src-tauri/` and `build.mjs`.
-2. The build runs on every push to `main` (or via **Actions › Build desktop app › Run workflow**). It reads the version from `src-tauri/tauri.conf.json` and, if release `v<version>` doesn't exist yet, builds and publishes it with the notes in `.github/RELEASE_NOTES.md`. If that version was already published, nothing is built.
-3. Open **Releases** (right-hand column of the repository's main page) and download from *Assets* the `…setup.exe` (installer) or `FM27-Tactical-Bible-portatil.exe` (runs without installing).
+**To publish a new version:** bump the version in `Cargo.toml`, `package.json`, and `src/ui/state.js` (CI fails if they differ), update `.github/RELEASE_NOTES.md`, and push to `main`.
 
-**To publish a new version:** bump the version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `src/ui/state.js` (the build fails if they differ), update `.github/RELEASE_NOTES.md` and push to `main`.
+**Locally (native Rust + GPUI desktop app):**
+The workspace uses the Rust toolchain pinned in `rust-toolchain.toml` (`1.100.1`).
+```bash
+cargo test --workspace       # run all Rust unit & parity tests (ta-core, ta-backend, ta-app)
+cargo run -p ta-app          # launch the native GPUI desktop app
+cargo build --release -p ta-app  # build release binary (target/release/fm27-tactical-architect)
+```
+Convenience npm scripts: `npm run app:dev` (`cargo run -p ta-app`) and `npm run app:build` (`cargo build --release -p ta-app`).
 
-Duration: about 6 to 8 minutes the first time and 2 to 3 minutes afterwards, thanks to the cache. By default it only builds for Windows. For macOS and Linux, tick the option in *Run workflow*.
-
-**Locally** (requires Node, Rust and the Visual Studio C++ Build Tools): run `npm run app:build`.
+**Single-file offline browser build:**
+Double-click `app/index.html` (rebuilt via `node build.mjs`, tested with `npm test`). It has everything except native save polling and the FM plugin, which require the desktop app.
 
 ## Language
 The app opens in **English** by default. Portuguese is chosen with the **EN/PT** selector at the bottom of the menu, and the choice is remembered.
-- **Full translation:** covers the interface, the Bible (descriptions and tips for the 77 roles, instructions, concepts, training) and the messages from the diagnosis, generator, opponent report, and set pieces.
+- **Full translation:** covers the interface, role/instruction descriptions and tips, training, and the messages from the diagnosis, generator, opponent report, and set pieces.
 - **Generator:** when switching language, the report's reasons are recalculated in the new language.
-- **FM names in Portuguese:** with the app in Portuguese, roles, instructions and their options, mentalities, player and opposition instructions, Tactical Tweaks and training areas appear with Portuguese names, also inside sentences. For roles, 34 names are **confirmed in the Portuguese FM26**, from tactics published by Salão de Jogos, and are marked with ✓ in `src/i18n/pt_terms.js`. The rest follow the game's same naming pattern. FM27 may have occasional differences.
+- **FM names in Portuguese:** with the app in Portuguese, roles, instructions and their options, mentalities, player and opposition instructions, Tactical Tweaks and training areas appear with Portuguese names, also inside sentences. For roles, 34 names are **confirmed in the Portuguese FM26**, from tactics published by Salão de Jogos, and are marked with ✓ in `src/i18n/pt_terms.js` (and mirrored in `crates/core/src/data/i18n.rs`). The rest follow the game's same naming pattern. FM27 may have occasional differences.
 - **FM27 sheet in Portuguese:** by default it keeps the names as they appear in the English game, so the tactic can be recreated without mistakes. The **Português** button shows it with translated names.
-- **Bible search:** finds roles by name in both languages.
-- **Automated tests:** `tests/ui_i18n.py` fails the build if any text stays in Portuguese with the app in English, including errors and temporary messages. `tests/ui_pt_terms.py` fails if any FM term stays in English with the app in Portuguese. `tests/i18n_audit.py` is a supporting static audit. `tests/ui_lang_audit.py` is the two-way audit: it extracts each language's vocabulary from the code itself and looks for Portuguese with the app in English and English with the app in Portuguese, across every screen and several states. Before running, it checks that the detectors catch known examples.
+- **Automated tests:** `cargo test --workspace` runs the Rust parity and i18n checks plus a headless GPUI render of all 14 desktop screens in both languages (with and without a squad); for the HTML build, `tests/ui_i18n.py`, `tests/ui_pt_terms.py`, and `tests/ui_lang_audit.py` catch untranslated text in both directions across every screen.
 
 ## Interface
 - **Collapsible panels:** click the ▾ (or the title) of any panel to close or open it. The app remembers the state on each screen.
-- **Icon-only menu:** « button at the top of the menu or **Ctrl+B**. In narrow windows (e.g. 1366 at 125% scaling) the menu switches to icons automatically.
-- **Game data always at hand:** the top bar has the **📥 Read the save now** button, and shows how long ago the squad was read. The same buttons appear at the top of Squad, in step 1 of Home and on screens that need the squad. Shortcut: **Ctrl+Shift+L**. In the browser, the button opens the squad file.
+- **Icon-only menu:** « button at the top of the menu or **Ctrl+B** / **Cmd+B**. In narrow windows the menu switches to icons automatically.
+- **Game data always at hand:** the top bar has the **Read the save now** button, and shows how long ago the squad was read. Shortcut: **Ctrl+Shift+L** / **Cmd+Shift+L**.
 - **Drag and drop** any file onto the window.
-- **Activity always visible:** anything that takes time shows it's working. A thin bar appears at the top of the window and a floating card at the top right shows what's happening, the elapsed time and, when known, the percentage. The card never covers content. That task's buttons show a spinner and are locked until it finishes. It's hooked up to save reading (with a notice when the first read takes a while), the next opponent from FM, large files, the Generator (pair-by-pair progress) and `.fmf` analysis.
-- **UI tests on GitHub:** `ui_layout.py` runs fully in English and in a quick pass in Portuguese. `ui_busy.py` checks the activity indicators and `ui_i18n.py` the language coverage.
-- **Layout gate:** `tests/ui_layout.py` goes through the 17 screens at 6 widths and 3 modes (normal, collapsed menu, closed panels) with a 62-player squad with long names. It runs on GitHub in parallel with every build (10-minute limit), and the Release is not published if it finds overlaps or errors.
+- **Activity always visible:** long-running tasks run off the UI thread and display a top progress bar and floating top-right activity card (never covering content) with elapsed time and percentage.
+- **Layout gate (HTML build):** `tests/ui_layout.py` checks the 14 screens at 6 widths and 3 modes on CI in parallel with the Rust build.
 
 ## Available roles per position
 - **Exact slot:** in FM26/27 some roles only exist in the central slot of a line (DM, MC, AMC, ST) or only in the offset slots (DML/DMR, MCL/MCR…). The app respects this in the analyser, animated pitch, Generator and templates. A role the game doesn't allow in that slot doesn't appear in the list and is flagged as invalid.
 - **Confirmed:**
   - The Box-To-Box Midfielder and the Box-To-Box Playmaker don't exist in central midfield, only in the DM line.
   - The Box-To-Box Midfielder only exists in the offset DM (DML/DMR).
-- **Full validation:** the app has a hook (`ROLE_AVAIL_ENGINE`) to apply an exact per-position role list to all 77 roles, if one becomes available.
 
 ## Limitations
 
-- **Save reading.** Reading is done by [fmsave](https://github.com/rhiever/fmsave) (MIT, by Randal S. Olson), always on a **copy** of the save. It never changes the save, doesn't read the game's memory and doesn't need FM open. fmsave marks some FM27 fields as "unconfirmed". The app only uses name, age, club, positions and attributes.
+- **Save reading.** Reading is done by [fmsave](https://github.com/rhiever/fmsave) (MIT, by Randal S. Olson), always on a **copy** of the save. It never changes the save, doesn't read the game's memory and doesn't need FM open. fmsave marks some FM27 fields as "unconfirmed".
 - **Reading the game's memory, like FMPT Chief Analyst.** Not needed: the save has the same data and doesn't break with every patch.
-- **`.fmf`:** FM27 encrypts the tactic inside `.fmf`, so the app doesn't read or write it. The tactic goes back into the game via the Sheet (and the XI via the optional bridge).
-- **Attribute weights.** Roles marked EST use estimated weights. They can be adjusted in `src/core/roles.js`.
+- **`.fmf`:** FM27 encrypts the tactic inside `.fmf`, so the app doesn't read or write it. The tactic goes back into the game via the Sheet (and the optional bridge plugin).
+- **Attribute weights.** Roles marked EST use estimated weights. They can be adjusted in `crates/core/src/data/roles.rs` (and `src/core/roles.js`).
 - **Animated pitch.** It's a model of each role's and instruction's intent, not the FM match engine.
 
 ## Structure
 
 ```
-src/i18n/   i18n.js (L/T/translateDOM) · en_dict.js (PT→EN dictionary) · pt_terms.js (FM terms in PT)
-src/core/   roles.js · tactics_data.js · engine.js · insights.js · synergy.js · generator.js · gameplans.js · scouting.js · sim_model.js
-src/ui/     state.js · components.js · sim_view.js (canvas pitch) · clips.js · views_*.js · fmbridge.js (FM ids + bridge client) · actions.js · main.js
-src/styles.css
-build.mjs   bundles src/ into app/index.html (single file; file order is in build.mjs)
-tests/      npm test (engine.test.cjs) · sim_canvas.test.cjs · Playwright UI checks ui_*.py (run on CI)
-src-tauri/  native window: latest save (.fm) → fmsave → squad; installs the bridge plugin; TCP client (127.0.0.1:27029) for it
-bridge/     TacticalBibleBridge (C# BepInEx plugin source), dist/ (prebuilt DLL embedded in the app), dev/ scripts, README.md (decoded FM ids)
-docs/       HANDOFF-bridge.md (state of the bridge, open gaps, rules)
+crates/
+  core/        ta-core: pure-Rust engine (data/, engine/, planning/, live/, types.rs) + parity tests
+  backend/     ta-backend: fmsave runner/cache, embedded bridge DLL installer, TCP bridge client (127.0.0.1:27029), native dialogs & JSON state store
+  app/         ta-app: native GPUI desktop app (state, custom canvas widgets, 14 bilingual screens)
+assets/icons/  application icons (.ico, .icns, PNG, SVG)
+packaging/     installer.nsi (Windows NSIS installer script)
+src/           offline browser HTML sources (i18n/, core/, ui/, styles.css)
+build.mjs      bundles src/ into app/index.html (single file)
+tests/         npm test (engine.test.cjs) · sim_canvas.test.cjs · Playwright UI checks ui_*.py
+bridge/        TacticalBibleBridge (C# BepInEx plugin source), dist/ (prebuilt DLL embedded in ta-backend), dev/ scripts, README.md (decoded FM ids)
+docs/          HANDOFF-bridge.md (state of the bridge, open gaps, rules)
 ```
 
 Not affiliated with Sports Interactive or SEGA.

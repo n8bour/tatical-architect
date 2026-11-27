@@ -59,10 +59,21 @@ for (const f of ['squad_en.csv','squad_de.csv']) {
 }
 console.log('códigos curtos', JSON.stringify(X.parsePositions('DC, DM')), JSON.stringify(X.parsePositions('AMR')));
 
-// 11. simulador: todas as táticas-modelo e todas as demos de papéis dão posições finitas
+// helper de teste: coloca qualquer papel numa formação válida para verificar o simulador e a casa exacta
+function testTacticForRole(S, r) {
+  const fits = (form, code) => { const a = S.slotInfo(form, code); return a && S.validRole(r.id, a.group, r.phase, a); };
+  const F = Object.keys(S.FORMATIONS).find(f => S.FORMATIONS[f].some(z => fits(f, z.code)));
+  if (!F) return { t: S.newTactic(), idx: -1 };
+  const t = S.newTactic(F, F);
+  const idx = t.slots.findIndex(s => fits(F, s.ipCode));
+  if (idx >= 0) t.slots[idx][r.phase === 'IP' ? 'ip' : 'oop'] = r.id;
+  return { t, idx };
+}
+
+// 11. simulador: todas as táticas-modelo e todos os 77 papéis dão posições finitas
 {
   const c3={console,Math}; vm.createContext(c3);
-  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','sim_model.js'),'utf8')+';this.S={simModel,demoTacticForRole,TEMPLATES,ROLES,tacticFromTemplate,PHASES,TI_BY_KEY};',c3);
+  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','sim_model.js'),'utf8')+';this.S={simModel,FORMATIONS,newTactic,slotInfo,validRole,TEMPLATES,ROLES,tacticFromTemplate,PHASES,TI_BY_KEY};',c3);
   const S=c3.S; let bad=0, n=0;
   const check=(t,label)=>{ const M=S.simModel(t); n++;
     M.P.forEach(p=>S.PHASES.forEach(ph=>{ const q=p.pos[ph.k]; if(!q||!isFinite(q.x)||!isFinite(q.y)){bad++; if(bad<5) console.log('NaN',label,p.s.ipCode,ph.k);} }));
@@ -70,7 +81,7 @@ console.log('códigos curtos', JSON.stringify(X.parsePositions('DC, DM')), JSON.
   S.TEMPLATES.forEach(tp=>{ const t=S.tacticFromTemplate(tp); check(t,tp.id);
     // variar todas as instruções animadas
     ['width','passing','loe','dline','trigger','def_trans','att_trans','press_trap','support_runs','buildup','short_gk','dl_behaviour'].forEach(k=>S.TI_BY_KEY[k].opts.forEach((_,v)=>{ const t2=JSON.parse(JSON.stringify(t)); t2.ti[k]=v; check(t2,tp.id+':'+k+v); })); });
-  S.ROLES.forEach(r=>{ const d=S.demoTacticForRole(r); if(d.idx<0){bad++;console.log('demo sem slot',r.id);} else if(d.t.slots[d.idx][r.phase==='IP'?'ip':'oop']!==r.id){bad++;console.log('demo papel não aplicado',r.id);} check(d.t,'demo:'+r.id); });
+  S.ROLES.forEach(r=>{ const d=testTacticForRole(S,r); if(d.idx<0){bad++;console.log('sem slot',r.id);} else if(d.t.slots[d.idx][r.phase==='IP'?'ip':'oop']!==r.id){bad++;console.log('papel não aplicado',r.id);} check(d.t,'role:'+r.id); });
   const cen=S.simModel(S.tacticFromTemplate(S.TEMPLATES[0]));
   console.log('simulador:',n,'modelos verificados; avisos no 1.º modelo:',cen.overlays.map(o=>o.label).join(' | ')||'nenhum');
   if(bad){ console.log('FAIL simulador',bad); process.exitCode=1; }
@@ -160,22 +171,22 @@ process.on('exit',c=>console.log(c?'HÁ TESTES A FALHAR':'TODOS OS TESTES OK'));
   if(bad) process.exitCode=1;
 }
 
-// 17. disponibilidade por casa exacta (FM26/27): modelos e demonstrações só usam papéis válidos naquela casa
+// 17. disponibilidade por casa exacta (FM26/27): modelos e todos os 77 papéis só usam papéis válidos naquela casa
 {
   const c8={console,Math}; vm.createContext(c8);
-  vm.runInContext(code+';\n'+fs.readFileSync(require('path').join(__dirname,'..','src','core','sim_model.js'),'utf8')+';this.V={TEMPLATES,tacticFromTemplate,slotInfo,validRole,rolesFor,ROLES,demoTacticForRole};',c8);
+  vm.runInContext(code+';this.V={TEMPLATES,FORMATIONS,newTactic,tacticFromTemplate,slotInfo,validRole,rolesFor,ROLES};',c8);
   const V=c8.V; let bad=0; const chk=(c,m)=>{ if(!c){bad++;console.log('FAIL',m);} };
   V.TEMPLATES.forEach(tp=>{ Object.entries(tp.roles||{}).forEach(([code,[ip,oop]])=>{ const t=V.tacticFromTemplate(tp); const s=t.slots.find(z=>z.ipCode===code); if(!s) return;
     const a=V.slotInfo(t.ipForm,s.ipCode), b=V.slotInfo(t.oopForm,s.oopCode);
     chk(V.validRole(ip,a.group,'IP',a),'modelo '+tp.id+' '+code+' IP '+ip); chk(V.validRole(oop,b.group,'OOP',b),'modelo '+tp.id+' '+code+' OOP '+oop); }); });
-  V.ROLES.forEach(r=>{ const d=V.demoTacticForRole(r), s=d.t.slots[d.idx], a=V.slotInfo(d.t.ipForm,s.ipCode); chk(V.validRole(r.id,a.group,r.phase,a),'demo '+r.id); });
+  V.ROLES.forEach(r=>{ const d=testTacticForRole(V,r); chk(d.idx>=0,'papel sem casa '+r.id); if(d.idx>=0){ const s=d.t.slots[d.idx], a=V.slotInfo(d.t.ipForm,s.ipCode); chk(V.validRole(r.id,a.group,r.phase,a),'papel '+r.id); } });
   // casos confirmados no jogo
   const at=(f,c)=>V.rolesFor(V.slotInfo(f,c).group,'IP',V.slotInfo(f,c)).map(r=>r.id);
   chk(!at('4-3-3 DM Wide','MCL').includes('b2bp'),'BBP não pode estar no médio centro');
   chk(!at('4-3-3 DM Wide','MCL').includes('b2b'),'BBM não pode estar no médio centro');
   chk(!at('4-3-3 DM Wide','DM').includes('b2b'),'BBM não pode estar no DM central');
   chk(at('4-2-4 DM Wide','DML').includes('b2b'),'BBM tem de estar no DM deslocado');
-  console.log('casa exacta: modelos, 77 demonstrações e casos confirmados verificados');
+  console.log('casa exacta: modelos, 77 papéis e casos confirmados verificados');
   if(bad) process.exitCode=1;
 }
 

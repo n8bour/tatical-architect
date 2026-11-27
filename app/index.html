@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FM27 Tactical Bible</title>
+<title>FM27 Tactical Architect</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23b3131d'/><rect x='15' y='13' width='70' height='74' rx='3' fill='none' stroke='%23f3ead8' stroke-width='2.2'/><g fill='%23f6eedd'><circle cx='50' cy='81' r='4.6'/><circle cx='26' cy='68' r='4.6'/><circle cx='43' cy='70' r='4.6'/><circle cx='57' cy='70' r='4.6'/><circle cx='74' cy='68' r='4.6'/><circle cx='32' cy='52' r='4.6'/><circle cx='50' cy='55' r='4.6'/><circle cx='68' cy='52' r='4.6'/><circle cx='28' cy='32' r='4.6'/><circle cx='50' cy='28' r='4.6'/><circle cx='72' cy='32' r='4.6'/></g></svg>">
 <script type="module" src="https://ui-sdk.dev/web.js"></script>
 <link rel="stylesheet" href="https://ui-sdk.dev/web.css" />
@@ -124,7 +124,6 @@ ul.clean{margin:.3em 0;padding-left:18px} ul.clean li{margin:.25em 0}
 .simgrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
 .simwrap{border-radius:12px;overflow:hidden;box-shadow:var(--shadow);background:var(--pitch)}
 canvas.simpitch,svg.simpitch{display:block;width:100%;height:auto;aspect-ratio:110/72}
-canvas.clip-canvas{display:block;width:100%;height:auto;aspect-ratio:110/72}
 .simbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;justify-content:space-between}
 .simbar-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;justify-content:space-between}
 .simbar [data-slot="toggle"]{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:6px 12px;border-radius:8px;height:auto;font-weight:600;cursor:pointer}
@@ -260,26 +259,6 @@ svg.pitch{max-width:420px;margin-inline:auto}
 .pill.no{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
 .pill:empty{display:none}
 a.btn{text-decoration:none;color:inherit;display:inline-block}
-
-/* ---------- clips da Bíblia ---------- */
-.clip{margin:10px 0 0}
-.clip-box{border-radius:10px;overflow:hidden;background:var(--pitch);max-width:420px}
-.clip-svg{display:block;width:100%;height:auto}
-.clip figcaption{margin-top:5px;color:var(--muted)}
-.clip-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-.clip-pair .clip{margin:0}.clip-pair .clip-box{max-width:none}
-tr.cliprow td{background:var(--panel2)}
-.clip-tg [data-slot="toggle"]{height:auto;padding:4px 9px;font-size:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;cursor:pointer}
-.clip-tg [data-slot="toggle"][data-pressed]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-.opp-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
-.concept-viz{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);min-width:0}
-.cv-row{display:grid;grid-template-columns:64px minmax(48px,96px) minmax(0,1fr);gap:8px;align-items:center}
-.cv-lbl{font-size:12px;font-weight:700}
-.cv-bar{height:7px;background:var(--panel2);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
-.cv-bar i{display:block;height:100%;border-radius:4px}
-.cv-pillars{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.cv-pill{background:var(--panel2);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:2px;font-size:12px;min-width:0;overflow-wrap:anywhere}
-.btn.ghost{background:transparent}
 
 /* ---------- sinergia ofensiva ---------- */
 .syn-top{display:flex;gap:14px;align-items:center}
@@ -422,7 +401,7 @@ tbody tr:hover>td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 // ============================================================
 // Idiomas: inglês por defeito, português como alternativa.
 //  • L(pt, en): texto dinâmico escrito nas duas línguas na origem (motor, mensagens com nomes)
-//  • T(texto): dicionário PT→EN para texto fixo (interface, Bíblia); números são substituídos
+//  • T(texto): dicionário PT→EN para texto fixo da interface; números são substituídos
 //    por '#' na chave e repostos na tradução (ex.: 'Plantel: # jogadores')
 //  • translateDOM(raiz): aplica T a todos os textos e atributos visíveis depois de desenhar
 // ============================================================
@@ -485,7 +464,7 @@ const LOCALE = () => (LANG === 'en' ? 'en-GB' : 'pt-PT');
 ;
 // ---- core/roles.js
 // ============================================================
-// FM27 Tactical Bible — Base de conhecimento: atributos e papéis
+// FM27 Tactical Architect — Base de conhecimento: atributos e papéis
 // src: 'v' = confirmado em fontes públicas FM26/FM27; 'e' = estimado
 // (pesos derivados da lógica FM; confirmar no jogo e ajustar aqui).
 // ============================================================
@@ -762,7 +741,7 @@ ROLES.forEach(r => { if (ROLE_SLOT[r.id]) r.slot = ROLE_SLOT[r.id]; });
 ;
 // ---- core/tactics_data.js
 // ============================================================
-// Formações, instruções de equipa/jogador/adversário, treino, conceitos
+// Formações, instruções de equipa/jogador, treino e modelos
 // ============================================================
 
 // Papéis cujos pesos de atributos foram confirmados em fontes públicas FM26
@@ -936,13 +915,6 @@ const PLAYER_INSTRUCTIONS = [
   { n:'Target Far Post', g:'Área (FM27)', d:'Ataca o segundo poste nos cruzamentos.', tip:'Extremo do lado oposto, Wide Forward.', fm27:true },
 ];
 
-const OPPOSITION_INSTRUCTIONS = [
-  { n:'Show onto (weaker) foot', d:'Força o adversário para o pé mais fraco.', tip:'Default útil contra extremos que cortam para dentro (mostre-os para fora).' },
-  { n:'Close down (more/less)', d:'Pressiona mais ou menos um jogador específico.', tip:'Mais no criativo/construtor; menos no central fraco com bola (deixe-o conduzir).' },
-  { n:'Tight marking', d:'Marcação em cima.', tip:'No médio ofensivo/falso 9; cuidado com arrastar centrais para fora.' },
-  { n:'Tackle harder', d:'Desarmes mais agressivos sobre esse jogador.', tip:'Contra driblers com pouca Bravura/Equilíbrio; evite com o seu defesa amarelado.' },
-];
-
 // ---- Tactical Tweaks (FM27, confirmados em antevisões; o jogo mostra as TIs exactas ao passar o rato)
 const TACTICAL_TWEAKS = [
   { n:'More Urgency', d:'Aumenta a urgência: tipicamente sobe ritmo e verticalidade.', when:'A perder ou empatado contra bloco baixo nos últimos 20–30 min.' },
@@ -952,18 +924,8 @@ const TACTICAL_TWEAKS = [
   { n:'Wingers Swap Sides', d:'Troca os extremos de flanco.', when:'Para atacar o lateral mais fraco, ou para meter o extremo no pé forte/fraco conforme o objectivo.' },
 ];
 
-// ---- Treino FM27 (Tactical Effectiveness)
+// ---- Áreas de Tactical Understanding (treino FM27)
 const TRAINING = {
-  effectiveness: [
-    { n:'Tactical Understanding', d:'Quanto a equipa compreende cada área da tática: IP Shape, OOP Shape, Passing Style, Build Up, Chance Creation e Pressing (Trigger Press, Pressing Trap, Line of Engagement). Influenciado por contributo do treino, exposição a jogos, capacidade tática dos jogadores e complexidade da tática.',
-      fix:'Sessões de Tactical Understanding focadas na área mais fraca; simplificar a tática (menos instruções não-default).' },
-    { n:'Player Ability', d:'Adequação ao papel (Player Role Suitability) e capacidade pura (Current Ability/atributos).',
-      fix:'Individual Development com Role Training no papel exacto da tática; recrutar para o papel.' },
-    { n:'Player Buy-In', d:'Managerial Support (personalidade, desempenho e respeito pelo treinador), relações com colegas/staff e tendências do treinador.',
-      fix:'Team Cohesion; conversas individuais; cumprir promessas; evitar muitas mudanças de plantel de uma vez.' },
-    { n:'Next Match Information', d:'Qualidade do relatório do próximo adversário (analistas) e conhecimento dos jogadores adversários.',
-      fix:'Match Preparation; atribuir o relatório ao melhor analista; observar a divisão e o adversário.' },
-  ],
   areas: {
     ip_shape:{ n:'In-Possession Shape', s:'Tactical Understanding: posse/estrutura ofensiva' },
     oop_shape:{ n:'Out-of-Possession Shape', s:'Tactical Understanding: estrutura defensiva' },
@@ -974,50 +936,7 @@ const TRAINING = {
     trap:{ n:'Pressing Trap', s:'Tactical Understanding: pressing' },
     loe:{ n:'Line of Engagement', s:'Tactical Understanding: pressing' },
   },
-  principles: [
-    'Treine a ideia, não só os atributos: no FM27 o treino está ligado à compreensão da tática. Uma área com compreensão baixa = sessões dessa área na semana.',
-    'Equilibre: ao focar uma área, outras descem ligeiramente. O objectivo é ter todas em níveis semelhantes, não uma perfeita.',
-    'Pré-época: carga física + Tactical Understanding de IP/OOP Shape primeiro; pressing e chance creation depois.',
-    'Semana com 2 jogos: Recuperação + Match Preparation; sem sessões pesadas.',
-    'Individual Development: Role Training no papel EXACTO da tática (IP ou OOP mais exigente para esse jogador).',
-    'Jovens: minutos > tudo. Se não joga, empréstimo a um clube que use papel parecido.',
-    'Mentoria: grupos pequenos com 1–2 líderes de alta Determinação/profissionalismo e jovens com personalidade a moldar.',
-    'Team Cohesion após muitas contratações ou mudança de treinador (Player Buy-In baixo).',
-    'Complexidade: cada instrução fora do default aumenta o tempo de adaptação. Comece simples, adicione uma instrução quando resolver um problema identificado.',
-  ],
-  periodization: [
-    { p:'Pré-época (sem 1–2)', f:'Físico + IP/OOP Shape', n:'Base aeróbica; estrutura de posse e bloco.' },
-    { p:'Pré-época (sem 3–4)', f:'Pressing (Trigger/Trap/LoE) + Build Up', n:'Ligar a pressão à estrutura; construção contra pressão.' },
-    { p:'Pré-época (sem 5–6)', f:'Chance Creation + Match Prep', n:'Último terço; amigáveis com o 11 provável.' },
-    { p:'Época — semana normal', f:'Área mais fraca + Match Prep + Recuperação', n:'1 sessão para a área com menor compreensão.' },
-    { p:'Época — 2 jogos/semana', f:'Recuperação + Match Prep', n:'Evitar lesões; rotação.' },
-    { p:'Pausa internacional', f:'Tactical Understanding + Cohesion', n:'Bom momento para introduzir mudanças táticas.' },
-  ],
 };
-
-// ---- Conceitos / princípios (bíblia)
-const CONCEPTS = [
-  { k:'ip_oop', n:'In / Out of Possession', t:'Desde o FM26, cada jogador tem um papel com bola (IP) e outro sem bola (OOP), e a equipa tem uma formação para cada fase. Não existem duties nem fluidez: o comportamento vem do papel + instruções. O jogo avisa se a distância entre a posição IP e OOP de um jogador é demasiado grande — isso cria buracos nas transições.' },
-  { k:'rest_def', n:'Rest-defence', t:'Jogadores que ficam atrás da linha da bola durante o ataque para travar o contra-ataque. Regra prática: 3 a 5 (sem contar o GR) com mentalidade Positive/Attacking — tipicamente 2 centrais + 1 médio defensivo, ou um lateral que fecha por dentro (IFB/IWB).' },
-  { k:'width', n:'Largura', t:'Cada flanco precisa de UM jogador a dar largura no último terço (W, WF, WB, AWB, WCM, OCB). Se o extremo entra por dentro, a largura tem de vir de trás. Dois jogadores abertos no mesmo corredor atropelam-se.' },
-  { k:'box', n:'Ocupação da área', t:'Pelo menos 2–3 jogadores a atacar a área (avançado + extremo interior/AM/BBM). Com um falso 9 ou DLF, alguém tem de atacar a profundidade (IF, CHM, SS). No FM27 as novas instruções de ataque à área (near/centre/far post, arrive late) permitem coordenar quem vai a cada zona.' },
-  { k:'press_coh', n:'Coerência da pressão', t:'Linha de pressão (LoE) e linha defensiva devem andar juntas. LoE alta + linha baixa = buraco entre linhas. LoE baixa + linha alta = espaço nas costas sem pressão sobre o passe. Pressing Trap Outside precisa de quem feche o corredor (Pressing FB/WB, Tracking Winger).' },
-  { k:'outlets', n:'Outlets', t:'Papéis OOP "Outlet" ficam na frente para o contra-ataque e não defendem. 1–2 dão uma saída; 3+ deixam o bloco em inferioridade.' },
-  { k:'creativity', n:'Criatividade', t:'1–2 criadores principais (DLP, MP, AP, FR, PW, PWB). Demasiados criadores = todos pedem a bola, ninguém ataca o espaço.' },
-  { k:'asymmetry', n:'Assimetria', t:'Lados diferentes não são um defeito: lateral seguro (IFB) num lado e ala ofensivo (WB/AWB) no outro é das estruturas mais estáveis. Faça corresponder o lado ofensivo ao seu melhor jogador.' },
-  { k:'complexity', n:'Complexidade (FM27)', t:'O FM27 mede a complexidade (instruções de equipa, individuais e de adversário). Quanto mais complexa, mais capazes os jogadores e mais tempo de treino precisam. Em divisões baixas, simplicidade ganha jogos.' },
-  { k:'effectiveness', n:'Tactical Effectiveness (FM27)', t:'Substitui a Familiaridade Tática. Quatro pilares: Tactical Understanding, Player Ability, Player Buy-In e Next Match Information. Visível em Treino, no ecrã de tácticas, plantel, base de dados e relatórios de observação ("Projected Effectiveness").' },
-];
-
-// ---- Contra formações adversárias
-const OPPONENTS = [
-  { k:'442', f:'4-4-2', t:'Superioridade central com 3 médios (4-3-3/4-2-3-1). Ataque os meios-espaços nas costas dos médios ala. OOP: 4-4-2 compacto ou 4-1-4-1 cobrindo os dois avançados com 2 centrais + DM.' },
-  { k:'4231', f:'4-2-3-1', t:'O AMC é a ameaça: Stopping CB, Screening DM, ou OI de marcação apertada. Os dois pivots podem ser pressionados com dois homens (4-4-2 OOP com AM a pressionar).' },
-  { k:'433', f:'4-3-3', t:'Decida onde quer superioridade: meio (losango/4-2-2-2) ou corredores (alas). Os laterais adversários sobem — explore com Wide Outlet ou Splitting Outlet.' },
-  { k:'352', f:'3-5-2 / 3-4-3', t:'Proteja os meios-espaços (central do lado + ala). Alas adversários dão largura: Pressing Trap Outside com Pressing FB. Use extremos para prender os alas atrás.' },
-  { k:'541', f:'5-3-2 / 5-4-1 (bloco baixo)', t:'Paciência alta, largura, remates de longe se tiver qualidade, sobrecarga num flanco. Counter-press para não ser apanhado em transição. Cruzamentos baixos e ataques ao segundo poste.' },
-  { k:'diamond', f:'4-4-2 losango', t:'É estreito: Exploit Width, alas/laterais ofensivos. OOP: feche o meio, deixe-os ir para fora e defenda o cruzamento.' },
-];
 
 // ---- Modelos táticos (usados pelas sugestões)
 // slots: [IPcode, IProle, OOPcode, OOProle] — IP/OOP formações indicadas
@@ -1066,20 +985,6 @@ const STYLE_PROFILES = {
   counter:{ n:'Contra-ataque', a:['pac','acc','otb','fin','pos','tea','str'] },
   low_block:{ n:'Bloco baixo', a:['pos','cnt','mar','hea','str','tea','cmp'] },
 };
-
-const GLOSSARY = [
-  ['IP / OOP','In Possession / Out of Possession — com e sem bola.'],
-  ['LoE','Line of Engagement: onde começa a pressão.'],
-  ['Meio-espaço','Corredor entre o centro e a ala (half-space).'],
-  ['Zona 14','Zona central imediatamente à frente da área adversária.'],
-  ['Rest-defence','Jogadores que ficam atrás para travar o contra-ataque.'],
-  ['Outlet','Jogador que fica à frente sem bola para receber em transição.'],
-  ['Overlap / Underlap','Apoio por fora / por dentro do colega da ala.'],
-  ['Counter-press','Pressão imediata após a perda da bola.'],
-  ['Bloco baixo/médio/alto','Altura onde a equipa defende organizada.'],
-  ['Tactical Tweaks','Atalhos do FM27 que mudam várias instruções de uma vez durante o jogo.'],
-  ['Tactical Complexity','Medida do FM27 de quão difícil a tática é de aprender.'],
-];
 
 ;
 // ---- core/engine.js
@@ -3615,796 +3520,9 @@ function phaseText(t, k, M) {
   return { text: TX[k], notes };
 }
 
-// demonstração de um papel: tática simples com o papel em destaque
-function demoTacticForRole(r) {
-  const g = r.groups[0];
-  let F = { GK:'4-3-3 DM Wide', DC: r.wideCB ? '3-4-2-1' : '4-3-3 DM Wide', D_LR:'4-3-3 DM Wide', WB_LR:'3-4-2-1', DM:'4-3-3 DM Wide', MC:'4-3-3 DM Wide', M_LR:'4-4-2', AMC:'4-2-3-1 Wide', AM_LR:'4-3-3 DM Wide', ST:'4-3-3 DM Wide' }[g];
-  const t = newTactic(F, F); t.name = 'Demo: ' + r.name; t.ment = 'Balanced';
-  const fits = (form, code) => { const a = slotInfo(form, code); return a && validRole(r.id, a.group, r.phase, a); };
-  if (!FORMATIONS[F].some(z => fits(F, z.code))) F = Object.keys(FORMATIONS).find(f => FORMATIONS[f].some(z => fits(f, z.code))) || F;
-  const t2 = newTactic(F, F); t.slots = t2.slots; t.ipForm = F; t.oopForm = F;
-  let idx = t.slots.findIndex(s => fits(F, s.ipCode) && slotInfo(F, s.ipCode).side !== 'R');
-  if (idx < 0) idx = t.slots.findIndex(s => fits(F, s.ipCode));
-  t.slots[idx][r.phase === 'IP' ? 'ip' : 'oop'] = r.id;
-  return { t, idx };
-}
-
-// ============================================================
-// Cenários realistas por papel (IP e OOP) para os clips da Bíblia.
-// Cada papel tem 3 tempos reais: s0 (posição inicial) → s1 (movimento característico) → s2 (acção com/sem bola),
-// com interacção directa da bola, reacção dos colegas e do adversário!
-// ============================================================
-function roleClipModel(roleId) {
-  const r = ROLE_BY_ID[roleId], d = demoTacticForRole(r), t = d.t, fi = d.idx;
-  const isIP = r.phase === 'IP';
-  const baseM = simModel(t);
-  const P = baseM.P.map(p => ({ ...p, pos: {}, pressing: false }));
-  const me = P[fi];
-  const sSide = me.sg || (me.a.x < 50 ? -1 : me.a.x > 50 ? 1 : -1); // -1 esq, +1 dir
-  const byC = (re) => P.find(p => p.i !== fi && re.test(p.s.ipCode));
-  const cbs = P.filter(p => p.i !== fi && p.a.group === 'DC');
-  const gk = P.find(p => p.a.group === 'GK');
-  const dm = byC(/^DM/) || byC(/^MC/);
-  const cm = byC(/^MC/) || byC(/^DM/);
-  const am = byC(/^AMC/) || byC(/^MC/);
-  const st = byC(/^ST/) || byC(/^AMC/);
-  const wideSame = P.find(p => p.i !== fi && ['AM_LR','M_LR','WB_LR'].includes(p.a.group) && (p.a.x < 50) === (sSide < 0));
-  const wideOpp = P.find(p => p.i !== fi && ['AM_LR','M_LR','WB_LR'].includes(p.a.group) && (p.a.x < 50) !== (sSide < 0));
-  const fbSame = P.find(p => p.i !== fi && ['D_LR','WB_LR'].includes(p.a.group) && (p.a.x < 50) === (sSide < 0));
-
-  // Helpers para construir os 3 tempos (s0, s1, s2)
-  const setBase = (ph, fromPh) => P.forEach(p => { p.pos[ph] = { ...baseM.P[p.i].pos[fromPh] }; });
-  const opp = {};
-  const setOpp = (ph, D, F) => {
-    opp[ph] = OPP_SHAPE.map(([ox, oy], k) => {
-      const tt = clamp((oy - 18) / 60, 0, 1);
-      return k === 0 ? { x: 100 - ox, y: Math.min(97, D + 10) } : { x: 100 - ox, y: D + (F - D) * tt };
-    });
-  };
-  const shift = (p, ph, dx, dy) => { if (!p) return; p.pos[ph] = { x: clamp(p.pos[ph].x + dx, 5, 95), y: clamp(p.pos[ph].y + dy, 3, 96) }; };
-  const place = (p, ph, x, y) => { if (!p) return; p.pos[ph] = { x: clamp(x, 5, 95), y: clamp(y, 3, 96) }; };
-  const ptOf = (p, ph, dx = 0, dy = 0, kind = 'pass') => p ? { x: clamp(p.pos[ph].x + dx, 4, 96), y: clamp(p.pos[ph].y + dy, 2, 99), kind } : { x: 50, y: 50, kind };
-
-  const ball = {}, arrows = { s0: [], s1: [], s2: [] }, zones = { s0: [], s1: [], s2: [] }, lines = { s0: [], s1: [], s2: [] };
-  const pressAt = { s0: false, s1: false, s2: false };
-  let labels;
-
-  if (isIP) {
-    // ---- CENÁRIOS COM BOLA (IP): Posição inicial → Movimento do papel → Acção com bola
-    labels = [L('1. Posição inicial', '1. Starting shape'), L('2. Movimento do papel', '2. Role movement'), L('3. Acção com bola', '3. Ball action')];
-    const startPh = ['gk_ip','bpgk','nngk','cb_ip','bpcb','nncb','ifb','hb','iwb','dm_ip','dlp'].includes(roleId) ? 'build'
-      : ['acb','pwb','cm_ip','mp','wcm','b2bp','ap','pw','wm_ip','fr','dlf','f9'].includes(roleId) ? 'prog' : 'prog';
-    // s0: forma base real da formação (antes do movimento específico do papel)
-    P.forEach(p => {
-      const a = p.a;
-      const y0 = startPh === 'build' ? clamp(a.y * 0.65 + 4, 4, 72) : clamp(a.y * 0.8 + 8, 5, 80);
-      p.pos.s0 = { x: clamp(a.x, 6, 94), y: y0 };
-    });
-    setBase('s1', startPh === 'build' ? 'build' : 'prog');
-    setBase('s2', startPh === 'build' ? 'prog' : 'final');
-    // copiar s0 → s1 → s2 como base estável e aplicar o comportamento exacto de cada papel
-    const keepTeamStable = (dy1, dy2) => P.forEach(p => {
-      if (p.i === fi) return;
-      const d1 = p.a.group === 'GK' ? dy1 * 0.2 : dy1, d2 = p.a.group === 'GK' ? dy2 * 0.2 : dy2;
-      p.pos.s1 = { x: p.pos.s0.x, y: clamp(p.pos.s0.y + d1, 4, 92) };
-      p.pos.s2 = { x: p.pos.s0.x, y: clamp(p.pos.s0.y + d2, 4, 94) };
-    });
-    setOpp('s0', 70, 38); setOpp('s1', 74, 44); setOpp('s2', 80, 52);
-
-    const xW = 50 + sSide * 43, xH = 50 + sSide * 19, xIn = 50 + sSide * 10, xCh = 50 + sSide * 24, xCB = 50 + sSide * 28;
-    switch (roleId) {
-      case 'gk_ip':
-        keepTeamStable(3, 6);
-        place(me, 's0', 50, 5); place(me, 's1', 50, 7); place(me, 's2', 50, 9);
-        ball.s0 = [ptOf(me,'s0'), ptOf(me,'s0', 0, 1)];
-        ball.s1 = [ptOf(me,'s1'), ptOf(cbs[0] || fbSame, 's1')];
-        ball.s2 = [ptOf(cbs[0] || fbSame, 's2'), ptOf(dm || cm, 's2')];
-        break;
-      case 'bpgk':
-        keepTeamStable(3, 7);
-        if (cbs[0]) { place(cbs[0],'s1',24,14); place(cbs[0],'s2',24,18); }
-        if (cbs[1]) { place(cbs[1],'s1',76,14); place(cbs[1],'s2',76,18); }
-        place(me, 's0', 50, 5); place(me, 's1', 50, 14); place(me, 's2', 50, 15);
-        ball.s0 = [ptOf(cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0', 0, 0, 'dribble'), ptOf(me,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(dm || cm,'s2')];
-        break;
-      case 'nngk':
-        keepTeamStable(5, 10);
-        place(me, 's0', 50, 4); place(me, 's1', 50, 4); place(me, 's2', 50, 5);
-        ball.s0 = [ptOf(cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0'), ptOf(me,'s1', 0, 1)];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'loft'), ptOf(st,'s2', 0, 4, 'loft')];
-        break;
-      case 'cb_ip':
-        keepTeamStable(3, 6);
-        place(me, 's0', 50 + sSide * 15, 16); place(me, 's1', 50 + sSide * 22, 18); place(me, 's2', 50 + sSide * 22, 23);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(dm || fbSame,'s1')];
-        ball.s2 = [ptOf(dm || fbSame,'s2'), ptOf(cm || wideSame,'s2')];
-        break;
-      case 'bpcb':
-        keepTeamStable(4, 8);
-        place(me, 's0', 50 + sSide * 16, 16); place(me, 's1', 50 + sSide * 18, 28); place(me, 's2', 50 + sSide * 18, 32);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0', 0, 0, 'dribble'), ptOf(me,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'loft'), ptOf(wideOpp || st,'s2', 0, 4, 'loft')];
-        break;
-      case 'nncb':
-        keepTeamStable(4, 8);
-        place(me, 's0', 50 + sSide * 14, 15); place(me, 's1', 50 + sSide * 14, 15); place(me, 's2', 50 + sSide * 14, 17);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0'), ptOf(me,'s1', 0, 1)];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'loft'), ptOf(st,'s2', 0, 6, 'loft')];
-        break;
-      case 'acb': {
-        keepTeamStable(4, 7);
-        place(me, 's0', 50 + sSide * 15, 18); place(me, 's1', 50 + sSide * 8, 40); place(me, 's2', 50 + sSide * 8, 48);
-        const f = cbs[0] || dm || gk;
-        ball.s0 = [ptOf(gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(am || st,'s2')];
-        break;
-      }
-      case 'ocb':
-        keepTeamStable(5, 10);
-        if (wideSame) { place(wideSame,'s1', xH, 54); place(wideSame,'s2', xH, 68); }
-        place(me, 's0', xCB, 20); place(me, 's1', xW, 50); place(me, 's2', xW, 78);
-        ball.s0 = [ptOf(cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0'), ptOf(wideSame || cm,'s1')];
-        ball.s2 = [ptOf(wideSame || cm,'s2'), ptOf(me,'s2'), ptOf(st,'s2')];
-        break;
-      case 'fb_ip':
-        keepTeamStable(4, 8);
-        place(me, 's0', xW, 20); place(me, 's1', xW, 34); place(me, 's2', xW, 46);
-        ball.s0 = [ptOf(cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(wideSame || cm,'s1')];
-        ball.s2 = [ptOf(wideSame || cm,'s2'), ptOf(me,'s2'), ptOf(dm || cm,'s2')];
-        break;
-      case 'ifb':
-        keepTeamStable(5, 9);
-        if (cbs[0]) { place(cbs[0],'s1',50,18); place(cbs[0],'s2',50,24); }
-        if (cbs[1]) { place(cbs[1],'s1',50 - sSide * 26,18); place(cbs[1],'s2',50 - sSide * 26,24); }
-        place(me, 's0', xW, 22); place(me, 's1', xCB, 18); place(me, 's2', xCB, 24);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(dm || cm,'s1')];
-        ball.s2 = [ptOf(dm || cm,'s2'), ptOf(wideOpp || st,'s2')];
-        break;
-      case 'wb_ip':
-        keepTeamStable(5, 10);
-        if (wideSame) { place(wideSame,'s1', xH, 66); place(wideSame,'s2', xIn, 80); }
-        place(me, 's0', xW, 26); place(me, 's1', xW, 56); place(me, 's2', xW, 82);
-        ball.s0 = [ptOf(cbs[0],'s0'), ptOf(dm || cm,'s0')];
-        ball.s1 = [ptOf(dm || cm,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s1', 0, 0, 'dribble'), ptOf(me,'s2', 0, 0, 'curve'), ptOf(st,'s2', 0, 2, 'curve')];
-        break;
-      case 'iwb':
-        keepTeamStable(4, 8);
-        if (wideSame) { place(wideSame,'s1', xW, 64); place(wideSame,'s2', xW, 76); }
-        place(me, 's0', xW, 24); place(me, 's1', xH, 38); place(me, 's2', xH, 46);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(cbs[0],'s0')];
-        ball.s1 = [ptOf(cbs[0],'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(wideSame || cm,'s2')];
-        break;
-      case 'pwb':
-        keepTeamStable(5, 9);
-        if (wideSame) { place(wideSame,'s1', xW, 66); place(wideSame,'s2', xW, 80); }
-        place(me, 's0', xW, 28); place(me, 's1', xH, 46); place(me, 's2', xH, 58);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(cbs[0],'s0')];
-        ball.s1 = [ptOf(cbs[0],'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(st || wideOpp,'s2', 0, 4)];
-        break;
-      case 'awb':
-        keepTeamStable(6, 11);
-        if (wideSame) { place(wideSame,'s1', xH, 68); place(wideSame,'s2', xIn, 84); }
-        place(me, 's0', xW, 32); place(me, 's1', xW, 68); place(me, 's2', xW, 91);
-        ball.s0 = [ptOf(cm || dm,'s0'), ptOf(wideSame || cm,'s0')];
-        ball.s1 = [ptOf(wideSame || cm,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s1', 0, 0, 'dribble'), ptOf(me,'s2', 0, 0, 'pass'), ptOf(st,'s2', 0, 2)];
-        break;
-      case 'dm_ip':
-        keepTeamStable(4, 8);
-        place(me, 's0', 50, 30); place(me, 's1', 46, 33); place(me, 's2', 52, 37);
-        ball.s0 = [ptOf(cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(cm || fbSame,'s1')];
-        ball.s2 = [ptOf(cm || fbSame,'s2'), ptOf(me,'s2'), ptOf(wideOpp || st,'s2')];
-        break;
-      case 'dlp':
-        keepTeamStable(5, 10);
-        place(me, 's0', 50, 31); place(me, 's1', 48, 28); place(me, 's2', 50, 36);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(cbs[0],'s0')];
-        ball.s1 = [ptOf(cbs[0],'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'loft'), ptOf(wideOpp || wideSame || st,'s2', 0, 6, 'loft')];
-        break;
-      case 'hb':
-        keepTeamStable(5, 9);
-        if (cbs[0]) { place(cbs[0],'s1',24,18); place(cbs[0],'s2',24,22); }
-        if (cbs[1]) { place(cbs[1],'s1',76,18); place(cbs[1],'s2',76,22); }
-        if (fbSame) { place(fbSame,'s1', xW, 46); place(fbSame,'s2', xW, 60); }
-        place(me, 's0', 50, 34); place(me, 's1', 50, 17); place(me, 's2', 50, 21);
-        ball.s0 = [ptOf(gk,'s0'), ptOf(cbs[0],'s0')];
-        ball.s1 = [ptOf(cbs[0],'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(fbSame || cm,'s2')];
-        break;
-      case 'b2b':
-        keepTeamStable(5, 10);
-        place(me, 's0', 50 + sSide * 12, 34); place(me, 's1', 50 + sSide * 10, 60); place(me, 's2', xIn, 86);
-        ball.s0 = [ptOf(cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0'), ptOf(wideSame || cm,'s1')];
-        ball.s2 = [ptOf(wideSame || cm,'s2'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      case 'b2bp': {
-        keepTeamStable(5, 10);
-        place(me, 's0', 50 + sSide * 10, 34); place(me, 's1', xH, 58); place(me, 's2', xH, 74);
-        const f = dm || fbSame || cbs[0];
-        ball.s0 = [ptOf(gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(st || wideSame,'s2', 0, 4)];
-        break;
-      }
-      case 'cm_ip': {
-        keepTeamStable(4, 9);
-        place(me, 's0', xH, 42); place(me, 's1', xH, 54); place(me, 's2', xH, 64);
-        const w = wideSame || fbSame || dm;
-        ball.s0 = [ptOf(dm || cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(w,'s1')];
-        ball.s2 = [ptOf(w,'s2'), ptOf(me,'s2'), ptOf(st,'s2')];
-        break;
-      }
-      case 'mp': {
-        keepTeamStable(4, 9);
-        place(me, 's0', xH, 44); place(me, 's1', 50 + sSide * 12, 52); place(me, 's2', 50 + sSide * 10, 62);
-        const f = dm || cbs[0];
-        ball.s0 = [ptOf(gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(wideOpp || st,'s2', 0, 4)];
-        break;
-      }
-      case 'wcm': {
-        keepTeamStable(5, 10);
-        if (wideSame) { place(wideSame,'s1', xIn, 74); place(wideSame,'s2', xIn, 86); }
-        place(me, 's0', xH, 45); place(me, 's1', xW - sSide * 5, 62); place(me, 's2', xW - sSide * 3, 76);
-        const f = dm || cm || cbs[0];
-        ball.s0 = [ptOf(cbs[0] || gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'curve'), ptOf(st,'s2', 0, 2, 'curve')];
-        break;
-      }
-      case 'chm': {
-        keepTeamStable(5, 10);
-        place(me, 's0', xH, 46); place(me, 's1', xCh, 68); place(me, 's2', xCh, 88);
-        const f = cm || dm || cbs[0];
-        ball.s0 = [ptOf(dm || cbs[0],'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s0', 0, 0, 'dribble'), ptOf(f,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(f,'s2'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      case 'ap': {
-        keepTeamStable(5, 9);
-        place(me, 's0', 50, 54); place(me, 's1', xH, 66); place(me, 's2', xH, 74);
-        const f = dm || cm || cbs[0];
-        ball.s0 = [ptOf(cbs[0] || gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(st || wideSame,'s2', 0, 5)];
-        break;
-      }
-      case 'am_ip': {
-        keepTeamStable(5, 10);
-        place(me, 's0', 50, 56); place(me, 's1', 50, 72); place(me, 's2', 50 + sSide * 6, 85);
-        const f = cm || dm || cbs[0];
-        ball.s0 = [ptOf(cbs[0] || gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      case 'wm_ip': {
-        keepTeamStable(5, 9);
-        place(me, 's0', xW, 46); place(me, 's1', xW, 60); place(me, 's2', xW, 74);
-        const f = fbSame || cm || dm;
-        ball.s0 = [ptOf(cbs[0] || gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'curve'), ptOf(st,'s2', 0, 2, 'curve')];
-        break;
-      }
-      case 'w_ip':
-        keepTeamStable(5, 10);
-        place(me, 's0', xW, 54); place(me, 's1', xW, 76); place(me, 's2', xW, 93);
-        ball.s0 = [ptOf(cm || fbSame,'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0', 0, 0, 'dribble'), ptOf(me,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(me,'s1', 0, 0, 'dribble'), ptOf(me,'s2', 0, 0, 'curve'), ptOf(st,'s2', 0, 2, 'curve')];
-        break;
-      case 'iw_ip':
-        keepTeamStable(5, 10);
-        if (fbSame) { place(fbSame,'s1', xW, 56); place(fbSame,'s2', xW, 76); }
-        place(me, 's0', xW, 54); place(me, 's1', xH, 68); place(me, 's2', xH, 79);
-        ball.s0 = [ptOf(fbSame || cm,'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s0', 0, 0, 'dribble'), ptOf(me,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(st || wideOpp,'s2', 0, 4)];
-        break;
-      case 'pw': {
-        keepTeamStable(5, 9);
-        if (fbSame) { place(fbSame,'s1', xW, 54); place(fbSame,'s2', xW, 72); }
-        place(me, 's0', xW, 52); place(me, 's1', xH, 62); place(me, 's2', 50 + sSide * 12, 71);
-        const f = cm || fbSame || dm;
-        ball.s0 = [ptOf(cbs[0] || gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2', 0, 0, 'loft'), ptOf(wideOpp || st,'s2', 0, 5, 'loft')];
-        break;
-      }
-      case 'if_ip': {
-        keepTeamStable(5, 10);
-        if (fbSame) { place(fbSame,'s1', xW, 58); place(fbSame,'s2', xW, 80); }
-        place(me, 's0', xW, 56); place(me, 's1', xH, 74); place(me, 's2', xIn, 90);
-        const f = cm || fbSame || dm;
-        ball.s0 = [ptOf(cbs[0] || gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s1', 0, 0, 'dribble'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      case 'wf_ip': {
-        keepTeamStable(5, 10);
-        place(me, 's0', xW, 56); place(me, 's1', xW - sSide * 5, 74); place(me, 's2', xCh - sSide * 6, 91);
-        const f = wideOpp || cm || dm;
-        ball.s0 = [ptOf(cm || dm,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s0', 0, 0, 'dribble'), ptOf(f,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(f,'s2', 0, 0, 'curve'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      case 'fr': {
-        keepTeamStable(5, 9);
-        place(me, 's0', 48, 56); place(me, 's1', 36, 64); place(me, 's2', 56, 74);
-        const f = cm || dm;
-        ball.s0 = [ptOf(dm || cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(f,'s1')];
-        ball.s2 = [ptOf(f,'s2'), ptOf(me,'s2'), ptOf(st || wideOpp,'s2', 0, 4)];
-        break;
-      }
-      case 'ss': {
-        keepTeamStable(5, 9);
-        if (st) { place(st,'s1',50,68); place(st,'s2',50,65); }
-        place(me, 's0', 50, 56); place(me, 's1', 50 + sSide * 8, 76); place(me, 's2', 50 + sSide * 6, 91);
-        const f = cm || dm;
-        ball.s0 = [ptOf(dm || cbs[0],'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1'), ptOf(st,'s1')];
-        ball.s2 = [ptOf(st,'s2'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      case 'cf_ip':
-        keepTeamStable(5, 10);
-        place(me, 's0', 50, 74); place(me, 's1', 50, 78); place(me, 's2', 50, 91);
-        ball.s0 = [ptOf(cm || dm,'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(wideSame || cm,'s1')];
-        ball.s2 = [ptOf(wideSame || cm,'s2'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      case 'chf': {
-        keepTeamStable(5, 10);
-        place(me, 's0', 50, 74); place(me, 's1', xCh, 82); place(me, 's2', xCh, 92);
-        const f = cm || dm;
-        ball.s0 = [ptOf(dm || cbs[0],'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s0', 0, 0, 'dribble'), ptOf(f,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(f,'s2'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      case 'dlf':
-        keepTeamStable(4, 9);
-        if (wideSame) { place(wideSame,'s1', xIn, 76); place(wideSame,'s2', xIn, 90); }
-        place(me, 's0', 50, 78); place(me, 's1', 50, 62); place(me, 's2', 50, 68);
-        ball.s0 = [ptOf(dm || cm,'s0'), ptOf(cm,'s0')];
-        ball.s1 = [ptOf(cm,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(wideSame || wideOpp || am,'s2', 0, 2)];
-        break;
-      case 'f9':
-        keepTeamStable(4, 9);
-        if (wideSame) { place(wideSame,'s1', xIn, 78); place(wideSame,'s2', xIn, 92); }
-        if (wideOpp) { place(wideOpp,'s1', 100 - xIn, 78); place(wideOpp,'s2', 100 - xIn, 92); }
-        opp.s1[2] = { x: 55, y: 66 }; opp.s2[2] = { x: 55, y: 63 };
-        place(me, 's0', 50, 80); place(me, 's1', 50, 56); place(me, 's2', 50, 58);
-        ball.s0 = [ptOf(dm || cm,'s0'), ptOf(cm,'s0')];
-        ball.s1 = [ptOf(cm,'s1'), ptOf(me,'s1')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(wideSame || wideOpp,'s2', 0, 2)];
-        break;
-      case 'poa': {
-        keepTeamStable(4, 8);
-        place(me, 's0', 50, 82); place(me, 's1', 54, 88); place(me, 's2', 52, 95);
-        const f = wideSame || cm;
-        ball.s0 = [ptOf(cm || dm,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s0', 0, 0, 'dribble'), ptOf(f,'s1', 0, 0, 'dribble')];
-        ball.s2 = [ptOf(f,'s2'), ptOf(me,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      case 'tf': {
-        keepTeamStable(4, 9);
-        if (cm) { place(cm,'s2', 50 + sSide * 8, 82); }
-        place(me, 's0', 50, 80); place(me, 's1', 50, 86); place(me, 's2', 50, 88);
-        const f = cbs[0] || dm || gk;
-        ball.s0 = [ptOf(gk,'s0'), ptOf(f,'s0')];
-        ball.s1 = [ptOf(f,'s1', 0, 0, 'loft'), ptOf(me,'s1', 0, 0, 'loft')];
-        ball.s2 = [ptOf(me,'s2'), ptOf(cm || wideSame,'s2', 0, 0, 'shot'), { x: 50, y: 98, kind: 'shot' }];
-        break;
-      }
-      default:
-        keepTeamStable(4, 9);
-        ball.s0 = [ptOf(dm || cbs[0],'s0'), ptOf(me,'s0')];
-        ball.s1 = [ptOf(me,'s1'), ptOf(cm || wideSame,'s1')];
-        ball.s2 = [ptOf(cm || wideSame,'s2'), ptOf(st || me,'s2')];
-    }
-    arrows.s1.push({ from: me.pos.s0, to: me.pos.s1, color: '#ffe27a', kind: 'run' });
-    arrows.s2.push({ from: me.pos.s0, to: me.pos.s1, color: 'rgba(255,226,122,.45)', kind: 'run' });
-    if (Math.hypot(me.pos.s2.x - me.pos.s1.x, me.pos.s2.y - me.pos.s1.y) > 3) {
-      arrows.s2.push({ from: me.pos.s1, to: me.pos.s2, color: '#ffe27a', kind: 'run' });
-    }
-  } else {
-    // ---- CENÁRIOS SEM BOLA (OOP): Adversário tem a bola e ataca → Reacção real do papel!
-    const isOutlet = r.tags.includes('OUT');
-    labels = isOutlet
-      ? [L('1. Equipa defende', '1. Team defends'), L('2. Fica alto (outlet)', '2. Stays high (outlet)'), L('3. Arranque em transição', '3. Counter break')]
-      : [L('1. Bloco inicial', '1. Block setup'), L('2. Adversário ataca', '2. Opponent attacks'), L('3. Reacção do papel', '3. Role action')];
-    setBase('s0', 'oop'); setBase('s1', 'oop'); setBase('s2', 'oop');
-    setOpp('s0', 84, 50); setOpp('s1', 78, 42); setOpp('s2', 74, 34);
-    // colocar linhas defensivas subtis
-    lines.s0.push({ y: baseM.dLine, color: 'rgba(125,211,252,.55)', label: '' });
-    lines.s1.push({ y: baseM.dLine, color: 'rgba(125,211,252,.55)', label: '' });
-    lines.s2.push({ y: baseM.dLine, color: 'rgba(125,211,252,.55)', label: '' });
-
-    const xW = 50 + sSide * 43, xH = 50 + sSide * 20, xCh = 50 + sSide * 28;
-    const oP = (ph, idx, x, y) => { opp[ph][idx] = { x: clamp(x, 5, 95), y: clamp(y, 4, 96) }; };
-    const oPt = (ph, idx) => ({ ...opp[ph][idx], kind: 'opp' });
-    const roleColor = r.tags.includes('HP') ? '#ff6b5a' : isOutlet ? '#ffe27a' : '#7dd3fc';
-
-    switch (roleId) {
-      case 'gk_oop':
-        place(me,'s0',50,6); place(me,'s1',50,8); place(me,'s2',50,7);
-        oP('s1', 7, 20, 32); oP('s2', 7, 16, 20);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), { x: 46, y: 12, kind: 'opp' }];
-        break;
-      case 'lhk':
-        place(me,'s0',50,4); place(me,'s1',50,3); place(me,'s2',50,3);
-        oP('s1', 10, 52, 34); oP('s2', 10, 52, 22);
-        ball.s0 = [oPt('s0',5), oPt('s0',8)]; ball.s1 = [oPt('s1',8), oPt('s1',10)]; ball.s2 = [oPt('s2',10), { x: 50, y: 4, kind: 'shot' }];
-        zones.s2.push({ kind: 'circle', x: 50, y: 4, r: 7, color: 'rgba(125,211,252,.2)', stroke: 'rgba(125,211,252,.75)', label: L('Linha de golo', 'Goal line') });
-        break;
-      case 'swk':
-        P.forEach(p => { if (p.b.group === 'DC' || p.b.group === 'D_LR') { shift(p,'s0',0,12); shift(p,'s1',0,12); shift(p,'s2',0,12); } });
-        place(me,'s0',50,14); place(me,'s1',50,22); place(me,'s2',50,27);
-        oP('s1', 8, 52, 52); oP('s2', 10, 50, 31);
-        ball.s0 = [oPt('s0',5), oPt('s0',8)];
-        ball.s1 = [oPt('s1',8), { x: 50, y: 28, kind: 'opp' }];
-        ball.s2 = [{ x: 50, y: 27, kind: 'pass' }, ptOf(fbSame || cbs[0], 's2')];
-        pressAt.s2 = true;
-        break;
-      case 'cb_oop':
-        place(me,'s0',50 + sSide * 14,27); place(me,'s1',50 + sSide * 15,27); place(me,'s2',50 + sSide * 15,25);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',8)]; ball.s2 = [oPt('s2',8), oPt('s2',10)];
-        break;
-      case 'ccb':
-        if (cbs[0]) { place(cbs[0],'s1',50 - sSide * 12, 34); place(cbs[0],'s2',50 - sSide * 12, 37); }
-        place(me,'s0',50 + sSide * 14,27); place(me,'s1',50 + sSide * 6, 21); place(me,'s2',50, 18);
-        oP('s1', 8, 50 - sSide * 12, 40); oP('s2', 10, 50, 26);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',8)]; ball.s2 = [oPt('s2',8), { x: 50, y: 20, kind: 'opp' }];
-        break;
-      case 'scb':
-        if (cbs[0]) { place(cbs[0],'s1',50,22); place(cbs[0],'s2',50,20); }
-        place(me,'s0',50 + sSide * 14,27); place(me,'s1',50 + sSide * 10,36); place(me,'s2',50 + sSide * 8,42);
-        oP('s1', 8, 50 + sSide * 8, 45); oP('s2', 8, 50 + sSide * 8, 45);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',8)]; ball.s2 = [oPt('s2',8), ptOf(me,'s2')];
-        pressAt.s2 = true;
-        break;
-      case 'cwcb':
-        if (fbSame) { place(fbSame,'s0',xW,48); place(fbSame,'s1',xW,44); place(fbSame,'s2',xW,38); }
-        place(me,'s0',xCh,26); place(me,'s1',xCh + sSide * 7,21); place(me,'s2',xCh + sSide * 11,18);
-        oP('s1', 7, xW, 38); oP('s2', 7, xW, 24);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), { x: xCh + sSide * 8, y: 20, kind: 'opp' }];
-        break;
-      case 'swcb':
-        place(me,'s0',xCh,26); place(me,'s1',xH,36); place(me,'s2',xH,43);
-        oP('s1', 8, xH, 46); oP('s2', 8, xH, 46);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',8)]; ball.s2 = [oPt('s2',8), ptOf(me,'s2')];
-        pressAt.s2 = true;
-        break;
-      case 'fb_oop':
-        place(me,'s0',xW - sSide * 4,27); place(me,'s1',xW - sSide * 4,27); place(me,'s2',xW - sSide * 2,29);
-        oP('s1', 7, xW, 38); oP('s2', 7, xW, 34);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), { x: xW - sSide * 12, y: 31, kind: 'opp' }];
-        break;
-      case 'hfb':
-        place(me,'s0',xW - sSide * 6,27); place(me,'s1',xCh,23); place(me,'s2',xCh - sSide * 3,21);
-        oP('s1', 10, 50 + sSide * 14, 34); oP('s2', 10, 50 + sSide * 14, 28);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',8)]; ball.s2 = [oPt('s2',8), oPt('s2',10)];
-        break;
-      case 'pfb':
-        place(me,'s0',xW - sSide * 4,28); place(me,'s1',xW,40); place(me,'s2',xW,48);
-        oP('s1', 7, xW, 52); oP('s2', 7, xW, 51);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), ptOf(me,'s2')];
-        pressAt.s2 = true;
-        break;
-      case 'wb_oop':
-        place(me,'s0',xW,44); place(me,'s1',xW,34); place(me,'s2',xW,26);
-        oP('s1', 7, xW, 44); oP('s2', 7, xW, 32);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), { x: xW - sSide * 12, y: 26, kind: 'opp' }];
-        break;
-      case 'hwb':
-        place(me,'s0',xW,30); place(me,'s1',xW - sSide * 4,24); place(me,'s2',xW - sSide * 6,21);
-        oP('s1', 7, xW, 36); oP('s2', 7, xW, 29);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), oPt('s2',10)];
-        break;
-      case 'prwb':
-        place(me,'s0',xW,36); place(me,'s1',xW,52); place(me,'s2',xW,62);
-        oP('s1', 4, xW, 66); oP('s2', 4, xW, 65);
-        ball.s0 = [oPt('s0',0), oPt('s0',2)]; ball.s1 = [oPt('s1',2), oPt('s1',4)]; ball.s2 = [oPt('s2',4), ptOf(me,'s2')];
-        pressAt.s2 = true;
-        break;
-      case 'dm_oop':
-        place(me,'s0',50,37); place(me,'s1',46,36); place(me,'s2',54,36);
-        oP('s1', 8, 45, 46); oP('s2', 8, 55, 45);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',6)]; ball.s2 = [oPt('s2',6), oPt('s2',8)];
-        break;
-      case 'ddm':
-        if (cbs[0]) { place(cbs[0],'s1',30,26); place(cbs[0],'s2',28,25); }
-        if (cbs[1]) { place(cbs[1],'s1',70,26); place(cbs[1],'s2',72,25); }
-        place(me,'s0',50,38); place(me,'s1',50,29); place(me,'s2',50,25);
-        oP('s1', 10, 44, 34); oP('s2', 10, 52, 32);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), oPt('s2',10)];
-        break;
-      case 'sdm':
-        place(me,'s0',50,36); place(me,'s1',48,35); place(me,'s2',50,35);
-        oP('s0', 5, 46, 58); oP('s1', 5, 46, 52); oP('s1', 8, 50, 31); oP('s2', 5, 50, 52); oP('s2', 8, 50, 30);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',6)]; ball.s2 = [oPt('s2',6), oPt('s2',7)];
-        zones.s2.push({ kind: 'trap', x1: 38, x2: 62, y1: 30, y2: 43, color: 'rgba(125,211,252,.18)', stroke: 'rgba(125,211,252,.72)', label: L('Linha fechada', 'Lane screened') });
-        break;
-      case 'wcdm':
-        if (fbSame) { place(fbSame,'s0',xW,52); place(fbSame,'s1',xW,48); place(fbSame,'s2',xW,44); }
-        place(me,'s0',50,36); place(me,'s1',xCh,33); place(me,'s2',xW - sSide * 6,30);
-        oP('s1', 7, xW, 42); oP('s2', 7, xW, 34);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), { x: xW - sSide * 10, y: 30, kind: 'opp' }];
-        break;
-      case 'pdm':
-        place(me,'s0',50,37); place(me,'s1',48,47); place(me,'s2',48,54);
-        oP('s1', 5, 48, 57); oP('s2', 5, 48, 57);
-        ball.s0 = [oPt('s0',0), oPt('s0',2)]; ball.s1 = [oPt('s1',2), oPt('s1',5)]; ball.s2 = [oPt('s2',5), ptOf(me,'s2')];
-        pressAt.s2 = true;
-        break;
-      case 'cm_oop':
-        place(me,'s0',xH,45); place(me,'s1',xH + sSide * 3,44); place(me,'s2',xH + sSide * 4,42);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',6)]; ball.s2 = [oPt('s2',6), oPt('s2',8)];
-        break;
-      case 'pcm':
-        place(me,'s0',xH,46); place(me,'s1',xH,58); place(me,'s2',xH,67);
-        oP('s1', 2, xH, 71); oP('s2', 2, xH, 70);
-        ball.s0 = [oPt('s0',0), oPt('s0',2)]; ball.s1 = [oPt('s0',2), oPt('s1',2)]; ball.s2 = [oPt('s2',2), ptOf(me,'s2')];
-        pressAt.s2 = true;
-        break;
-      case 'scm':
-        place(me,'s0',xH,44); place(me,'s1',50 + sSide * 10,43); place(me,'s2',50 + sSide * 10,42);
-        oP('s0', 5, 50 + sSide * 10, 62); oP('s1', 5, 50 + sSide * 10, 58); oP('s2', 8, 50 + sSide * 10, 36);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',6)]; ball.s2 = [oPt('s2',6), oPt('s2',7)];
-        zones.s2.push({ kind: 'trap', x1: 36, x2: 64, y1: 37, y2: 49, color: 'rgba(125,211,252,.18)', stroke: 'rgba(125,211,252,.72)', label: L('Zona protegida', 'Zone screened') });
-        break;
-      case 'wccm':
-        if (fbSame) { place(fbSame,'s0',xW,54); place(fbSame,'s1',xW,50); place(fbSame,'s2',xW,46); }
-        place(me,'s0',xH,45); place(me,'s1',xCh + sSide * 6,41); place(me,'s2',xW - sSide * 5,36);
-        oP('s1', 7, xW, 46); oP('s2', 7, xW, 39);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), { x: xW - sSide * 10, y: 34, kind: 'opp' }];
-        break;
-      case 'wm_oop':
-        place(me,'s0',xW,52); place(me,'s1',xW - sSide * 4,44); place(me,'s2',xW - sSide * 5,40);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), oPt('s2',8)];
-        break;
-      case 'twm':
-      case 'tw':
-        place(me,'s0',xW,58); place(me,'s1',xW,40); place(me,'s2',xW,25);
-        oP('s0', 4, xW, 56); oP('s1', 4, xW, 42); oP('s2', 4, xW, 28);
-        ball.s0 = [oPt('s0',5), oPt('s0',7)]; ball.s1 = [oPt('s1',7), oPt('s1',4)]; ball.s2 = [oPt('s1',4), oPt('s2',4)];
-        break;
-      case 'tam':
-        place(me,'s0',50,58); place(me,'s1',50,46); place(me,'s2',50,38);
-        oP('s0', 5, 50, 58); oP('s1', 5, 50, 48); oP('s2', 8, 50, 40);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',8)]; ball.s2 = [oPt('s2',8), ptOf(me,'s2')];
-        break;
-      case 'am_oop':
-        place(me,'s0',50,56); place(me,'s1',48,52); place(me,'s2',48,50);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',6)]; ball.s2 = [oPt('s2',6), oPt('s2',8)];
-        break;
-      case 'w_oop':
-        place(me,'s0',xW,56); place(me,'s1',xW - sSide * 5,48); place(me,'s2',xW - sSide * 6,44);
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',7)]; ball.s2 = [oPt('s2',7), oPt('s2',8)];
-        break;
-      case 'cf_oop':
-        place(me,'s0',50,62); place(me,'s1',44,64); place(me,'s2',42,66);
-        ball.s0 = [oPt('s0',2), oPt('s0',3)]; ball.s1 = [oPt('s1',3), oPt('s1',2)]; ball.s2 = [oPt('s2',2), oPt('s2',5)];
-        break;
-      case 'tcf':
-        place(me,'s0',50,64); place(me,'s1',50,52); place(me,'s2',48,47);
-        oP('s1', 5, 48, 50); oP('s2', 5, 48, 50);
-        ball.s0 = [oPt('s0',0), oPt('s0',2)]; ball.s1 = [oPt('s1',2), oPt('s1',5)]; ball.s2 = [oPt('s2',5), ptOf(me,'s2')];
-        pressAt.s2 = true;
-        break;
-      case 'wowm':
-      case 'wow':
-        P.forEach(p => { if (p.i !== fi && p.b.group !== 'GK') { shift(p,'s0',0,-6); shift(p,'s1',0,-8); shift(p,'s2',0,-4); } });
-        place(me,'s0',xW,60); place(me,'s1',xW,65); place(me,'s2',xW,86);
-        ball.s0 = [oPt('s0',5), oPt('s0',6)]; ball.s1 = [oPt('s1',6), ptOf(dm || cm,'s1')];
-        ball.s2 = [ptOf(dm || cm,'s2', 0, 0, 'loft'), ptOf(me,'s2', 0, 2, 'loft')];
-        break;
-      case 'iow':
-        P.forEach(p => { if (p.i !== fi && p.b.group !== 'GK') { shift(p,'s0',0,-6); shift(p,'s1',0,-8); shift(p,'s2',0,-4); } });
-        place(me,'s0',xH,60); place(me,'s1',xH,66); place(me,'s2',xH - sSide * 4,88);
-        ball.s0 = [oPt('s0',5), oPt('s0',6)]; ball.s1 = [oPt('s1',6), ptOf(dm || cm,'s1')];
-        ball.s2 = [ptOf(dm || cm,'s2', 0, 0, 'loft'), ptOf(me,'s2', 0, 2, 'loft')];
-        break;
-      case 'coam':
-      case 'cocf':
-        P.forEach(p => { if (p.i !== fi && p.b.group !== 'GK') { shift(p,'s0',0,-6); shift(p,'s1',0,-8); shift(p,'s2',0,-4); } });
-        place(me,'s0',50,62); place(me,'s1',50,66); place(me,'s2',50,86);
-        ball.s0 = [oPt('s0',5), oPt('s0',8)]; ball.s1 = [oPt('s1',8), ptOf(dm || cbs[0],'s1')];
-        ball.s2 = [ptOf(dm || cbs[0],'s2', 0, 0, 'loft'), ptOf(me,'s2', 0, 2, 'loft')];
-        break;
-      case 'soam':
-      case 'socf':
-        P.forEach(p => { if (p.i !== fi && p.b.group !== 'GK') { shift(p,'s0',0,-6); shift(p,'s1',0,-8); shift(p,'s2',0,-4); } });
-        place(me,'s0',50,62); place(me,'s1',xCh,68); place(me,'s2',xCh + sSide * 4,88);
-        ball.s0 = [oPt('s0',5), oPt('s0',8)]; ball.s1 = [oPt('s1',8), ptOf(dm || cbs[0],'s1')];
-        ball.s2 = [ptOf(dm || cbs[0],'s2', 0, 0, 'loft'), ptOf(me,'s2', 0, 2, 'loft')];
-        break;
-      default:
-        ball.s0 = [oPt('s0',2), oPt('s0',5)]; ball.s1 = [oPt('s1',5), oPt('s1',8)]; ball.s2 = [oPt('s2',8), oPt('s2',10)];
-    }
-    if (Math.hypot(me.pos.s1.x - me.pos.s0.x, me.pos.s1.y - me.pos.s0.y) > 2.5) {
-      arrows.s1.push({ from: me.pos.s0, to: me.pos.s1, color: roleColor, kind: 'role' });
-      arrows.s2.push({ from: me.pos.s0, to: me.pos.s1, color: roleColor, kind: 'role', dim: true });
-    }
-    if (Math.hypot(me.pos.s2.x - me.pos.s1.x, me.pos.s2.y - me.pos.s1.y) > 2.5) {
-      arrows.s2.push({ from: me.pos.s1, to: me.pos.s2, color: roleColor, kind: 'role' });
-    }
-  }
-
-  const M = { P, ball, opp, overlays: [], arrows, zones, lines, pressAt, dLine: baseM.dLine, front: baseM.front, bs: baseM.bs };
-  return { M, phases: ['s0', 's1', 's2'], labels, focus: fi, slot: t.slots[fi], phase: r.phase, isRoleClip: true };
-}
-
-const TI_PHASE = { buildup:0, goal_kicks:0, gk_speed:0, gk_target:0, passing:1, tempo:1, reception:1, progress:1, support_runs:2, width:2, dribbling:1, patience:2, crossing:2, long_shots:2, creative:1,
-  def_trans:3, loe:4, dline:4, dl_behaviour:4, trigger:4, press_trap:4, short_gk:4, tackling:4, cross_eng:4, att_trans:5, timewaste:2, set_pieces:2 };
-const SIM_TI = new Set(['buildup','goal_kicks','gk_target','passing','tempo','reception','width','support_runs','dribbling','progress','patience','long_shots','crossing','creative','att_trans','loe','dline','dl_behaviour','trigger','press_trap','cross_eng','short_gk','def_trans']);
-
-// ============================================================
-// Cenários visuais para Conceitos e Contra cada sistema (Bíblia)
-// ============================================================
-const CONCEPT_CLIPS = new Set(['ip_oop','rest_def','width','box','press_coh','outlets','creativity','asymmetry']);
-
-function oppCoordsFor(form, D, F) {
-  const slots = FORMATIONS[form] || FORMATIONS['4-4-2'];
-  return slots.map((s, k) => {
-    const tt = clamp((s.y - 18) / 66, 0, 1);
-    return k === 0 ? { x: 100 - s.x, y: Math.min(97, D + 10) } : { x: 100 - s.x, y: D + (F - D) * tt };
-  });
-}
-
-function conceptClipModel(key) {
-  const mk = (ipF, oopF, roles, ti = {}) => {
-    const t = newTactic(ipF, oopF); t.ment = 'Positive'; t.ti = ti;
-    Object.entries(roles || {}).forEach(([c, [ip, oop]]) => { const s = t.slots.find(x => x.ipCode === c); if (s) { if (ip) s.ip = ip; if (oop) s.oop = oop; } });
-    return simModel(t);
-  };
-  const wrap = (M, phases, labels, opts = {}) => ({ M, phases, labels, focus: null, isConceptClip: true, phaseByStep: opts.phaseByStep || null });
-
-  if (key === 'ip_oop') {
-    const M = mk('4-3-3 DM Wide', '4-4-2', { DL:['wb_ip','fb_oop'], DR:['ifb','fb_oop'], DM:['dlp','cm_oop'], AML:['if_ip','wm_oop'], AMR:['w_ip','wm_oop'], ST:['f9','cf_oop'] });
-    M.zones.final.push({ kind: 'lane', x1: 4, x2: 96, y1: 58, y2: 94, color: 'rgba(16,185,129,.12)', stroke: 'rgba(16,185,129,.55)', label: L('Com bola: 3-2-5', 'IP: 3-2-5 attack') });
-    M.zones.oop.push({ kind: 'trap', x1: 12, x2: 88, y1: M.dLine - 2, y2: M.front + 2, color: 'rgba(96,165,250,.14)', stroke: 'rgba(96,165,250,.6)', label: L('Sem bola: 4-4-2', 'OOP: 4-4-2 block') });
-    return wrap(M, ['final', 'loss', 'oop'], [L('1. Forma com bola (IP)', '1. In-possession shape'), L('2. Transição', '2. Transition'), L('3. Bloco sem bola (OOP)', '3. Out-of-possession block')], { phaseByStep: ['IP', 'OOP', 'OOP'] });
-  }
-  if (key === 'rest_def') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DL:['wb_ip','fb_oop'], DR:['ifb','hfb'], DM:['dm_ip','sdm'], MCL:['b2b','cm_oop'], AML:['if_ip','w_oop'], AMR:['w_ip','w_oop'] }, { def_trans: 2 });
-    M.zones.final.push({ kind: 'trap', x1: 20, x2: 80, y1: 28, y2: 50, color: 'rgba(125,211,252,.18)', stroke: 'rgba(125,211,252,.78)', label: L('Rest-defence (3+1)', 'Rest-defence (3+1)') });
-    M.zones.loss.push({ kind: 'trap', x1: 20, x2: 80, y1: 26, y2: 52, color: 'rgba(125,211,252,.18)', stroke: 'rgba(125,211,252,.78)', label: L('Escudo trava contra-ataque', 'Shield stops counter') });
-    return wrap(M, ['prog', 'final', 'loss'], [L('1. Equipa sobe', '1. Team advances'), L('2. Rest-defence atrás da bola', '2. Rest-defence behind ball'), L('3. Perda travada atrás', '3. Counter stopped')], { phaseByStep: ['IP', 'IP', 'OOP'] });
-  }
-  if (key === 'width') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DL:['wb_ip','fb_oop'], DR:['iwb','fb_oop'], AML:['if_ip','w_oop'], AMR:['w_ip','w_oop'] }, { width: 4 });
-    M.zones.final.push({ kind: 'lane', x1: 2, x2: 18, y1: 52, y2: 94, color: 'rgba(255,226,122,.16)', stroke: 'rgba(255,226,122,.7)', label: L('WB abre · IF entra', 'WB wide · IF inside') });
-    M.zones.final.push({ kind: 'lane', x1: 82, x2: 98, y1: 52, y2: 94, color: 'rgba(255,226,122,.16)', stroke: 'rgba(255,226,122,.7)', label: L('W abre · IWB entra', 'W wide · IWB inside') });
-    return wrap(M, ['build', 'prog', 'final'], [L('1. Início', '1. Build-up'), L('2. Esticar os flancos', '2. Stretch flanks'), L('3. 1 aberto por corredor', '3. One wide per flank')], { phaseByStep: ['IP', 'IP', 'IP'] });
-  }
-  if (key === 'box') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DL:['wb_ip','fb_oop'], MCL:['b2b','cm_oop'], AML:['if_ip','w_oop'], AMR:['wf_ip','w_oop'], ST:['f9','tcf'] });
-    M.zones.final.push({ kind: 'trap', x1: 24, x2: 76, y1: 82, y2: 97, color: 'rgba(255,226,122,.16)', stroke: 'rgba(255,226,122,.75)', label: L('3+ na área (1.º / centro / 2.º)', '3+ in box (near / centre / far)') });
-    return wrap(M, ['build', 'prog', 'final'], [L('1. F9 baixa e arrasta', '1. F9 drops & drags'), L('2. Corredores atacam espaço', '2. Runners attack space'), L('3. Área ocupada', '3. Box occupied')], { phaseByStep: ['IP', 'IP', 'IP'] });
-  }
-  if (key === 'press_coh') {
-    const Mbad = mk('4-3-3 DM Wide', '4-4-2', {}, { loe: 2, dline: 0, trigger: 3 });
-    const Mgood = mk('4-3-3 DM Wide', '4-4-2', { GK:['bpgk','swk'], DL:['wb_ip','pfb'] }, { loe: 2, dline: 4, trigger: 4, press_trap: 2 });
-    const P = Mgood.P.map((p, i) => ({ ...p, pos: { s0: Mbad.P[i].pos.oop, s1: Mgood.P[i].pos.oop, s2: Mgood.P[i].pos.oop } }));
-    const ob0 = Mbad.opp.oop, ob1 = Mgood.opp.oop;
-    const trapPt = Mgood.ball.oop[Mgood.ball.oop.length - 1];
-    const M = {
-      P, opp: { s0: ob0, s1: ob1, s2: ob1 },
-      ball: {
-        s0: [{ ...ob0[2], kind: 'opp' }, { ...ob0[5], kind: 'opp' }],
-        s1: [{ ...ob1[5], kind: 'opp' }, { ...ob1[7], kind: 'opp' }],
-        s2: [{ ...ob1[7], kind: 'opp' }, trapPt],
-      },
-      overlays: [],
-      lines: { s0: Mbad.lines.oop, s1: Mgood.lines.oop, s2: Mgood.lines.oop },
-      zones: {
-        s0: [{ kind: 'trap', x1: 10, x2: 90, y1: Mbad.dLine + 2, y2: Mbad.front - 4, color: 'rgba(255,107,90,.22)', stroke: 'rgba(255,107,90,.8)', label: L('Buraco entre linhas!', 'Huge gap between lines!') }],
-        s1: Mgood.zones.oop,
-        s2: Mgood.zones.oop,
-      },
-      arrows: { s0: [], s1: Mgood.P.filter(p => p.b.group === 'DC').map((p, i) => ({ from: Mbad.P[p.i].pos.oop, to: p.pos.oop, color: '#ffe27a', kind: 'run' })), s2: Mgood.arrows.oop },
-      dLine: Mgood.dLine, front: Mgood.front, bs: Mgood.bs,
-    };
-    return wrap(M, ['s0', 's1', 's2'], [L('1. Desligado: buraco entre linhas', '1. Disconnected: huge gap'), L('2. Defesa sobe junta', '2. Line steps up together'), L('3. Bloco compacto + armadilha', '3. Compact press + trap')], { phaseByStep: ['OOP', 'OOP', 'OOP'] });
-  }
-  if (key === 'outlets') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { AML:['if_ip','wow'], ST:['chf','socf'] }, { loe: 0, dline: 1, att_trans: 2 });
-    M.zones.oop.push({ kind: 'trap', x1: 6, x2: 64, y1: 50, y2: 68, color: 'rgba(255,226,122,.16)', stroke: 'rgba(255,226,122,.72)', label: L('2 Outlets altos', '2 high outlets') });
-    return wrap(M, ['oop', 'win'], [L('1. 9 defendem · 2 ficam altos', '1. 9 defend · 2 stay high'), L('2. Recuperação → contra-ataque', '2. Ball won → counter break')], { phaseByStep: ['OOP', 'IP'] });
-  }
-  if (key === 'creativity') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DM:['dlp','sdm'], MCL:['ap','cm_oop'], AML:['if_ip','w_oop'], AMR:['wf_ip','w_oop'], ST:['poa','cf_oop'] });
-    const dlp = M.P.find(p => p.ip && p.ip.id === 'dlp'), ap = M.P.find(p => p.ip && p.ip.id === 'ap');
-    if (dlp) M.zones.prog.push({ kind: 'circle', x: dlp.pos.prog.x, y: dlp.pos.prog.y, r: 10, color: 'rgba(255,226,122,.22)', stroke: 'rgba(255,226,122,.8)', label: L('Criador 1 (DLP)', 'Creator 1 (DLP)') });
-    if (ap) M.zones.prog.push({ kind: 'circle', x: ap.pos.prog.x, y: ap.pos.prog.y, r: 10, color: 'rgba(255,226,122,.22)', stroke: 'rgba(255,226,122,.8)', label: L('Criador 2 (AP)', 'Creator 2 (AP)') });
-    return wrap(M, ['build', 'prog', 'final'], [L('1. Construção segura', '1. Safe build-up'), L('2. 2 criadores pedem bola', '2. 2 creators find pockets'), L('3. Servem os corredores', '3. Feed the runners')], { phaseByStep: ['IP', 'IP', 'IP'] });
-  }
-  // asymmetry
-  const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DL:['wb_ip','pfb'], DR:['ifb','hfb'], AML:['if_ip','w_oop'], AMR:['w_ip','tw'], DM:['dm_ip','sdm'] });
-  M.zones.final.push({ kind: 'lane', x1: 2, x2: 24, y1: 42, y2: 92, color: 'rgba(255,226,122,.14)', stroke: 'rgba(255,226,122,.68)', label: L('Flanco ofensivo (WB+IF)', 'Attacking flank (WB+IF)') });
-  M.zones.final.push({ kind: 'trap', x1: 68, x2: 95, y1: 26, y2: 52, color: 'rgba(125,211,252,.16)', stroke: 'rgba(125,211,252,.72)', label: L('Lado seguro (IFB)', 'Secure side (IFB)') });
-  return wrap(M, ['build', 'prog', 'final'], [L('1. Saída assimétrica', '1. Asymmetric build-up'), L('2. Esq. sobe · Dir. protege', '2. Left attacks · Right locks'), L('3. Ataque + equilíbrio', '3. Attack + balance')], { phaseByStep: ['IP', 'IP', 'IP'] });
-}
-
-function oppClipModel(key) {
-  const mk = (ipF, oopF, roles, ti = {}) => {
-    const t = newTactic(ipF, oopF); t.ment = 'Positive'; t.ti = ti;
-    Object.entries(roles || {}).forEach(([c, [ip, oop]]) => { const s = t.slots.find(x => x.ipCode === c); if (s) { if (ip) s.ip = ip; if (oop) s.oop = oop; } });
-    return simModel(t);
-  };
-  const setOppForm = (M, form) => {
-    const cfg = { build: [64, 30], prog: [74, 44], final: [86, 60], loss: [80, 46], oop: [Math.max(82, M.front + 14), M.dLine + 8], win: [70, M.dLine + 4] };
-    Object.entries(cfg).forEach(([ph, [D, F]]) => { M.opp[ph] = oppCoordsFor(form, D, F); });
-  };
-
-  if (key === '442') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DM:['dlp','sdm'], MCL:['chm','cm_oop'], MCR:['mp','cm_oop'], AML:['if_ip','w_oop'] });
-    setOppForm(M, '4-4-2');
-    M.zones.prog.push({ kind: 'trap', x1: 26, x2: 74, y1: 35, y2: 64, color: 'rgba(255,226,122,.16)', stroke: 'rgba(255,226,122,.72)', label: L('3×2 no meio-campo', '3v2 central overload') });
-    return { M, phases: ['build', 'prog', 'final'], labels: [L('1. Contra 4-4-2', '1. Vs 4-4-2'), L('2. 3×2 no meio + meios-espaços', '2. 3v2 midfield + half-spaces'), L('3. Ruptura nas costas', '3. Break in behind')], focus: null, isConceptClip: true, phaseByStep: ['IP','IP','IP'] };
-  }
-  if (key === '4231') {
-    const M = mk('4-3-3 DM Wide', '4-4-2', { DCL:['bpcb','scb'], DCR:['cb_ip','ccb'], DM:['dm_ip','sdm'], ST:['cf_ip','tcf'] }, { loe: 1, dline: 2, trigger: 3 });
-    setOppForm(M, '4-2-3-1 DM Wide');
-    M.zones.oop.push({ kind: 'circle', x: 50, y: M.dLine + 16, r: 12, color: 'rgba(255,107,90,.2)', stroke: 'rgba(255,107,90,.8)', label: L('Anular o #10 (SCB+SDM)', 'Shut down #10 (SCB+SDM)') });
-    return { M, phases: ['loss', 'oop'], labels: [L('1. Fechar o centro', '1. Close the middle'), L('2. Anular o AMC + pressionar pivots', '2. Trap #10 + press double pivot')], focus: null, isConceptClip: true, phaseByStep: ['OOP','OOP'] };
-  }
-  if (key === '433') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { AML:['if_ip','wow'], ST:['chf','socf'] }, { loe: 1, dline: 1, att_trans: 2 });
-    setOppForm(M, '4-3-3 DM Wide');
-    M.zones.win.push({ kind: 'lane', x1: 4, x2: 28, y1: 58, y2: 92, color: 'rgba(255,226,122,.18)', stroke: 'rgba(255,226,122,.78)', label: L('Espaço nas costas do lateral', 'Space behind opponent FB') });
-    return { M, phases: ['oop', 'win'], labels: [L('1. Laterais adversários sobem', '1. Opponent FBs push up'), L('2. Outlets atacam as costas', '2. Outlets sprint into space')], focus: null, isConceptClip: true, phaseByStep: ['OOP','IP'] };
-  }
-  if (key === '352') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DL:['wb_ip','pfb'], DR:['wb_ip','pfb'], AML:['w_ip','tw'], AMR:['w_ip','tw'] }, { loe: 2, dline: 3, trigger: 3, press_trap: 2 });
-    setOppForm(M, '3-5-2');
-    M.zones.final.push({ kind: 'lane', x1: 4, x2: 26, y1: 60, y2: 92, color: 'rgba(255,226,122,.16)', stroke: 'rgba(255,226,122,.75)', label: L('Prender os alas atrás', 'Pin wing-backs back') });
-    return { M, phases: ['final', 'loss', 'oop'], labels: [L('1. Extremos prendem os alas', '1. Wingers pin wing-backs'), L('2. Transição na perda', '2. Transition on loss'), L('3. Armadilha fora + PFB', '3. Trap outside + PFB')], focus: null, isConceptClip: true, phaseByStep: ['IP','OOP','OOP'] };
-  }
-  if (key === '541') {
-    const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DL:['wb_ip','fb_oop'], DR:['wb_ip','fb_oop'], AML:['if_ip','w_oop'], AMR:['wf_ip','w_oop'], MCL:['ap','cm_oop'] }, { width: 4, patience: 2, def_trans: 2, crossing: 0 });
-    setOppForm(M, '5-4-1');
-    M.zones.final.push({ kind: 'lane', x1: 4, x2: 96, y1: 68, y2: 94, color: 'rgba(255,226,122,.12)', stroke: 'rgba(255,226,122,.6)', label: L('Paciência + largura + 2.º poste', 'Patience + width + far post') });
-    return { M, phases: ['prog', 'final', 'loss'], labels: [L('1. Esticar bloco de 5', '1. Stretch back 5'), L('2. Paciência e cruzamento baixo', '2. Patient low cutback'), L('3. Contra-pressão imediata', '3. Instant counter-press')], focus: null, isConceptClip: true, phaseByStep: ['IP','IP','OOP'] };
-  }
-  // diamond (4-4-2 Diamond)
-  const M = mk('4-3-3 DM Wide', '4-1-4-1 DM Wide', { DL:['wb_ip','fb_oop'], DR:['wb_ip','fb_oop'], AML:['w_ip','w_oop'], AMR:['w_ip','w_oop'] }, { width: 4, support_runs: 2 });
-  setOppForm(M, '4-4-2 Diamond');
-  M.zones.prog.push({ kind: 'lane', x1: 2, x2: 22, y1: 36, y2: 90, color: 'rgba(255,226,122,.18)', stroke: 'rgba(255,226,122,.78)', label: L('Explorar largura!', 'Exploit wide flanks!') });
-  M.zones.prog.push({ kind: 'lane', x1: 78, x2: 98, y1: 36, y2: 90, color: 'rgba(255,226,122,.18)', stroke: 'rgba(255,226,122,.78)', label: L('Losango estreito', 'Narrow diamond') });
-  return { M, phases: ['build', 'prog', 'final'], labels: [L('1. Adversário estreito no meio', '1. Opponent narrow inside'), L('2. Abrir pelos corredores', '2. Exploit both flanks'), L('3. Sobreposição e cruzamento', '3. Overlap & cross')], focus: null, isConceptClip: true, phaseByStep: ['IP','IP','IP'] };
-}
-
 ;
 // ---- i18n/en_dict.js
-// Dicionário PT → EN (texto fixo da interface e da Bíblia). Chaves com '#' = números (repostos na tradução).
+// Dicionário PT → EN (texto fixo da interface). Chaves com '#' = números (repostos na tradução).
 addEN({
   "Aplicar no FM — Tactical Bible Bridge": "Apply in FM — Tactical Bible Bridge",
   "a aguardar o jogo": "waiting for the game",
@@ -4413,7 +3531,6 @@ addEN({
   "Situações de jogo": "Game states",
   "Carregue F9 no FM27 e depois em “Carregar o último F9” — ou ligue o carregamento automático em Plantel.": "Press F9 in FM27 and then “Load the latest F9” — or turn on automatic loading in Squad.",
   "Exportar catálogo do motor (diagnóstico)": "Export the engine catalogue (diagnostics)",
-  "Desligado": "Disconnected",
   "Actualizar": "Refresh",
   "Plano aplicado à tática": "Plan applied to the tactic",
   "Escolha o contexto e carregue em": "Pick the context and press",
@@ -4463,8 +3580,6 @@ addEN({
   "# pares de formações avaliados, # optimizados a fundo.": "# formation pairs evaluated, # fully optimised.",
   "# resultado(s)": "# result(s)",
   "# secções (.efa #B, .fmf #B — índice zstd) e # ficheiros internos cifrados (#B, #B, #B). O maior (#B cifrados) é a tática.": "# sections (.efa #B, .fmf #B — zstd index) and # encrypted internal files (#B, #B, #B). The largest (#B encrypted) is the tactic.",
-  "# sessão para a área com menor compreensão.": "# session for the area with the lowest understanding.",
-  "### / ### (bloco baixo)": "### / ### (low block)",
   "### Bloco Baixo": "### Low Block",
   "### Bloco Médio & Contra-ataque": "### Mid Block & Counter-attack",
   "### DM Wide com bola → ### DM Wide sem bola · Positive. Clique num jogador para o seguir.": "### DM Wide in possession → ### DM Wide out of possession · Positive. Click a player to follow him.",
@@ -4480,7 +3595,6 @@ addEN({
   "#%: # a # pts": "#%: # to # pts",
   "#. Team Shape — papéis": "#. Team Shape — roles",
   "#. Topo do ecrã de táticas": "#. Top of the tactics screen",
-  "#–# criadores principais (DLP, MP, AP, FR, PW, PWB). Demasiados criadores = todos pedem a bola, ninguém ataca o espaço.": "#–# main creators (DLP, MP, AP, FR, PW, PWB). Too many creators = everyone wants the ball, nobody attacks the space.",
   "(MIT) e decide com estatística, não com palpites.": "(MIT) and decides with statistics, not hunches.",
   "(MIT) é descarregado sozinho na primeira leitura.": "(MIT) downloads itself on the first read.",
   "(Randal S. Olson, MIT — lê uma cópia do save, nunca o altera nem lê a memória do jogo), ou do F# do FM View Exporter. A app não gera .fmf (o FM# cifra-os): as táticas voltam ao jogo pela Ficha para o FM#.": "(Randal S. Olson, MIT — reads a copy of the save, never changes it and never reads the game’s memory), or from the FM View Exporter’s F#. The app does not create .fmf files (FM# encrypts them): tactics go back into the game via the FM27 Sheet.",
@@ -4517,11 +3631,9 @@ addEN({
   "Abrir": "Open",
   "Abrir fmsave online": "Open fmsave online",
   "Abrir no analisador": "Open in the analyser",
-  "Abrir no campo animado completo": "Open in the full animated pitch",
   "Acompanha o lateral adversário até atrás.": "Tracks the opposing full-back all the way back.",
   "Acompanha o recuo e defende o flanco intensamente.": "Tracks back and defends the flank intensely.",
   "Adequação": "Fit",
-  "Adequação ao papel (Player Role Suitability) e capacidade pura (Current Ability/atributos).": "Role suitability (Player Role Suitability) and raw ability (Current Ability/attributes).",
   "Adequação:": "Fit:",
   "Adversário": "Opponent",
   "Adversário carregado": "Opponent loaded",
@@ -4546,7 +3658,6 @@ addEN({
   "Alto + passe curto exige Decisões/Técnica altas; cansa mais.": "High + short passing demands high Decisions/Technique; more tiring.",
   "Alto: apanha o adversário desorganizado. Baixo: controlo e paciência.": "High: catches the opponent disorganised. Low: control and patience.",
   "Altura da linha defensiva.": "Height of the defensive line.",
-  "Altura onde a equipa defende organizada.": "Height at which the team defends in shape.",
   "Alvo aéreo": "Aerial target",
   "Ambas": "Both",
   "Analisar": "Analyse",
@@ -4557,22 +3668,18 @@ addEN({
   "Aplicar": "Apply",
   "Aplicar a principal de cada jogador": "Apply each player’s main one",
   "Aplicar tudo": "Apply all",
-  "Apoio por fora / por dentro do colega da ala.": "Support outside / inside the wide team-mate.",
   "Aqui aparecem os resultados com intervalo de confiança e veredicto; pode correr mais jogos ou exportar o .fmf da vencedora.": "Results appear here with a confidence interval and a verdict; you can run more matches or export the winner’s .fmf.",
   "Arraste o .fmf para aqui": "Drag the .fmf here",
   "Arraste para aqui o CSV do plantel (fmsave ou F# do FM View Exporter), ou cole o conteúdo…": "Drag the squad CSV here (fmsave or the FM View Exporter’s F#), or paste its content…",
   "Arraste qualquer ficheiro (CSV, HTML, .fmf, .json) para a janela.": "Drag any file (CSV, HTML, .fmf, .json) into the window.",
   "As bolas paradas são escolhidas a partir dos atributos dos jogadores do teu XI.": "Set pieces are picked from the attributes of the players in your XI.",
   "Assertivo: sai da linha para pressionar o jogador entre linhas.": "Aggressive: steps out of the line to press the player between the lines.",
-  "Assimetria": "Asymmetry",
   "Ataca a profundidade na última linha.": "Attacks depth on the last line.",
   "Ataca o centro da área nos cruzamentos.": "Attacks the centre of the box on crosses.",
   "Ataca o primeiro poste nos cruzamentos.": "Attacks the near post on crosses.",
   "Ataca o segundo poste nos cruzamentos.": "Attacks the far post on crosses.",
   "Ataca os canais entre central e lateral — \"game-breaker\" discreto.": "Attacks the channels between centre-back and full-back — a discreet game-breaker.",
   "Ataca os canais entre central e lateral.": "Attacks the channels between centre-back and full-back.",
-  "Atalhos do FM# que mudam várias instruções de uma vez durante o jogo.": "FM# shortcuts that change several instructions at once during the match.",
-  "Atalhos no ecrã de jogo que alteram várias instruções de uma vez. Passe o rato no jogo para ver exactamente quais.": "Match-screen shortcuts that change several instructions at once. Hover over them in the game to see exactly which.",
   "Ataque aéreo": "Aerial attack",
   "Atenção:": "Note:",
   "Atribua jogadores ao XI (Plantel → Analisador → Auto XI) para recomendações individuais.": "Assign players to the XI (Squad → Analyser → Auto XI) for individual recommendations.",
@@ -4591,7 +3698,6 @@ addEN({
   "Baixa para entre os centrais na construção, formando linha de #.": "Drops between the centre-backs in the build-up, forming a back #.",
   "Baixa para o espaço entre linhas e liga o jogo.": "Drops into the space between the lines and links play.",
   "Baixos para avançados rápidos; Floated para referências aéreas.": "Low for quick strikers; Floated for aerial targets.",
-  "Base aeróbica; estrutura de posse e bloco.": "Aerobic base; possession shape and block.",
   "Base equilibrada.": "A balanced base.",
   "Base para # atrás.": "The base for a back #.",
   "Base sólida e versátil. Fácil de aprender (baixa complexidade).": "A solid, versatile base. Easy to learn (low complexity).",
@@ -4604,7 +3710,6 @@ addEN({
   "Bloco baixo com Counter-Attack.": "Low block with Counter-Attack.",
   "Bloco baixo contra # avançados.": "Low block against # strikers.",
   "Bloco baixo.": "Low block.",
-  "Bloco baixo/médio/alto": "Low/mid/high block",
   "Bloco muito baixo, risco mínimo. Para proteger vantagens curtas ou jogos de enorme inferioridade.": "A very deep block, minimum risk. To protect narrow leads or in heavily outmatched games.",
   "Bloco médio-alto, extremos abertos, um avançado de referência.": "Mid-high block, wide wingers, a target striker.",
   "Bloco médio/baixo com ###.": "Mid/low block with ###.",
@@ -4614,17 +3719,12 @@ addEN({
   "Bolas paradas & capitães": "Set pieces & captains",
   "Bolas paradas e capitães": "Set pieces and captains",
   "Bom com o lado oposto a pressionar alto (estrutura assimétrica).": "Good with the opposite side pressing high (asymmetric structure).",
-  "Bom momento para introduzir mudanças táticas.": "A good moment to introduce tactical changes.",
   "Bom num duplo pivot com um DM seguro.": "Good in a double pivot with a safe DM.",
   "Bom par para \"Bypass Press\" e Goal Kicks \"Long\" com um Target Forward.": "A good partner for \"Bypass Press\" and Goal Kicks \"Long\" with a Target Forward.",
-  "Bíblia": "Bible",
-  "Bíblia tática": "Tactical bible",
   "Cabeçalho": "Header",
-  "Cada flanco precisa de UM jogador a dar largura no último terço (W, WF, WB, AWB, WCM, OCB). Se o extremo entra por dentro, a largura tem de vir de trás. Dois jogadores abertos no mesmo corredor atropelam-se.": "Each flank needs ONE player giving width in the final third (W, WF, WB, AWB, WCM, OCB). If the winger comes inside, the width must come from behind. Two wide players in the same channel get in each other’s way.",
   "Cada mudança redesenha o movimento na hora e fica gravada na tática.": "Every change redraws the movement instantly and is saved to the tactic.",
   "Campo animado": "Animated pitch",
   "Campo animado da tática": "Animated pitch of the tactic",
-  "Campo completo": "Full pitch",
   "Cancelamento pedido": "Cancellation requested",
   "Candidato ao título": "Title contenders",
   "Canto defensivo": "Defending corner",
@@ -4657,8 +3757,6 @@ addEN({
   "Chega mais vezes ao último terço.": "Gets into the final third more often.",
   "Chega à área em segunda vaga, atacando o espaço que se abre.": "Arrives in the box as a second wave, attacking the space that opens up.",
   "Claro": "Light",
-  "Clip animado": "Animated clip",
-  "Clip do papel": "Role clip",
   "Clique num jogador do campo para mudar papéis, jogador e instruções individuais.": "Click a player on the pitch to change roles, the player and player instructions.",
   "Clique num jogador para editar papéis e instruções.": "Click a player to edit roles and instructions.",
   "Clique num jogador para editar papéis e instruções. Círculos azuis = posição sem bola.": "Click a player to edit roles and instructions. Blue circles = out-of-possession position.",
@@ -4666,11 +3764,9 @@ addEN({
   "Clássico par de um Stopping Centre-Back. Ideal com linha alta e central rápido.": "The classic partner of a Stopping Centre-Back. Ideal with a high line and a quick centre-back.",
   "Cobre o flanco do seu lado (ex-Carrilero) quando o lateral/ala subiu.": "Covers his own flank (the former Carrilero) when the full-back/wing-back has pushed on.",
   "Coerência": "Coherence",
-  "Coerência da pressão": "Pressing coherence",
   "Cola que equilibra o meio-campo.": "The glue that balances the midfield.",
   "Com IWB/IFB atrás o flanco fica bem equilibrado.": "With an IWB/IFB behind, the flank is well balanced.",
   "Com bola": "In possession",
-  "Com bola (IP)": "In possession (IP)",
   "Com bola:": "In possession:",
   "Com o plantel, a app escolhe o melhor XI para a tua tática, recomenda instruções individuais pelos atributos e mostra suplentes e sucessores para cada posição.": "With the squad, the app picks the best XI for your tactic, recommends player instructions from attributes and shows back-ups and successors for every position.",
   "Combina com Counter-Attack.": "Pairs with Counter-Attack.",
@@ -4680,31 +3776,23 @@ addEN({
   "Combine com cruzamentos e \"Bypass Press\".": "Pair with crosses and \"Bypass Press\".",
   "Combine com referências na área (CF, TF, Poacher).": "Pair with targets in the box (CF, TF, Poacher).",
   "Como carregar": "How to load",
-  "Como melhorar:": "How to improve:",
   "Como trazer o plantel do FM#": "How to bring in your FM# squad",
   "Como usar": "How to use",
   "Compacto sem bola, transições rápidas para dois avançados.": "Compact out of possession, quick transitions to two strikers.",
   "Comparação A/B com as mesmas sementes": "A/B comparison with the same seeds",
   "Complexidade": "Complexity",
-  "Complexidade (FM#)": "Complexity (FM#)",
   "Complexidade acima do que o XI absorve: inclua Team Cohesion e reduza instruções.": "Complexity above what the XI can absorb: add Team Cohesion and cut instructions.",
   "Complexidade:": "Complexity:",
-  "Complexidade: cada instrução fora do default aumenta o tempo de adaptação. Comece simples, adicione uma instrução quando resolver um problema identificado.": "Complexity: each non-default instruction lengthens adaptation. Start simple and add an instruction when it solves an identified problem.",
   "Comportamento defensivo padrão do avançado.": "Standard defensive behaviour for a striker.",
   "Comportamento defensivo padrão à frente da defesa.": "Standard defensive behaviour in front of the defence.",
   "Comportamento defensivo padrão: alterna entre ficar na linha e sair consoante a situação.": "Standard defensive behaviour: alternates between staying on the line and coming out depending on the situation.",
-  "Comportamento:": "Behaviour:",
   "Comprimento médio dos passes.": "Average pass length.",
-  "Conceitos & adversários": "Concepts & opponents",
-  "Conceitos, princípios e adversários": "Concepts, principles and opponents",
   "Concentre no lado do seu melhor jogador ou do ponto fraco adversário.": "Focus on the side of your best player or the opponent’s weak spot.",
   "Conduz e procura o um-para-um.": "Carries the ball and looks for the one-on-one.",
   "Construção": "Build-up",
   "Conta para a rest-defence.": "Counts towards rest-defence.",
   "Contra adversários reais do save": "Against real opponents from the save",
-  "Contra cada sistema": "Against each system",
   "Contra defesas com laterais muito subidos.": "Against defences with very advanced full-backs.",
-  "Contra driblers com pouca Bravura/Equilíbrio; evite com o seu defesa amarelado.": "Against dribblers with little Bravery/Balance; avoid it with your booked defender.",
   "Contra laterais ofensivos.": "Against attacking full-backs.",
   "Contradiz \"Play Through Press\". Use em bloco baixo / jogo directo.": "Contradicts \"Play Through Press\". Use in a low block / direct play.",
   "Contraria-se com o papel: um W com overlap gera aglomeração no corredor.": "It clashes with the role: a W with overlaps crowds the channel.",
@@ -4715,7 +3803,6 @@ addEN({
   "Copiar como texto": "Copy as text",
   "Copiar texto": "Copy text",
   "Cor = adequação ao par de papéis (verde ≥ #).": "Colour = fit for the pair of roles (green ≥ #).",
-  "Corredor entre o centro e a ala (half-space).": "The channel between the centre and the flank (half-space).",
   "Corta para dentro em direcção à baliza — ameaça de golo.": "Cuts inside towards goal — a goal threat.",
   "Counter sem velocidade/outlets resulta em perdas rápidas.": "Counter without pace/outlets leads to quick turnovers.",
   "Counter-Press com equipa muito aberta/cansada é atravessado em transição.": "Counter-Press with a very open/tired team gets played through in transition.",
@@ -4733,8 +3820,6 @@ addEN({
   "Cópia de segurança": "Backup",
   "Dados restaurados": "Data restored",
   "De onde vêm os dados:": "Where the data comes from:",
-  "Decida onde quer superioridade: meio (losango/####) ou corredores (alas). Os laterais adversários sobem — explore com Wide Outlet ou Splitting Outlet.": "Decide where you want superiority: the middle (diamond/####) or the flanks (wing-backs). Their full-backs push on — exploit it with a Wide Outlet or Splitting Outlet.",
-  "Default útil contra extremos que cortam para dentro (mostre-os para fora).": "A useful default against wingers who cut inside (show them outside).",
   "Defende a área, sai rápido com dois avançados complementares.": "Defends the box and breaks quickly with two complementary strikers.",
   "Defende na linha com comportamento equilibrado: sai ao portador quando faz sentido.": "Defends on the line with balanced behaviour: steps out to the ball carrier when it makes sense.",
   "Defesa central": "Centre-back",
@@ -4746,13 +3831,10 @@ addEN({
   "Deixar de seguir": "Stop following",
   "Desarme e Agressividade altos.": "High Tackling and Aggression.",
   "Desarme fraco ou jogador amarelado.": "Weak tackling or a booked player.",
-  "Desarmes mais agressivos sobre esse jogador.": "Harder tackles on that player.",
   "Desarmes mais agressivos.": "Harder tackles.",
   "Desarmes mais cautelosos.": "More careful tackles.",
   "Descarregar o plugin": "Download the plugin",
-  "Desde o FM#, cada jogador tem um papel com bola (IP) e outro sem bola (OOP), e a equipa tem uma formação para cada fase. Não existem duties nem fluidez: o comportamento vem do papel + instruções. O jogo avisa se a distância entre a posição IP e OOP de um jogador é demasiado grande — isso cria buracos nas transições.": "Since FM#, every player has an in-possession role (IP) and an out-of-possession role (OOP), and the team has a formation for each phase. There are no duties or fluidity: behaviour comes from the role + instructions. The game warns you if the distance between a player’s IP and OOP positions is too large — that creates holes in transitions.",
   "Desenvolvimento individual do XI": "Individual development of the XI",
-  "Desligado": "Disconnected",
   "Desloca-se para cobrir o flanco quando o lateral sobe.": "Moves across to cover the flank when the full-back pushes on.",
   "Dia #": "Day #",
   "Dia # (pós-jogo)": "Day # (after the match)",
@@ -4774,7 +3856,6 @@ addEN({
   "Equilibra flancos assimétricos.": "Balances asymmetric flanks.",
   "Equilibrado mas com prudência; posse mais lenta e paciente.": "Balanced but prudent; slower, more patient possession.",
   "Equilibrado: apoia a construção e chega ao ataque com moderação.": "Balanced: supports the build-up and joins the attack in moderation.",
-  "Equilibre: ao focar uma área, outras descem ligeiramente. O objectivo é ter todas em níveis semelhantes, não uma perfeita.": "Balance it: when you focus on one area, the others drop slightly. The aim is to have them all at similar levels, not one perfect.",
   "Escolha base; ajuste com o papel do parceiro (um sai, outro cobre).": "The base choice; adjust with his partner’s role (one steps out, the other covers).",
   "Escolha segura com linha defensiva média.": "A safe choice with a medium defensive line.",
   "Escolha segura em quase qualquer sistema.": "A safe choice in almost any system.",
@@ -4789,7 +3870,6 @@ addEN({
   "Estica o jogo pelos corredores.": "Stretches the game down the flanks.",
   "Estilo": "Style",
   "Estilo e mentalidade": "Style and mentality",
-  "Evitar lesões; rotação.": "Avoid injuries; rotate.",
   "Excelente contra um médio ofensivo/falso #. Precisa de um Covering ao lado.": "Excellent against an attacking midfielder/false #. Needs a Covering partner.",
   "Exige subir os avançados e médios — mais espaço atrás.": "It means pushing strikers and midfielders up — more space in behind.",
   "Experimente as instruções": "Try the instructions",
@@ -4809,7 +3889,6 @@ addEN({
   "Fecha para dentro.": "Tucks inside.",
   "Fecha por dentro e torna-se terceiro central na posse (linha de # na construção).": "Tucks inside and becomes a third centre-back in possession (back # in the build-up).",
   "Fechar": "Close",
-  "Fechar clip": "Close clip",
   "Ferramentas externas opcionais. Cada uma diz o que precisa e onde se descarrega.": "Optional external tools. Each one says what it needs and where to download it.",
   "Fica aberto mas ataca a baliza (diagonais curtas, segundo poste).": "Stays wide but attacks goal (short diagonals, far post).",
   "Fica aberto, vai à linha e cruza.": "Stays wide, goes to the byline and crosses.",
@@ -4836,25 +3915,21 @@ addEN({
   "Formação com bola": "In-possession formation",
   "Formação com bola (IP)": "In-possession formation (IP)",
   "Formação sem bola (OOP)": "Out-of-possession formation (OOP)",
-  "Força o adversário para o pé mais fraco.": "Forces the opponent onto his weaker foot.",
   "Frequência com que os jogadores disparam a pressão.": "How often players trigger the press.",
   "Frequência de condução/drible.": "How often players carry/dribble the ball.",
   "Frequência de remates de fora da área.": "How often players shoot from outside the box.",
   "Fuga à descida": "Relegation battle",
   "Funciona melhor com linha defensiva baixa; com linha alta deixa espaço enorme nas costas.": "Works best with a low defensive line; with a high line it leaves huge space in behind.",
-  "Físico + IP/OOP Shape": "Physical + IP/OOP Shape",
   "Garanta cobertura: com ACB, deixe # centrais/IFB atrás ou um Half Back.": "Make sure of cover: with an ACB, leave # centre-backs/IFB behind or a Half Back.",
   "Gegenpress / bloco alto.": "Gegenpress / high block.",
   "Gegenpress ou bloco compacto.": "Gegenpress or a compact block.",
   "Gegenpress. Deixe outro médio a fechar.": "Gegenpress. Leave another midfielder covering.",
   "Geral": "General",
   "Gerar de novo": "Generate again",
-  "Gerar plano para a minha tática →": "Build a plan for my tactic →",
   "Gerar tática": "Generate tactic",
   "Gerar tática para o plantel": "Generate a tactic for the squad",
   "Gestão do relógio.": "Managing the clock.",
   "Get Stuck In ganha mais duelos.": "Get Stuck In wins more duels.",
-  "Glossário": "Glossary",
   "Golos": "Goals",
   "Guarda-redes": "Goalkeeper",
   "Guarda-redes equilibrado na posse: distribui de forma segura conforme as instruções de equipa.": "A balanced goalkeeper in possession: distributes safely according to the team instructions.",
@@ -4868,12 +3943,7 @@ addEN({
   "Importar JSON": "Import JSON",
   "Importar tática JSON (desta app)": "Import tactic JSON (from this app)",
   "Imprimir/PDF": "Print/PDF",
-  "In Possession / Out of Possession — com e sem bola.": "In Possession / Out of Possession — with and without the ball.",
-  "Individual Development com Role Training no papel exacto da tática; recrutar para o papel.": "Individual Development with Role Training in the tactic’s exact role; recruit for the role.",
-  "Individual Development: Role Training no papel EXACTO da tática (IP ou OOP mais exigente para esse jogador).": "Individual Development: Role Training in the tactic’s EXACT role (the more demanding of IP or OOP for that player).",
   "Instrução": "Instruction",
-  "Instrução com bola.": "In-possession instruction.",
-  "Instrução sem bola.": "Out-of-possession instruction.",
   "Instruções": "Instructions",
   "Instruções de adversário": "Opposition instructions",
   "Instruções de adversário activas:": "Active opposition instructions:",
@@ -4896,16 +3966,11 @@ addEN({
   "Jogador": "Player",
   "Jogador #": "Player #",
   "Jogador e papéis": "Player and roles",
-  "Jogador que fica à frente sem bola para receber em transição.": "A player who stays forward out of possession to receive in transition.",
   "Jogador-estrela (constrói à volta dele)": "Star player (build around him)",
   "Jogadores cansados, a ganhar, ou pressão a ser batida sistematicamente.": "Tired players, winning, or a press being beaten consistently.",
-  "Jogadores que ficam atrás da linha da bola durante o ataque para travar o contra-ataque. Regra prática: # a # (sem contar o GR) com mentalidade Positive/Attacking — tipicamente # centrais + # médio defensivo, ou um lateral que fecha por dentro (IFB/IWB).": "Players who stay behind the ball during the attack to stop the counter-attack. Rule of thumb: # to # (not counting the GK) with a Positive/Attacking mentality — typically # centre-backs + # defensive midfielder, or a full-back who tucks inside (IFB/IWB).",
-  "Jogadores que ficam atrás para travar o contra-ataque.": "Players who stay back to stop the counter-attack.",
   "Jogos": "Matches",
   "Jovens a desenvolver (≤ #) — ganham prioridade no XI": "Youngsters to develop (≤ #) — get priority in the XI",
-  "Jovens: minutos > tudo. Se não joga, empréstimo a um clube que use papel parecido.": "Youngsters: minutes above everything. If he does not play, loan him to a club that uses a similar role.",
   "Keep Ball in Play mantém o ritmo mas desperdiça uma arma se fores forte no ar.": "Keep Ball in Play keeps the tempo but wastes a weapon if you are strong in the air.",
-  "Lados diferentes não são um defeito: lateral seguro (IFB) num lado e ala ofensivo (WB/AWB) no outro é das estruturas mais estáveis. Faça corresponder o lado ofensivo ao seu melhor jogador.": "Different sides are not a flaw: a safe full-back (IFB) on one side and an attacking wing-back (WB/AWB) on the other is one of the most stable structures. Put the attacking side on your best player’s flank.",
   "Lançamentos longos": "Long throws",
   "Largo dificulta a reacção à perda (counter-press). Estreito facilita o fecho do adversário ao meio.": "Wide makes reacting to a turnover harder (counter-press). Narrow makes it easier for the opponent to close the middle.",
   "Largo: estica o bloco adversário, abre corredores interiores. Estreito: combinações centrais.": "Wide: stretches the opponent’s block and opens inside channels. Narrow: central combinations.",
@@ -4927,17 +3992,13 @@ addEN({
   "Liberdade total para vaguear e criar (substitui Trequartista/Enganche).": "Total freedom to roam and create (replaces Trequartista/Enganche).",
   "Lido:": "Read:",
   "Ligado às áreas de Tactical Understanding do FM#: treine primeiro o que a sua tática mais exige.": "Linked to FM#’s Tactical Understanding areas: train first what your tactic demands most.",
-  "Ligar": "Connect",
-  "Ligar a pressão à estrutura; construção contra pressão.": "Connect the press to the shape; build-up against pressure.",
   "Ligação": "Connection",
   "Ligação directa": "Direct connection",
   "Ligue a leitura do save ou instale o plugin do F# — veja Plantel.": "Turn on save reading or install the F# plugin — see Squad.",
   "Limite do formato:": "Format limit:",
   "Limpar": "Clear",
   "Limpar XI": "Clear XI",
-  "Line of Engagement: onde começa a pressão.": "Line of Engagement: where the press starts.",
   "Linha de # com alas a dar largura e dois # nos meios-espaços.": "A back # with wing-backs giving width and two #s in the half-spaces.",
-  "Linha de pressão (LoE) e linha defensiva devem andar juntas. LoE alta + linha baixa = buraco entre linhas. LoE baixa + linha alta = espaço nas costas sem pressão sobre o passe. Pressing Trap Outside precisa de quem feche o corredor (Pressing FB/WB, Tracking Winger).": "The line of engagement (LoE) and the defensive line must move together. High LoE + deep line = a hole between the lines. Low LoE + high line = space in behind with no pressure on the pass. Pressing Trap Outside needs someone to close the channel (Pressing FB/WB, Tracking Winger).",
   "Livres": "Free kicks",
   "Livres directos": "Direct free kicks",
   "Livres para cruzar": "Crossed free kicks",
@@ -4946,10 +4007,8 @@ addEN({
   "Lê o plantel directamente do save, sempre sobre uma cópia, sem alterar nada.": "Reads the squad straight from the save, always from a copy, without changing anything.",
   "Mais faltas e cartões; perigoso com defesas de baixo Desarme.": "More fouls and cards; dangerous with defenders who have low Tackling.",
   "Mais largura, ritmo e risco. Atenção à rest-defence.": "More width, tempo and risk. Watch your rest-defence.",
-  "Mais no criativo/construtor; menos no central fraco com bola (deixe-o conduzir).": "More on the creator/build-up player; less on a centre-back weak on the ball (let him carry it).",
   "Mais perigosos": "Most dangerous",
   "Mais: recuperações altas, caos para o adversário.": "More: high recoveries, chaos for the opponent.",
-  "Managerial Support (personalidade, desempenho e respeito pelo treinador), relações com colegas/staff e tendências do treinador.": "Managerial Support (personality, performance and respect for the manager), relationships with team-mates/staff and the manager’s tendencies.",
   "Mantém a posição na construção, passes simples para o médio ou lateral.": "Holds position in the build-up, simple passes to a midfielder or full-back.",
   "Mantém posição e entra para o meio (zona de médio defensivo) na posse.": "Holds position and moves inside (into the defensive-midfield zone) in possession.",
   "Mantém posição e largura, papel de equilíbrio.": "Holds position and width, a balancing role.",
@@ -4960,15 +4019,11 @@ addEN({
   "Mantém posição, bloqueia linhas de passe centrais, pressiona menos.": "Holds position, blocks central passing lanes, presses less.",
   "Marca #": "Marks #",
   "Marcadores": "Takers",
-  "Marcação em cima.": "Tight marking.",
   "Marcação mais apertada.": "Tighter marking.",
   "Marcação ≥ #.": "Marking ≥ #.",
   "Marcações individuais contra os mais fortes no ar do adversário carregado.": "Man-marking against the opponent’s best players in the air.",
   "Match Preparation (próximo adversário) + bolas paradas": "Match Preparation (next opponent) + set pieces",
-  "Match Preparation; atribuir o relatório ao melhor analista; observar a divisão e o adversário.": "Match Preparation; give the report to your best analyst; scout the division and the opponent.",
-  "Medida do FM# de quão difícil a tática é de aprender.": "FM#’s measure of how hard a tactic is to learn.",
   "Meio da tabela": "Mid-table",
-  "Meio-espaço": "Half-space",
   "Melhor XI": "Best XI",
   "Melhor XI & sistemas": "Best XI & systems",
   "Melhores papéis com bola": "Best in-possession roles",
@@ -4977,8 +4032,6 @@ addEN({
   "Melhores papéis sem bola": "Best out-of-possession roles",
   "Mentalidade": "Mentality",
   "Mentoria": "Mentoring",
-  "Mentoria: grupos pequenos com #–# líderes de alta Determinação/profissionalismo e jovens com personalidade a moldar.": "Mentoring: small groups with #–# leaders of high Determination/professionalism and young players whose personality is still forming.",
-  "Mesma equipa e mesma fase": "Same team, same phase",
   "Misto": "Mixed",
   "Muito bom contra AMCL/AMCR adversários. Mais liberdade que numa linha de #.": "Very good against opposing AMCL/AMCR. More freedom than in a back #.",
   "Máx. # outlets por tática.": "Max. # outlets per tactic.",
@@ -4997,7 +4050,6 @@ addEN({
   "No FM#, abra o plantel do adversário e carregue": "In FM#, open the opponent’s squad and press",
   "No FM#, abre o plantel do adversário (com a mesma vista de atributos).": "In FM#, open the opponent’s squad (with the same attributes view).",
   "No browser: use o": "In the browser: use",
-  "No médio ofensivo/falso #; cuidado com arrastar centrais para fora.": "On the attacking midfielder/false #; beware of dragging centre-backs out.",
   "Nome": "Name",
   "Nomes do FM#. A borda verde marca instruções fora do default (cada uma soma complexidade no FM#).": "FM# names. The green border marks non-default instructions (each one adds complexity in FM#).",
   "Nova": "New",
@@ -5006,8 +4058,6 @@ addEN({
   "Não consegui ler o save — veja Definições": "Could not read the save — see Settings",
   "Não encontrei saves do FM# — indique a pasta em Definições": "No FM# saves found — set the folder in Settings",
   "O \"default\" que nunca compromete a rest-defence.": "The \"default\" that never compromises the rest-defence.",
-  "O AMC é a ameaça: Stopping CB, Screening DM, ou OI de marcação apertada. Os dois pivots podem ser pressionados com dois homens (### OOP com AM a pressionar).": "The AMC is the threat: Stopping CB, Screening DM, or a tight-marking OI. Their two pivots can be pressed with two men (### OOP with the AM pressing).",
-  "O FM# mede a complexidade (instruções de equipa, individuais e de adversário). Quanto mais complexa, mais capazes os jogadores e mais tempo de treino precisam. Em divisões baixas, simplicidade ganha jogos.": "FM# measures complexity (team, player and opposition instructions). The more complex it is, the more capable the players and the more training time they need. In the lower leagues, simplicity wins games.",
   "O campo é um modelo simplificado: mostra a intenção de cada papel e instrução, não reproduz o motor de jogo do FM#.": "The pitch is a simplified model: it shows the intention of each role and instruction, it does not reproduce the FM# match engine.",
   "O gerador monta uma tática completa à volta do teu plantel: formas com e sem bola, XI com papel para cada fase, as instruções todas com o porquê, bolas paradas, profundidade, reforços e alternativas.": "The generator builds a complete tactic around your squad: shapes in and out of possession, an XI with a role for each phase, every instruction with its reason, set pieces, depth, signings and alternatives.",
   "O meu clube": "My club",
@@ -5019,7 +4069,6 @@ addEN({
   "Objectivo na liga": "League objective",
   "Obrigatório com linha defensiva alta. Exige Antecipação, Decisões e Saídas.": "A must with a high defensive line. Needs Anticipation, Decisions and Rushing Out.",
   "Ocupa o espaço entre linhas e ameaça o golo (o antigo CM-Ataque num MC).": "Occupies the space between the lines and threatens goal (the old attacking CM at MC).",
-  "Ocupação da área": "Box occupation",
   "Olá! Vamos preparar o próximo jogo.": "Hi! Let’s get ready for the next match.",
   "Onde a equipa começa a pressionar.": "Where the team starts pressing.",
   "Onde reforçar": "Where to strengthen",
@@ -5034,13 +4083,10 @@ addEN({
   "Outside sem laterais/extremos agressivos não fecha a armadilha; Inside exige meio-campo forte.": "Outside without aggressive full-backs/wingers does not close the trap; Inside needs a strong midfield.",
   "Outside: encurrala no corredor. Inside: força para o meio congestionado.": "Outside: corners them on the flank. Inside: forces them into a crowded middle.",
   "Overlap com extremos interiores; underlap com extremos abertos.": "Overlap with inside wingers; underlap with wide wingers.",
-  "Paciência alta, largura, remates de longe se tiver qualidade, sobrecarga num flanco. Counter-press para não ser apanhado em transição. Cruzamentos baixos e ataques ao segundo poste.": "High patience, width, long shots if you have the quality, overload one flank. Counter-press so you are not caught in transition. Low crosses and far-post runs.",
   "Papel com bola": "In-possession role",
   "Papel sem bola": "Out-of-possession role",
   "Papéis": "Roles",
-  "Papéis OOP \"Outlet\" ficam na frente para o contra-ataque e não defendem. #–# dão uma saída; #+ deixam o bloco em inferioridade.": "OOP “Outlet” roles stay forward for the counter-attack and do not defend. #–# give you an outlet; #+ leave the block outnumbered.",
   "Papéis e instruções seguem o sistema IP/OOP do FM# com as novidades confirmadas do FM#. As pontuações (#–#) são médias ponderadas dos atributos-chave (peso #) e preferidos (peso #), ajustadas pela posição — uma segunda opinião transparente, não as estrelas do jogo.": "Roles and instructions follow FM#’s IP/OOP system with FM#’s confirmed new features. Scores (#–#) are weighted averages of the key attributes (weight #) and preferred attributes (weight #), adjusted for position — a transparent second opinion, not the game’s stars.",
-  "Papéis — com bola e sem bola": "Roles — in and out of possession",
   "Par do Advanced Wing-Back.": "The Advanced Wing-Back’s partner.",
   "Par natural de um ala muito ofensivo.": "The natural partner of a very attacking wing-back.",
   "Para atacar o lateral mais fraco, ou para meter o extremo no pé forte/fraco conforme o objectivo.": "To attack the weaker full-back, or to put the winger on his strong/weak foot depending on the aim.",
@@ -5055,19 +4101,15 @@ addEN({
   "Passes seguros.": "Safe passes.",
   "Pasta dos saves (opcional)": "Saves folder (optional)",
   "Pasta personalizada (opcional)": "Custom folder (optional)",
-  "Pausa internacional": "International break",
   "Pausar": "Pause",
-  "Pelo menos #–# jogadores a atacar a área (avançado + extremo interior/AM/BBM). Com um falso # ou DLF, alguém tem de atacar a profundidade (IF, CHM, SS). No FM# as novas instruções de ataque à área (near/centre/far post, arrive late) permitem coordenar quem vai a cada zona.": "At least #–# players attacking the box (striker + inside winger/AM/BBM). With a false # or DLF, someone has to attack depth (IF, CHM, SS). In FM# the new box-attacking instructions (near/centre/far post, arrive late) let you coordinate who goes to each zone.",
   "Penáltis": "Penalties",
   "Penáltis — #.º": "Penalties — #.º",
   "Percursos": "Paths",
   "Perda da bola": "Losing the ball",
   "Perfeito com um extremo que entre por dentro ou um IWB.": "Perfect with a winger who comes inside or an IWB.",
-  "Periodização": "Periodisation",
   "Permite aos laterais subirem os dois. Redundante com IFB do mesmo lado.": "Lets both full-backs push on. Redundant with an IFB on the same side.",
   "Permitir ou impedir cruzamentos (bloco baixo).": "Allow or stop crosses (low block).",
   "Pesos estimados — confirmar no jogo": "Estimated weights — confirm in the game",
-  "Pesquisar papel…": "Search role…",
   "Plano de jogo": "Game plan",
   "Plano de treino completo": "Full training plan",
   "Plano de treino para": "Training plan for",
@@ -5097,14 +4139,11 @@ addEN({
   "Precisa de servidores — criadores/cruzadores.": "Needs suppliers — creators/crossers.",
   "Preferidos:": "Preferred:",
   "Pressiona mais do que o resto da equipa.": "Presses more than the rest of the team.",
-  "Pressiona mais ou menos um jogador específico.": "Presses a specific player more or less.",
   "Pressionar a reposição curta do GR adversário (secção High Press).": "Press the opposing keeper’s short distribution (High Press section).",
   "Pressão": "Pressing",
   "Pressão alta, ataques rápidos pelo meio, muitos homens perto da área.": "High press, quick attacks through the middle, plenty of players near the box.",
-  "Pressão imediata após a perda da bola.": "Immediate pressure after losing the ball.",
   "Previsível: o adversário pode montar armadilha.": "Predictable: the opponent can set a trap.",
   "Previsível; adversário pode sobrecarregar esse lado.": "Predictable; the opponent can overload that side.",
-  "Princípios": "Principles",
   "Prioridades de Tactical Understanding": "Tactical Understanding priorities",
   "Prioriza a solidez, transições cautelosas. Underdog fora de casa.": "Prioritises solidity and cautious transitions. The away underdog.",
   "Proactivo sem extremos: avança linhas, mais risco controlado. Óptimo default para equipas favoritas.": "Proactive without extremes: pushes lines up, more controlled risk. A great default for favourites.",
@@ -5117,16 +4156,10 @@ addEN({
   "Progressão": "Progression",
   "Protecção da zona #.": "Protects zone #.",
   "Proteja as costas de um ala muito ofensivo.": "Protect the back of a very attacking wing-back.",
-  "Proteja os meios-espaços (central do lado + ala). Alas adversários dão largura: Pressing Trap Outside com Pressing FB. Use extremos para prender os alas atrás.": "Protect the half-spaces (wide centre-back + wing-back). Their wing-backs give width: Pressing Trap Outside with a Pressing FB. Use your wingers to pin their wing-backs back.",
-  "Pré-época (sem #–#)": "Pre-season (wk #–#)",
-  "Pré-época: carga física + Tactical Understanding de IP/OOP Shape primeiro; pressing e chance creation depois.": "Pre-season: physical load + IP/OOP Shape Tactical Understanding first; pressing and chance creation later.",
   "Prós": "Pros",
   "Prós:": "Pros:",
   "Próximo adversário:": "Next opponent:",
-  "Qualidade do relatório do próximo adversário (analistas) e conhecimento dos jogadores adversários.": "Quality of the next-opponent report (analysts) and knowledge of the opposing players.",
   "Quando a construção curta está a ser pressionada e perde bolas atrás, ou para explorar uma referência.": "When the short build-up is being pressed and loses balls at the back, or to exploit a target.",
-  "Quando:": "When:",
-  "Quanto a equipa compreende cada área da tática: IP Shape, OOP Shape, Passing Style, Build Up, Chance Creation e Pressing (Trigger Press, Pressing Trap, Line of Engagement). Influenciado por contributo do treino, exposição a jogos, capacidade tática dos jogadores e complexidade da tática.": "How well the team understands each area of the tactic: IP Shape, OOP Shape, Passing Style, Build Up, Chance Creation and Pressing (Trigger Press, Pressing Trap, Line of Engagement). Influenced by training contribution, match exposure, the players’ tactical ability and the tactic’s complexity.",
   "Quem desperdiça posses a rematar.": "Players who waste possession by shooting.",
   "Quão aberta fica a equipa com bola.": "How wide the team is in possession.",
   "Reacção imediata à perda da bola.": "Immediate reaction to losing the ball.",
@@ -5174,16 +4207,13 @@ addEN({
   "Seguro. Combine com um extremo que vá por dentro para manter a largura.": "Safe. Pair with a winger who comes inside to keep the width.",
   "Sem adversário": "No opponent",
   "Sem bola": "Out of possession",
-  "Sem bola (OOP)": "Out of possession (OOP)",
   "Sem bola:": "Out of possession:",
   "Sem corredores (IF/CHM/SS) a área fica vazia.": "Without runners (IF/CHM/SS) the box stays empty.",
   "Sem dados do pé preferido o efeito do canto não é indicado. Exportações com a coluna do pé (FM View Exporter, fmsave) mostram-no.": "Without preferred-foot data the corner’s swing is not shown. Exports with the foot column (FM View Exporter, fmsave) show it.",
   "Sem efeito": "No effect",
   "Sem plantel": "No squad",
-  "Semana com # jogos: Recuperação + Match Preparation; sem sessões pesadas.": "A week with # matches: Recovery + Match Preparation; no heavy sessions.",
   "Semana-tipo sugerida": "Suggested typical week",
   "Semanas com dois jogos: só Recuperação + Match Preparation.": "Weeks with two matches: only Recovery + Match Preparation.",
-  "Sessões de Tactical Understanding focadas na área mais fraca; simplificar a tática (menos instruções não-default).": "Tactical Understanding sessions focused on the weakest area; simplify the tactic (fewer non-default instructions).",
   "Setor a setor": "Sector by sector",
   "Sistema": "System",
   "Sistema que melhor serve o plantel": "The system that best suits the squad",
@@ -5200,9 +4230,7 @@ addEN({
   "Step Up com centrais lentos é perigoso; Drop Off afasta a defesa do meio-campo.": "Step Up with slow centre-backs is dangerous; Drop Off separates the defence from midfield.",
   "Step Up: equipa compacta, apanha foras-de-jogo. Drop Off: protege as costas.": "Step Up: compact team, catches players offside. Drop Off: protects the space in behind.",
   "Streams descomprimidos": "Decompressed streams",
-  "Substitui a Familiaridade Tática. Quatro pilares: Tactical Understanding, Player Ability, Player Buy-In e Next Match Information. Visível em Treino, no ecrã de tácticas, plantel, base de dados e relatórios de observação (\"Projected Effectiveness\").": "Replaces Tactical Familiarity. Four pillars: Tactical Understanding, Player Ability, Player Buy-In and Next Match Information. Visible in Training, on the tactics screen, the squad, the database and scouting reports (“Projected Effectiveness”).",
   "Sucessor (≤ #)": "Successor (≤ #)",
-  "Superioridade central com # médios (###/####). Ataque os meios-espaços nas costas dos médios ala. OOP: ### compacto ou #### cobrindo os dois avançados com # centrais + DM.": "Central superiority with # midfielders (###/####). Attack the half-spaces behind their wide midfielders. OOP: a compact ### or a #### covering both strikers with # centre-backs + a DM.",
   "Superioridade central, laterais dão toda a largura.": "Central superiority; full-backs provide all the width.",
   "Suplente": "Back-up",
   "Só faz sentido em linha de #. Precisa de resistência e um ala que entre por dentro para não se atropelarem.": "Only makes sense in a back #. Needs stamina and a wing-back who comes inside so they do not get in each other’s way.",
@@ -5210,8 +4238,6 @@ addEN({
   "Só para o melhor jogador técnico; dá estrutura à volta.": "Only for your best technical player; give him structure around him.",
   "Tamanho": "Size",
   "Também aceita CSV/JSON do fmsave, FMPT Chief Analyst, FMLibreEditor, HTML com tabela e texto colado — basta arrastar para a janela.": "Also accepts CSV/JSON from fmsave, FMPT Chief Analyst, FMLibreEditor, HTML tables and pasted text — just drag it into the window.",
-  "Team Cohesion após muitas contratações ou mudança de treinador (Player Buy-In baixo).": "Team Cohesion after many signings or a change of manager (low Player Buy-In).",
-  "Team Cohesion; conversas individuais; cumprir promessas; evitar muitas mudanças de plantel de uma vez.": "Team Cohesion; one-to-one talks; keep promises; avoid too many squad changes at once.",
   "Tema": "Theme",
   "Tenta passes de ruptura.": "Tries defence-splitting passes.",
   "Testa todos os pares de formações, escolhe o papel de cada posição com regras de equilíbrio (rest-defence, largura, área, criadores, outlets) e o XI exacto pelo algoritmo húngaro.": "Tests every pair of formations, picks each position’s role with balance rules (rest-defence, width, box, creators, outlets) and the exact XI with the Hungarian algorithm.",
@@ -5228,10 +4254,7 @@ addEN({
   "Todas as posições": "All positions",
   "Trabalhar a bola até à área ou finalizar cedo.": "Work the ball into the box or finish early.",
   "Transição": "Transition",
-  "Treine a ideia, não só os atributos: no FM# o treino está ligado à compreensão da tática. Uma área com compreensão baixa = sessões dessa área na semana.": "Train the idea, not just the attributes: in FM# training is linked to understanding the tactic. An area with low understanding = sessions for that area in the week.",
   "Treino": "Training",
-  "Treino & Effectiveness": "Training & Effectiveness",
-  "Treino & Tactical Effectiveness (FM#)": "Training & Tactical Effectiveness (FM#)",
   "Troca os extremos de flanco.": "Swaps the wingers’ flanks.",
   "Trocar adversário": "Change opponent",
   "Três passos. Tudo corre neste computador e o plantel actualiza sozinho quando carrega F# no FM.": "Three steps. Everything runs on this computer and the squad updates itself when you press F# in FM.",
@@ -5259,7 +4282,6 @@ addEN({
   "Velocidade e jogo aéreo dos centrais deles contra os teus avançados.": "Pace and aerial ability of their centre-backs against your strikers.",
   "Ver diagnóstico completo": "See the full diagnosis",
   "Ver diagramas dos cantos": "See the corner diagrams",
-  "Ver efeito": "See the effect",
   "Ver em campo": "See on the pitch",
   "Ver melhor XI": "See best XI",
   "Ver na Ficha para o FM#": "See it in the FM27 Sheet",
@@ -5275,7 +4297,6 @@ addEN({
   "XI escolhido pela melhor adequação": "XI picked by best fit",
   "Yes força o adversário a bater longo.": "Yes forces the opponent to go long.",
   "Zona #": "Zone #",
-  "Zona central imediatamente à frente da área adversária.": "The central zone just outside the opponent’s box.",
   "Zona preferida de progressão.": "Preferred zone for progressing the ball.",
   "Zonal": "Zonal",
   "a tua baliza": "your goal",
@@ -5290,7 +4311,6 @@ addEN({
   "ataca o canal": "attacks the channel",
   "ataca o canal entre central e lateral": "attacks the channel between centre-back and full-back",
   "ataque →": "attack →",
-  "atributos confirmados ·": "confirmed attributes ·",
   "automático": "automatic",
   "aéreo": "aerial",
   "baixa": "drops deep",
@@ -5302,7 +4322,6 @@ addEN({
   "carregado": "loaded",
   "cauteloso": "cautious",
   "chega à área em segunda vaga": "arrives in the box as a second wave",
-  "cobre flanco": "covers the flank",
   "cobre o canal, mais fundo": "covers the channel, deeper",
   "cobre o flanco do lateral": "covers the full-back’s flank",
   "com bola": "in possession",
@@ -5322,7 +4341,6 @@ addEN({
   "entra pelo meio-espaço para criar": "moves into the half-space to create",
   "entra por dentro": "comes inside",
   "estado:": "status:",
-  "estimados.": "estimated.",
   "ex.: D:\\Documentos\\Sports Interactive\\FM View Exporter": "e.g. D:\\Documents\\Sports Interactive\\FM View Exporter",
   "falta instalar": "needs installing",
   "fecha como terceiro central": "tucks in as a third centre-back",
@@ -5360,14 +4378,12 @@ addEN({
   "o plugin gratuito": "the free plugin",
   "ocupa a zona # e ameaça de fora": "occupies zone # and threatens from distance",
   "ocupa a zona 14 e ameaça de fora": "occupies zone 14 and threatens from distance",
-  "opções a confirmar no jogo": "options to confirm in the game",
   "outlet": "outlet",
   "pares de jogos.": "pairs of matches.",
   "parte da ala e entra para organizar": "starts wide and comes inside to organise",
   "plugin encontrado": "plugin found",
   "plugin não encontrado": "plugin not found",
   "posiciona-se alto para varrer bolas nas costas": "positions himself high to sweep balls in behind",
-  "pressiona alto": "presses high",
   "procura espaço entre linhas": "looks for space between the lines",
   "profundidade": "runs in behind",
   "protege a zona central": "protects the central zone",
@@ -5387,7 +4403,6 @@ addEN({
   "sobe para o meio-campo": "steps into midfield",
   "sobe pelo corredor e dá a largura": "pushes up the flank and gives width",
   "sobrepõe pelo corredor como um ala": "overlaps down the flank like a wing-back",
-  "só central do lado numa linha de #": "wide centre-back in a back # only",
   "só na app instalada": "installed app only",
   "titular": "starter",
   "transição": "transition",
@@ -5395,22 +4410,20 @@ addEN({
   "vagueia para o lado da bola": "drifts to the ball side",
   "vai até à linha de fundo, quase como extremo": "goes all the way to the byline, almost like a winger",
   "vai à linha de fundo para cruzar": "goes to the byline to cross",
-  "vira central": "becomes a CB",
-  "vira médio def.": "becomes a DM",
   "vive na última linha à espera da bola": "lives on the last line waiting for the ball",
   "· alternativa": "· alternative",
-  "Área mais fraca + Match Prep + Recuperação": "Weakest area + Match Prep + Recovery",
   "Áreas de Tactical Understanding": "Tactical Understanding areas",
-  "É estreito: Exploit Width, alas/laterais ofensivos. OOP: feche o meio, deixe-os ir para fora e defenda o cruzamento.": "It is narrow: Exploit Width, attacking wing-backs/full-backs. OOP: close the middle, let them go wide and defend the cross.",
-  "Época — # jogos/semana": "Season — # matches/week",
-  "Época — semana normal": "Season — normal week",
+  "Tactical Understanding: posse/estrutura ofensiva": "Tactical Understanding: in-possession shape",
+  "Tactical Understanding: estrutura defensiva": "Tactical Understanding: out-of-possession shape",
+  "Tactical Understanding: estilo de passe": "Tactical Understanding: passing style",
+  "Tactical Understanding: construção": "Tactical Understanding: build-up",
+  "Tactical Understanding: criação no último terço": "Tactical Understanding: final-third chance creation",
   "Índice de Trabalho e Resistência altos.": "High Work Rate and Stamina.",
   "Óptimo para rest-defence. O outro lado pode ter um lateral ofensivo.": "Great for rest-defence. The other side can have an attacking full-back.",
   "Ótimo para chegar à área em segunda vaga.": "Great for arriving in the box as a second wave.",
   "Último save:": "Latest save:",
   "Último terço": "Final third",
   "Último terço ": "Final third",
-  "Último terço; amigáveis com o # provável.": "Final third; friendlies with the likely #.",
   "Útil a ganhar no fim.": "Useful when winning late on.",
   "Útil em bloco baixo com Counter-Attack.": "Useful in a low block with Counter-Attack.",
   "último terço → perda → bloco": "final third → loss → block",
@@ -5517,9 +4530,9 @@ const fitColor = (s) => s == null ? 'var(--muted)' : s >= 70 ? '#1c8a4d' : s >= 
 
 const EMPTY_SQUAD = () => ({ players: [], source: '', warnings: [], mapped: [], at: null });
 const ST = {
-  view: 'home', tabs: { team: 'squad', tactic: 'analyze', bible: 'roles' },
+  view: 'home', tabs: { team: 'squad', tactic: 'analyze' },
   tactic: newTactic(), squad: EMPTY_SQUAD(), opp: EMPTY_SQUAD(), myClub: null,
-  saved: [], sel: null, pitchMode: 'IP', rq: '', rg: '', rp: '', fmf: null, sugg: null, theme: 'dark',
+  saved: [], sel: null, pitchMode: 'IP', fmf: null, sugg: null, theme: 'dark',
   auto: { on: false, dir: '', mtime: 0, last: '', save: false, saveDir: '', saveMtime: 0, saveErr: '', saveLast: '', v: 45 },   // carregamento automático (app instalada)
   lastSave: null, gen: null, ui: { collapsed: {}, navMini: false }, lang: 'en',
 };
@@ -5545,7 +4558,7 @@ function load() {
       if (!d.auto.v || d.auto.v < 45) ST.auto.on = false;     // v4.5: carregar o F9 sozinho também passa a ser opcional
       ST.auto.v = 45;
     }
-    if (d.tabs) ST.tabs = Object.assign(ST.tabs, d.tabs);
+    if (d.tabs) { delete d.tabs.bible; ST.tabs = Object.assign(ST.tabs, d.tabs); }
     if (d.gen) ST.gen = d.gen;
     if (d.bridge) ST.bridge = d.bridge;
     if (d.lang === 'pt' || d.lang === 'en') ST.lang = d.lang;
@@ -5708,8 +4721,8 @@ function attrChip(k, p) {
 const SIM = { raf: 0, last: 0, model: null, ro: null, hits: [] };
 const X_ = (y) => 3 + y * 1.04, Y_ = (x) => 2 + x * 0.68;
 
-function simTactic() { return ST.sim && ST.sim.src === 'demo' ? ST.sim.t : ST.tactic; }
-function simDefaults() { if (!ST.sim) ST.sim = { src: 'tactic', phase: 0, u: 0, playing: !matchMedia('(prefers-reduced-motion: reduce)').matches, speed: 1, opp: true, trails: false, focus: null, hl: null }; return ST.sim; }
+function simTactic() { return ST.tactic; }
+function simDefaults() { if (!ST.sim) ST.sim = { phase: 0, u: 0, playing: !matchMedia('(prefers-reduced-motion: reduce)').matches, speed: 1, opp: true, trails: false, focus: null, hl: null }; return ST.sim; }
 
 function simBallState(path, bu) {
   if (!path || !path.length) return { x: 50, y: 50, z: 0, kind: 'pass' };
@@ -6054,11 +5067,9 @@ function vSim() {
   const ctl = (k) => { const d = TI_BY_KEY[k]; return `<ui-field class="${sim.hl === k ? 'hl' : ''}"><ui-field-label>${esc(d.n)}</ui-field-label>${selectHTML(d.opts.map((o, i) => [i, o]), tiVal(t, k), `A.simTI('${k}',this.value)`)}</ui-field>`; };
   const fr = sim.focus != null ? t.slots[sim.focus] : null;
   const fRole = fr ? [ROLE_BY_ID[fr.ip], ROLE_BY_ID[fr.oop]] : null;
-  return `<div class="top"><div><h2>${sim.src === 'demo' ? esc(sim.title) : '<span>' + L('Campo animado', 'Animated pitch') + '</span> — ' + esc(tName(t))}</h2>
+  return `<div class="top"><div><h2><span>${L('Campo animado', 'Animated pitch')}</span> — ${esc(tName(t))}</h2>
       <p class="muted small" style="margin:0">${esc(t.ipForm)} <span>com bola</span> → ${esc(t.oopForm)} <span>sem bola</span> · ${esc(t.ment)}. <span>Clique num jogador para o seguir.</span></p></div>
-    <div class="row">${sim.src === 'demo'
-      ? `<ui-button id="sim-back"><button type="button" class="btn">${L('Voltar à minha tática', 'Back to my tactic')}</button></ui-button>`
-      : `<ui-button id="sim-edit"><button type="button" class="btn">${L('Editar no analisador', 'Edit in analyser')}</button></ui-button>`}</div></div>
+    <div class="row"><ui-button id="sim-edit"><button type="button" class="btn">${L('Editar no analisador', 'Edit in analyser')}</button></ui-button></div></div>
   <div class="simgrid">
     <div>
       <div class="simwrap"><canvas class="simpitch" id="sim-canvas" role="img" aria-label="${L('Campo animado da tática', 'Animated tactic pitch')}"></canvas></div>
@@ -6088,15 +5099,15 @@ function vSim() {
     <div class="grid simside">
       ${fr ? `<div class="panel"><h3>${esc(fr.ipCode)} → ${esc(fr.oopCode)}</h3>
         ${fRole.map(r => r ? `<p class="small"><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span> <b>${esc(roleName(r))}</b> — ${esc(r.desc)}</p>` : '').join('')}
-        ${sim.src === 'demo' ? '' : `<div class="grid g2">
+        <div class="grid g2">
           <ui-field><ui-field-label>${L('Papel com bola', 'In possession role')}</ui-field-label>${selectHTML(rolesFor(slotInfo(t.ipForm, fr.ipCode).group, 'IP', slotInfo(t.ipForm, fr.ipCode)).map(r => [r.id, roleName(r)]), fr.ip, `A.simRole('IP',this.value)`)}</ui-field>
-          <ui-field><ui-field-label>${L('Papel sem bola', 'Out of possession role')}</ui-field-label>${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode)).map(r => [r.id, roleName(r)]), fr.oop, `A.simRole('OOP',this.value)`)}</ui-field></div>`}
+          <ui-field><ui-field-label>${L('Papel sem bola', 'Out of possession role')}</ui-field-label>${selectHTML(rolesFor(slotInfo(t.oopForm, fr.oopCode).group, 'OOP', slotInfo(t.oopForm, fr.oopCode)).map(r => [r.id, roleName(r)]), fr.oop, `A.simRole('OOP',this.value)`)}</ui-field></div>
         <ui-button id="sim-unfocus"><button type="button" class="btn sm">${L('Deixar de seguir', 'Stop following')}</button></ui-button></div>` : ''}
       <div class="panel grid">
         <h3>Experimente as instruções</h3>
-        <p class="small muted" style="margin:0">${sim.src === 'demo' ? L('Cada mudança redesenha o movimento na hora (só nesta demonstração).', 'Every change redraws the movement instantly (in this demo only).') : L('Cada mudança redesenha o movimento na hora e fica gravada na tática.', 'Every change redraws the movement instantly and is saved to the tactic.')}</p>
+        <p class="small muted" style="margin:0">${L('Cada mudança redesenha o movimento na hora e fica gravada na tática.', 'Every change redraws the movement instantly and is saved to the tactic.')}</p>
         <ui-field><ui-field-label>${L('Mentalidade', 'Mentality')}</ui-field-label>${selectHTML(MENTALITIES.map(m => [m, m]), t.ment, 'A.simMent(this.value)')}</ui-field>
-        ${sim.src === 'demo' ? '' : `<div class="grid g2"><ui-field><ui-field-label>${L('Formação com bola', 'In possession formation')}</ui-field-label>${selectHTML(forms, t.ipForm, "A.setForm('IP',this.value)")}</ui-field><ui-field><ui-field-label>${L('Sem bola', 'Out of possession')}</ui-field-label>${selectHTML(forms, t.oopForm, "A.setForm('OOP',this.value)")}</ui-field></div>`}
+        <div class="grid g2"><ui-field><ui-field-label>${L('Formação com bola', 'In possession formation')}</ui-field-label>${selectHTML(forms, t.ipForm, "A.setForm('IP',this.value)")}</ui-field><ui-field><ui-field-label>${L('Sem bola', 'Out of possession')}</ui-field-label>${selectHTML(forms, t.oopForm, "A.setForm('OOP',this.value)")}</ui-field></div>
         <ui-accordion id="sim-acc" multiple default-value="ip,oop" aria-label="${L('Instruções de equipa', 'Team instructions')}">
           <ui-accordion-item value="ip">
             <ui-accordion-header><h4><ui-accordion-trigger><button type="button" aria-expanded="true">${L('Com bola', 'In possession')}</button></ui-accordion-trigger></h4></ui-accordion-header>
@@ -6161,7 +5172,6 @@ function simBindUI(canvas) {
     el.addEventListener('action', fn);
     el.addEventListener('click', () => { if (!customElements.get('ui-button')) fn(); });
   };
-  bindBtn('sim-back', () => A.simBack());
   bindBtn('sim-edit', () => A.tab('tactic', 'analyze'));
   bindBtn('sim-unfocus', () => A.simFocus(ST.sim.focus));
 
@@ -6252,99 +5262,6 @@ function simFrame(now = performance.now()) {
 }
 
 ;
-// ---- ui/clips.js
-const CLIPS = new Map();
-let CLIP_RAF = 0, CLIP_IO = null;
-
-function clipModelRole(roleId) {
-  return roleClipModel(roleId);
-}
-function clipModelTI(k, v) {
-  const t = newTactic('4-3-3 DM Wide', '4-1-4-1 DM Wide');
-  const set = (code, ip, oop) => { const s = t.slots.find(x => x.ipCode === code); if (s) { if (ip) s.ip = ip; if (oop) s.oop = oop; } };
-  set('DL', 'wb_ip', 'fb_oop'); set('DR', 'wb_ip', 'fb_oop');
-  set('AML', 'if_ip', 'w_oop'); set('AMR', 'w_ip', 'w_oop');
-  set('MCL', 'chm', 'cm_oop'); set('ST', 'cf_ip', 'tcf');
-  t.ment = 'Balanced'; t.ti = {}; if (v !== TI_BY_KEY[k].def) t.ti[k] = v;
-  const i = TI_PHASE[k] ?? 0;
-  const phases = i === 0 ? ['build', 'prog'] : [PHASES[i - 1].k, PHASES[i].k];
-  const tempoMul = k === 'tempo' ? [1.55, 1.25, 1, 0.78, 0.58][v] : 1;
-  return { M: simModel(t), phases, focus: null, ti: k, tempoMul };
-}
-
-function clipHTML(id, caption) { return `<figure class="clip" data-clip="${esc(id)}"><div class="clip-box"></div>${caption ? `<figcaption class="small">${caption}</figcaption>` : ''}</figure>`; }
-
-function initClips() {
-  if (!CLIP_IO && typeof IntersectionObserver !== 'undefined') {
-    // Pause off-screen canvases so opening many Bible clips stays fast.
-    CLIP_IO = new IntersectionObserver((entries) => {
-      entries.forEach(en => { const c = CLIPS.get(en.target); if (c) c.visible = en.isIntersecting; });
-    }, { rootMargin: '120px' });
-  }
-  document.querySelectorAll('[data-clip-toggle]').forEach(tg => {
-    if (tg._bound) return;
-    tg._bound = true;
-    const cid = tg.dataset.clipToggle;
-    tg.addEventListener('pressedchange', () => A.clipToggle(cid));
-    tg.addEventListener('click', () => { if (!customElements.get('ui-toggle')) A.clipToggle(cid); });
-  });
-  document.querySelectorAll('[data-clip]').forEach(el => {
-    if (el._clip) return;
-    const id = el.dataset.clip, [kind, a, b] = id.split(':');
-    let model; try { model = kind === 'role' ? clipModelRole(a) : kind === 'concept' ? conceptClipModel(a) : kind === 'opp' ? oppClipModel(a) : clipModelTI(a, +b); } catch (e) { el.querySelector('.clip-box').textContent = '—'; return; }
-    const box = el.querySelector('.clip-box');
-    box.innerHTML = `<canvas class="clip-canvas" role="img" aria-label="${L('Clip animado', 'Animated clip')}"></canvas>`;
-    const canvas = box.querySelector('canvas');
-    el._clip = { model, canvas, t0: performance.now(), visible: true };
-    CLIPS.set(el, el._clip);
-    if (CLIP_IO) CLIP_IO.observe(el);
-  });
-  if (CLIPS.size && !CLIP_RAF) CLIP_RAF = requestAnimationFrame(clipTick);
-}
-
-function clipTick(now) {
-  CLIP_RAF = 0;
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  for (const [el, c] of CLIPS) {
-    if (!el.isConnected) { if (CLIP_IO) CLIP_IO.unobserve(el); CLIPS.delete(el); continue; }
-    if (!c.visible && !reduce) continue;
-    const M = c.model.M, ph = c.model.phases, mul = c.model.tempoMul || 1;
-    const SEG = 1.45 * mul, HOLD = 0.85 * mul, per = SEG + HOLD;
-    const total = per * ph.length;
-    const tt = reduce ? (ph.length - 1) * per + SEG : (Math.max(0, now - c.t0) / 1000) % total;
-    const i = Math.floor(tt / per), within = tt - i * per;
-    const isReset = i === 0;
-    const from = isReset ? ph[0] : ph[i - 1], to = ph[i];
-    const moveU = isReset ? 1 : Math.min(1, within / (SEG * 0.46));
-    const prevPath = !isReset && M.ball[from] ? M.ball[from] : null;
-    const prevBallEnd = prevPath && prevPath.length ? prevPath[prevPath.length - 1] : null;
-    const carryU = isReset ? 1 : moveU;
-    const bu = isReset ? Math.min(1, Math.max(0, (within - SEG * 0.12) / (SEG * 0.85)))
-      : Math.min(1, Math.max(0, (within - SEG * 0.46) / (SEG * 0.54)));
-    const fadeIn = isReset && !reduce ? Math.min(1, Math.max(0.15, within / 0.25)) : 1;
-    const oopish = c.model.isRoleClip ? c.model.phase === 'OOP'
-      : c.model.phaseByStep ? c.model.phaseByStep[i] === 'OOP'
-      : ['oop', 'loss'].includes(to);
-    const lbl = c.model.labels ? c.model.labels[i] : T((PHASES.find(x => x.k === to) || {}).n || '');
-    const f = c.model.focus;
-    drawPitchFrame(c.canvas, {
-      M, fromPh: from, toPh: to, um: ease(moveU), bu, carryU, prevBallEnd, isReset, fadeIn,
-      oopish, showOpp: true, showTrails: false,
-      focus: f, pmap: null, compact: true, phaseLabel: lbl,
-      ghostPt: c.model.isRoleClip && f != null ? M.P[f].pos.s0 : null,
-      pulse: (now % 1100) / 1100,
-      pressFn: (p, k) => c.model.isRoleClip ? (k === f && M.pressAt && M.pressAt[to] && moveU > 0.5) : (to === 'oop' && p.pressing && moveU > 0.5),
-    });
-  }
-  if (CLIPS.size && !reduceAll()) CLIP_RAF = requestAnimationFrame(clipTick);
-}
-function stopClips() {
-  if (CLIP_IO) CLIP_IO.disconnect();
-  CLIPS.clear(); cancelAnimationFrame(CLIP_RAF); CLIP_RAF = 0;
-}
-const reduceAll = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-;
 // ---- ui/views_home.js
 // ============================================================
 // Início: fluxo guiado em 3 passos + o que a app viu
@@ -6370,7 +5287,7 @@ function vHome() {
   <div class="grid g2" style="margin-top:16px">
     <div class="panel"><h3>O que corrigir primeiro</h3>${top.length ? top.map(f => `<div class="finding"><div class="sev ${f.sev}">${f.sev === 'crit' ? '!' : '▲'}</div><div><b>${esc(f.title)}</b><span class="small">${esc(f.text)}</span>${f.fix ? `<div class="fix">→ ${esc(f.fix)}</div>` : ''}</div></div>`).join('') : '<p class="muted">Nada grave na tática. 👍</p>'}
       <button class="btn" onclick="A.tab('tactic','analyze')">Ver diagnóstico completo</button></div>
-    <div class="grid">${sugg}${oppBox}${!sugg && !oppBox ? `<div class="panel"><h3>Bíblia tática</h3><p class="small muted">${ROLES.length} papéis com animação, ${TEAM_INSTRUCTIONS.length} instruções, conceitos e treino FM27.</p><button class="btn" onclick="A.go('bible')">Abrir</button></div>` : ''}</div>
+    <div class="grid">${sugg}${oppBox}${!sugg && !oppBox ? `<div class="panel"><h3>${L('Campo animado', 'Animated pitch')}</h3><p class="small muted">${L('Veja a sua tática em movimento nas 6 fases de jogo e teste instruções em tempo real.', 'Watch your tactic move across all 6 match phases and test instructions in real time.')}</p><button class="btn" onclick="A.simOpen()">${L('Abrir', 'Open')}</button></div>` : ''}</div>
   </div>
   ${ST.saved.length ? `<div class="panel" style="margin-top:16px"><h3>Táticas guardadas</h3><div class="row">${ST.saved.slice(0, 8).map((s, i) => `<button class="btn sm" onclick="A.loadSaved(${i})">${esc(s.name)}</button>`).join('')}</div></div>` : ''}`;
 }
@@ -7126,113 +6043,6 @@ function vTraining() {
     ${plan.mentors.length && plan.youth.length ? `<h4 style="margin-top:12px">Mentoria</h4><p class="small">${L('Mentores (Determinação ≥ 15, ≥ 26 anos)', 'Mentors (Determination ≥ 15, aged 26+)')}: ${plan.mentors.slice(0, 4).map(p => esc(p.name)).join(', ')}. ${L('Jovens ≤ 21', 'Youngsters ≤ 21')}: ${plan.youth.slice(0, 8).map(p => esc(p.name)).join(', ')}.</p>` : ''}
   </div>`;
 }
-
-;
-// ---- ui/views_bible.js
-// ============================================================
-// Bíblia
-// ============================================================
-function vRoles() {
-  const q = ST.rq.toLowerCase();
-  const list = ROLES.filter(r => (!ST.rg || r.groups.includes(ST.rg)) && (!ST.rp || r.phase === ST.rp) &&
-    (!q || [r.name, PT_TERMS[r.name] || '', PT_ROLE_ID[r.id] || '', r.desc, r.tip, r.ab, T(r.desc), T(r.tip)].join(' ').toLowerCase().includes(q)));
-  const tagNames = { W:'dá largura', IN:'entra por dentro', RD:'fica atrás', BOX:'ataca a área', CR:'criativo', LINK:'liga jogo', RUN:'profundidade', DROP:'baixa', AIR:'aéreo', ADV:'sobe', TOCB:'vira central', TODM:'vira médio def.', HP:'pressiona alto', LOW:'cauteloso', OUT:'outlet', CW:'cobre flanco', TRK:'acompanha recuo' };
-  return `<div class="top"><div><h2>Papéis — com bola e sem bola</h2>
-    <p class="muted small">${ROLES.length} papéis. Desde o FM26 não há duties: cada jogador tem um papel IP e um OOP. <span class="tag v">CONF</span> atributos confirmados · <span class="tag e">EST</span> estimados.</p></div></div>
-  <div class="panel row" style="margin-bottom:14px">
-    <input id="rq" type="text" placeholder="Pesquisar papel…" value="${esc(ST.rq)}" oninput="A.rq(this.value)" style="min-width:220px">
-    ${selectHTML([['', 'Todas as posições']].concat(Object.entries(GROUPS)), ST.rg, 'A.rg(this.value)')}
-    ${selectHTML([['', 'IP + OOP'], ['IP', 'Com bola (IP)'], ['OOP', 'Sem bola (OOP)']], ST.rp, 'A.rp(this.value)')}
-    <span class="small muted">${list.length} resultado(s)</span></div>
-  <div class="grid g2">${list.map(r => `<div class="role-card">
-    <div class="row" style="justify-content:space-between"><div><b>${esc(roleName(r))}</b> <span class="muted small">(${esc(r.ab)})</span></div><div><span class="chip ${r.phase === 'IP' ? 'ip' : 'oop'}">${r.phase}</span>${srcTag(r)}</div></div>
-    <div class="small muted">${r.groups.map(g => `<span>${GROUPS[g]}</span>`).join(' · ')}${r.wideCB ? ` · <span>só central do lado numa linha de 3</span>` : ''}</div>
-    <p class="small">${esc(r.desc)}</p><p class="small">💡 ${esc(r.tip)}</p>
-    <div class="attrs"><b>Chave:</b> ${r.key.map(k => `<span class="chip">${esc(attrName(k))}</span>`).join('')}</div>
-    <div class="attrs"><b>Preferidos:</b> ${r.pref.map(k => `<span class="chip">${esc(attrName(k))}</span>`).join('')}</div>
-    ${r.tags.length ? `<div class="attrs muted"><span>Comportamento:</span> ${r.tags.map(x => `<span>${tagNames[x] || x}</span>`).join(', ')}</div>` : ''}
-    <div class="row" style="margin-top:8px"><button class="btn sm" onclick="A.clipToggle('role:${r.id}')" aria-expanded="${!!(ST.openClips || {})['role:' + r.id]}">${(ST.openClips || {})['role:' + r.id] ? '■ Fechar clip' : '▶ Clip do papel'}</button><button class="btn sm ghost" onclick="A.roleDemo('${r.id}')" title="Abrir no campo animado completo">Campo completo</button></div>
-    ${(ST.openClips || {})['role:' + r.id] ? clipHTML('role:' + r.id, (() => { const n = MOVE_NOTES[r.id], ph = `<span>${r.phase === 'IP' ? L('posição → movimento → acção com bola', 'shape → movement → ball action') : r.tags.includes('OUT') ? L('bloco → fica alto → contra-ataque', 'block → stays high → counter') : L('bloco → ataque adversário → reacção', 'block → opponent attack → reaction')}</span>`; return n ? `<b>${esc(r.ab)}</b> <span>${esc(n[1])}</span> · ${ph}` : ph; })()) : ''}
-  </div>`).join('')}</div>`;
-}
-
-function vTI() {
-  return `<div class="top"><div><h2>Instruções</h2></div></div>
-  <div class="panel"><h3>Mentalidade</h3><div class="grid g2">${MENTALITIES.map(m => `<div><b>${m}</b><p class="small muted">${esc(MENTALITY_INFO[m])}</p></div>`).join('')}</div></div>
-  ${['IP','OOP'].map(ph => `<div class="panel" style="margin-top:16px"><h3>Instruções de equipa — ${ph === 'IP' ? 'com bola' : 'sem bola'}</h3>
-    <div class="table-wrap" style="max-height:none"><table><thead><tr><th>Instrução</th><th>Opções</th><th>O que faz</th><th>Prós</th><th>Contras</th></tr></thead><tbody>
-    ${TEAM_INSTRUCTIONS.filter(d => d.ph === ph).map(d => `<tr><td><b>${esc(d.n)}</b>${d.fm27 ? ' <span class="chip new">FM27</span>' : ''}<div class="small muted"><span>${esc(d.area)}</span>${d.unconf ? ` · <span>opções a confirmar no jogo</span>` : ''}</div>${SIM_TI.has(d.k) ? `<button class="btn sm" style="margin-top:4px" onclick="A.clipToggle('ti:${d.k}')" aria-expanded="${!!(ST.openClips || {})['ti:' + d.k]}">${(ST.openClips || {})['ti:' + d.k] ? '■ Fechar' : '▶ Ver efeito'}</button>` : ''}</td><td class="small">${d.opts.map((o, i) => i === d.def ? `<u>${esc(o)}</u>` : esc(o)).join(' · ')}</td><td class="small">${esc(d.d)}</td><td class="small">${esc(d.pro)}</td><td class="small">${esc(d.con)}</td></tr>${(ST.openClips || {})['ti:' + d.k] ? `<tr class="cliprow"><td colspan="5"><div class="clip-pair">${[0, d.opts.length - 1].map(v => clipHTML('ti:' + d.k + ':' + v, `<b>${esc(d.opts[v])}</b>${v === d.def ? ' (default)' : ''}`)).join('')}</div><p class="small muted" style="margin:6px 0 0"><span>${L('Mesma equipa e mesma fase', 'Same team, same phase')}</span> (<span>${esc(PHASES[TI_PHASE[d.k] ?? 0].n)}</span>)<span>${L('; só muda', '; only')}</span> <b>${esc(d.n)}</b> ${L('', '<span>changes.</span>')} <span>${d.ph === 'IP' ? 'Instrução com bola.' : 'Instrução sem bola.'}</span></p></td></tr>` : ''}`).join('')}
-    </tbody></table></div></div>`).join('')}
-  <div class="grid g2" style="margin-top:16px">
-    <div class="panel"><h3>Instruções individuais</h3>${PLAYER_INSTRUCTIONS.map(p => `<p class="small"><b>${esc(p.n)}</b>${p.fm27 ? ' <span class="chip new">FM27</span>' : ''}<br>${esc(p.d)} <span class="muted">${esc(p.tip)}</span></p>`).join('')}</div>
-    <div class="grid">
-      <div class="panel"><h3>Instruções de adversário</h3>${OPPOSITION_INSTRUCTIONS.map(p => `<p class="small"><b>${esc(p.n)}</b><br>${esc(p.d)} <span class="muted">${esc(p.tip)}</span></p>`).join('')}</div>
-      <div class="panel"><h3>Tactical Tweaks <span class="chip new">FM27</span></h3><p class="small muted">Atalhos no ecrã de jogo que alteram várias instruções de uma vez. Passe o rato no jogo para ver exactamente quais.</p>
-        ${TACTICAL_TWEAKS.map(p => `<p class="small"><b>${esc(p.n)}</b> — ${esc(p.d)}<br><span class="muted"><span>Quando:</span> <span>${esc(p.when)}</span></span></p>`).join('')}</div>
-    </div></div>`;
-}
-
-function conceptDiagram(k) {
-  if (k === 'complexity') {
-    const tiers = [
-      [L('Baixa', 'Low'), L('0–5 desvios · adaptação rápida', '0–5 tweaks · fast learning'), 'var(--good)', 32],
-      [L('Média', 'Medium'), L('6–12 desvios · equilíbrio', '6–12 tweaks · balanced'), 'var(--warn)', 66],
-      [L('Alta', 'High'), L('13+ desvios · exige elite e treino', '13+ tweaks · needs elite IQ & training'), 'var(--crit)', 96],
-    ];
-    return `<div class="concept-viz">${tiers.map(([l, d, col, w]) => `<div class="cv-row"><span class="cv-lbl">${l}</span><div class="cv-bar"><i style="width:${w}%;background:${col}"></i></div><span class="small muted">${d}</span></div>`).join('')}</div>`;
-  }
-  if (k === 'effectiveness') {
-    const pillars = [
-      [L('Compreensão tática', 'Tactical Understanding'), L('Treino + jogos + simplicidade', 'Training + matches + simplicity'), 'var(--good)'],
-      [L('Capacidade do jogador', 'Player Ability'), L('Adequação ao papel + CA', 'Role suitability + CA'), '#3b82f6'],
-      [L('Adesão do plantel', 'Player Buy-In'), L('Apoio + coesão + promessas', 'Support + cohesion + promises'), 'var(--warn)'],
-      [L('Info. próximo jogo', 'Next Match Info'), L('Analistas + preparação', 'Analysts + match prep'), '#a855f7'],
-    ];
-    return `<div class="concept-viz cv-pillars">${pillars.map(([l, d, col]) => `<div class="cv-pill" style="border-top-color:${col}"><b>${l}</b><span class="small muted">${d}</span></div>`).join('')}</div>`;
-  }
-  return '';
-}
-
-function vConcepts() {
-  const open = ST.openClips || {};
-  return `<div class="top"><div><h2>Conceitos, princípios e adversários</h2></div></div>
-  <div class="grid g2">${CONCEPTS.map(c => {
-    const cid = 'concept:' + c.k, hasClip = CONCEPT_CLIPS.has(c.k), isOpen = !!open[cid];
-    return `<div class="panel">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <h3 style="margin:0">${esc(c.n)}</h3>
-        ${hasClip ? `<ui-toggle class="clip-tg" data-clip-toggle="${cid}"${isOpen ? ' default-pressed' : ''}><button type="button" class="btn sm">${L('Ver no campo', 'Show on pitch')}</button></ui-toggle>` : ''}
-      </div>
-      <p class="small" style="margin-top:8px">${esc(c.t)}</p>
-      ${conceptDiagram(c.k)}
-      ${hasClip && isOpen ? clipHTML(cid, `<b>${esc(c.n)}</b> · <span>${L('animação tática', 'tactical animation')}</span>`) : ''}
-    </div>`;
-  }).join('')}</div>
-  <div class="panel" style="margin-top:16px"><h3>Contra cada sistema</h3>
-    <div class="grid g2" style="margin-top:10px">${OPPONENTS.map(o => {
-      const cid = 'opp:' + o.k, isOpen = !!open[cid];
-      return `<div class="opp-card">
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <b>${esc(o.f)}</b>
-          <ui-toggle class="clip-tg" data-clip-toggle="${cid}"${isOpen ? ' default-pressed' : ''}><button type="button" class="btn sm">${L('Ver plano', 'Show plan')}</button></ui-toggle>
-        </div>
-        <p class="small" style="margin:.45em 0 0">${esc(o.t)}</p>
-        ${isOpen ? clipHTML(cid, `<span>${L('Como bater', 'How to beat')}</span> <b>${esc(o.f)}</b>`) : ''}
-      </div>`;
-    }).join('')}</div></div>
-  <div class="panel" style="margin-top:16px"><h3>Glossário</h3><table><tbody>${GLOSSARY.map(([a, b]) => `<tr><td style="width:170px"><b>${esc(a)}</b></td><td class="small">${esc(b)}</td></tr>`).join('')}</tbody></table></div>`;
-}
-
-function vBTraining() {
-  return `<div class="top"><div><h2>Treino & Tactical Effectiveness (FM27)</h2></div><button class="btn" onclick="A.go('training')">Gerar plano para a minha tática →</button></div>
-  <div class="grid g2">${TRAINING.effectiveness.map(e => `<div class="panel"><h3>${esc(e.n)}</h3><p class="small">${esc(e.d)}</p><p class="small"><b>Como melhorar:</b> ${esc(e.fix)}</p></div>`).join('')}</div>
-  <div class="grid g2" style="margin-top:16px">
-    <div class="panel"><h3>Princípios</h3><ul class="clean small">${TRAINING.principles.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
-    <div class="panel"><h3>Periodização</h3><table><tbody>${TRAINING.periodization.map(p => `<tr><td><b>${esc(p.p)}</b></td><td class="small">${esc(p.f)}<br><span class="muted">${esc(p.n)}</span></td></tr>`).join('')}</tbody></table>
-      <h4 style="margin-top:12px">Áreas de Tactical Understanding</h4><p class="small">${Object.values(TRAINING.areas).map(a => `<span class="chip">${esc(a.n)}</span>`).join('')}</p></div>
-  </div>`;
-}
-
 
 ;
 // ---- ui/views_settings.js
@@ -8246,7 +7056,7 @@ const A = {
   focusArea(nat) { const d = scoutState().focus; if (!d) return; d.areas = d.areas.includes(nat) ? d.areas.filter(x => x !== nat) : [...d.areas, nat]; render(); },
   async focusCreate() {
     const d = scoutState().focus; if (!d || !d.areas.length) return;
-    const o = { name: d.name || 'Tactical Bible', ageMin: d.ageMin, ageMax: d.ageMax, caStars: d.caStars, paStars: d.paStars,
+    const o = { name: d.name || 'Tactical Architect', ageMin: d.ageMin, ageMax: d.ageMax, caStars: d.caStars, paStars: d.paStars,
       areas: d.areas.map(n => ({ id: FMB_IDS.focus.nation(n), label: SCOUT.nations[n] || '' })) };
     try {
       const made = await withBusy('bridge-focus', L('A criar a observação no FM', 'Creating the scouting assignment in FM'), (prog) => FMB.createFocus(o, (t) => prog(null, t)));
@@ -8277,7 +7087,6 @@ const A = {
     const txt = lines.join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(L('Plano copiado', 'Plan copied')), () => download('plano.txt', txt, 'text/plain')); },
   navMini() { ST.ui.navMini = !ST.ui.navMini; save(); render(); },
   collapseAll(c) { document.querySelectorAll('#main .panel.collapsible').forEach(p => { if (p.classList.contains('collapsed') !== c) p.querySelector('.pc-toggle').click(); }); },
-  clipToggle(id) { ST.openClips = ST.openClips || {}; if (ST.openClips[id]) delete ST.openClips[id]; else ST.openClips[id] = 1; render(); },
   clearOpp() { ST.opp = EMPTY_SQUAD(); save(); render(); },
   /** Next opponent from the running FM (bridge): FM gives the fixture and the opponent's players (unique_id), the save
    *  database gives their attributes. silent: background check, only acts if the opponent changed. */
@@ -8305,26 +7114,15 @@ const A = {
   saveToggle() { ST.auto.save = !ST.auto.save; save(); render(); if (ST.auto.save) savePoll(); },
   saveDir(v) { ST.auto.saveDir = v.trim(); ST.auto.saveMtime = 0; save(); savePoll(true); },
   // campo animado
-  simOpen() { const s = simDefaults(); Object.assign(s, { src: 'tactic', t: null, focus: null, hl: null, title: '' }); A.go('tactic', 'sim'); },
-  roleDemo(id) {
-    const r = ROLE_BY_ID[id], d = demoTacticForRole(r), s = simDefaults();
-    Object.assign(s, { src: 'demo', t: d.t, focus: d.idx, hl: null, title: L('Como joga: ', 'How it plays: ') + r.name, phase: r.phase === 'IP' ? 0 : 4, u: 0 });
-    A.go('tactic', 'sim');
-  },
-  tiDemo(k) {
-    const s = simDefaults();
-    Object.assign(s, { src: 'demo', t: JSON.parse(JSON.stringify(ST.tactic)), focus: null, hl: k, title: L('Instrução: ', 'Instruction: ') + TI_BY_KEY[k].n, phase: TI_PHASE[k] ?? 0, u: 0 });
-    A.go('tactic', 'sim');
-  },
-  simBack() { Object.assign(ST.sim, { src: 'tactic', t: null, focus: null, hl: null }); render(true); },
+  simOpen() { const s = simDefaults(); Object.assign(s, { focus: null, hl: null }); A.go('tactic', 'sim'); },
   simPlay(v) { ST.sim.playing = v == null ? !ST.sim.playing : !!v; const tg = document.getElementById('sim-play-tg'); if (tg && tg.pressed !== ST.sim.playing) tg.pressed = ST.sim.playing; },
   simPhase(i) { ST.sim.phase = +i; ST.sim.u = 0; const el = document.getElementById('sim-phases'); if (el && el.value !== String(ST.sim.phase)) el.value = String(ST.sim.phase); simCaption(simTactic()); simFrame(); },
   simSpeed(v) { ST.sim.speed = +v; const el = document.getElementById('sim-speed'); if (el && el.value !== String(ST.sim.speed)) el.value = String(ST.sim.speed); },
   simFocus(i) { ST.sim.focus = ST.sim.focus === i ? null : i; render(); },
   simToggle(k, v) { ST.sim[k] = v == null ? !ST.sim[k] : !!v; simFrame(); },
-  simTI(k, v) { const t = simTactic(), d = TI_BY_KEY[k].def; v = +v; if (v === d) delete t.ti[k]; else t.ti[k] = v; if (ST.sim.src === 'tactic') save(); simRebuild(); },
-  simMent(v) { simTactic().ment = v; if (ST.sim.src === 'tactic') save(); simRebuild(); },
-  simRole(phase, id) { simTactic().slots[ST.sim.focus][phase === 'IP' ? 'ip' : 'oop'] = id; if (ST.sim.src === 'tactic') save(); render(); },
+  simTI(k, v) { const t = simTactic(), d = TI_BY_KEY[k].def; v = +v; if (v === d) delete t.ti[k]; else t.ti[k] = v; save(); simRebuild(); },
+  simMent(v) { simTactic().ment = v; save(); simRebuild(); },
+  simRole(phase, id) { simTactic().slots[ST.sim.focus][phase === 'IP' ? 'ip' : 'oop'] = id; save(); render(); },
   // .fmf
   async fmf(input) {
     const f = input.files ? input.files[0] : input; if (!f) return;
@@ -8346,9 +7144,6 @@ const A = {
   sampleSquad() { ST.squad = { ...EMPTY_SQUAD(), players: makeSample(), source: L('exemplo (fictício)', 'sample (fictional)') }; ST.myClub = null; ST.sugg = null; autoPickXI(ST.tactic, ST.squad.players); save(); render(); toast('Plantel de exemplo carregado (fictício)'); },
   clearSquad() { ST.squad = EMPTY_SQUAD(); ST.myClub = null; ST.tactic.slots.forEach(s => s.pid = null); ST.sugg = null; save(); render(); },
   runSuggest() { ST.sugg = suggestTactics(players()); render(); },
-  // bíblia
-  rq(v) { ST.rq = v; render(); const el = document.getElementById('rq'); if (el) { el.focus(); el.setSelectionRange(v.length, v.length); } },
-  rg(v) { ST.rg = v; render(); }, rp(v) { ST.rp = v; render(); },
   // dados
   exportAll() { download('fm27tb_backup.json', JSON.stringify({ kind: 'fm27tb-all', v: 1, tactic: ST.tactic, squad: ST.squad, saved: ST.saved }, null, 2)); },
   wipe() { if (!confirm(T('Apagar tática, plantel e táticas guardadas deste computador?'))) return; localStorage.removeItem(STORE_KEY); location.reload(); },
@@ -8367,13 +7162,11 @@ const NAV = [
   ['scout', 'Prospeção', '🔭'],
   ['tactic', 'Tática', '◎'],
   ['training', 'Treino', '◷'],
-  ['bible', 'Bíblia', '◆'],
   ['settings', 'Definições', '⚙'],
 ];
 const TABS = {
   team: [['squad', 'Plantel'], ['gen', 'Gerar tática'], ['xi', 'Melhor XI & sistemas'], ['opp', 'Adversário']],
   tactic: [['analyze', 'Analisar'], ['sim', 'Campo animado'], ['plans', 'Situações de jogo'], ['setpieces', 'Bolas paradas'], ['sheet', 'Ficha para o FM27'], ['import', 'Importar']],
-  bible: [['roles', 'Papéis'], ['ti', 'Instruções'], ['concepts', 'Conceitos & adversários'], ['btraining', 'Treino & Effectiveness']],
 };
 
 // Barra de topo ao estilo do FM: menu principal + estado + dados do jogo; por baixo, os separadores do ecrã (como no FM).
@@ -8387,7 +7180,7 @@ function renderNav() {
   const tabs = TABS[v] ? TABS[v].map(([k, n]) => `<button role="tab" aria-selected="${ST.tabs[v] === k}" class="${ST.tabs[v] === k ? 'on' : ''}" onclick="A.tab('${v}','${k}')">${n}</button>`).join('')
     : `<span class="tb-crumb">${(NAV.find(([id]) => id === v) || [, ''])[1]}</span>`;
   return `<div class="tb-row">
-      <button class="tb-brand" onclick="A.go('home')" title="FM27 Tactical Bible v${VERSION}${DESKTOP ? ' · app' : ' · browser'}" aria-label="FM27 Tactical Bible"><span class="logo">FM27</span><span class="lbl">Tactical Bible</span></button>
+      <button class="tb-brand" onclick="A.go('home')" title="FM27 Tactical Architect v${VERSION}${DESKTOP ? ' · app' : ' · browser'}" aria-label="FM27 Tactical Architect"><span class="logo">FM27</span><span class="lbl">Tactical Architect</span></button>
       <nav class="tb-nav" aria-label="${L('Menu', 'Menu')}">${main.map(([id, label, ic]) => `<button class="nav-btn ${v === id ? 'active' : ''}" onclick="A.go('${id}')" title="${label}" aria-label="${label}"${v === id ? ' aria-current="page"' : ''}><span class="ic" aria-hidden="true">${ic}</span><span class="lbl">${label}</span></button>`).join('')}</nav>
       <div class="tb-right">
         <div class="tb-status">
@@ -8416,7 +7209,6 @@ function render(scrollTop) {
   else if (v === 'tactic') body = (tab === 'analyze' ? vTactic() : tab === 'sim' ? vSim() : tab === 'plans' ? vGamePlans() : tab === 'setpieces' ? vSetPieces() : tab === 'sheet' ? vSheet() : vImport());
   else if (v === 'training') body = vTraining();
   else if (v === 'scout') body = vScout();
-  else if (v === 'bible') body = (tab === 'roles' ? vRoles() : tab === 'ti' ? vTI() : tab === 'concepts' ? vConcepts() : vBTraining());
   else body = vSettings();
   main.innerHTML = body;
   document.querySelector('.app').classList.toggle('mini', !!ST.ui.navMini);
@@ -8427,7 +7219,6 @@ function render(scrollTop) {
   document.documentElement.lang = LANG;
   main.scrollTop = scrollTop ? 0 : y;
   if (isSim) simStart();
-  if (v === 'bible') initClips(); else stopClips();
 }
 
 // ---------- actividade: tudo o que demora mostra que está a trabalhar ----------

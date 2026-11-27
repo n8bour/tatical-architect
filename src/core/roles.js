@@ -1,5 +1,5 @@
 // ============================================================
-// FM27 Tactical Bible — Base de conhecimento: atributos e papéis
+// FM27 Tactical Architect — Base de conhecimento: atributos e papéis
 // src: 'v' = confirmado em fontes públicas FM26/FM27; 'e' = estimado
 // (pesos derivados da lógica FM; confirmar no jogo e ajustar aqui).
 // ============================================================
