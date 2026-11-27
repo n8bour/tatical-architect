@@ -1,6 +1,7 @@
 node_modules/
 /target
 /dist
+__pycache__/
 
 bridge/TacticalBibleBridge/bin/
 bridge/TacticalBibleBridge/obj/

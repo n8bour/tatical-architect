@@ -2,7 +2,6 @@
 //!
 //! Widgets here (`synergy_map`, `setpieces_diagram`, `suitability_bar`, `attr_chip`, etc.)
 //! are shared across the screens in `views/`.
-#![allow(dead_code)]
 
 pub mod common;
 pub mod pitch_animated;

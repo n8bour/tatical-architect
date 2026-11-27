@@ -109,7 +109,6 @@ src/           offline browser HTML sources (i18n/, core/, ui/, styles.css)
 build.mjs      bundles src/ into app/index.html (single file)
 tests/         npm test (engine.test.cjs) · sim_canvas.test.cjs · Playwright UI checks ui_*.py
 bridge/        TacticalBibleBridge (C# BepInEx plugin source), dist/ (prebuilt DLL embedded in ta-backend), dev/ scripts, README.md (decoded FM ids)
-docs/          HANDOFF-bridge.md (state of the bridge, open gaps, rules)
 ```
 
 Not affiliated with Sports Interactive or SEGA.

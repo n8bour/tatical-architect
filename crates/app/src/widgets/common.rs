@@ -20,8 +20,6 @@ pub mod pal {
     pub const WARN: u32 = 0xe3a83f;
     pub const CRIT: u32 = 0xe5553f;
     pub const INFO: u32 = 0xb8ab92;
-    /// Second accent (`--accent2`): fixes, links, highlights on dark paper.
-    pub const ACCENT2: u32 = 0xff8f96;
     /// FM attribute tiers (`--att-hi` / `--att-mid`).
     pub const ATT_HI: u32 = 0x2f9e4f;
     pub const ATT_MID: u32 = 0xc9a227;

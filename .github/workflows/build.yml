@@ -15,7 +15,7 @@ on:
         default: false
   push:
     branches: [main]
-    paths-ignore: ['README.md', 'docs/**']
+    paths-ignore: ['README.md']
 
 concurrency:
   group: build-${{ github.ref }}

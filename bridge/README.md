@@ -1,7 +1,7 @@
 # Tactical Bible Bridge (optional)
 
-A minimal BepInEx 6 (IL2CPP) plugin that runs inside FM27 and lets FM27 Tactical Bible **apply** things in the game
-(currently: place your XI into the active tactic). Windows only. The app works fully without it.
+A minimal BepInEx 6 (IL2CPP) plugin that runs inside FM27 and lets FM27 Tactical Architect **apply** things in the game
+(XI, tactics, set pieces, shortlist, recruitment focus; see below). Windows only. The app works fully without it.
 
 Trimmed from FM27Bridge (fm27-assistant, MIT, © 2026 arress03). Listens on `127.0.0.1:27029`. Data folder:
 `%APPDATA%\FM27TacticalBible` (`bridge.log`, `bridge_refs.txt`).
@@ -171,3 +171,16 @@ Active tactic = `TeamTacticReference|825307168=126;<session>;1651271022=1;168521
 - Revert to role defaults: `1984657952` {slot, `1265792339`, `1936487524` {0, label}}: every tile back to Standard, the starting point for the presses.
 - Scope: the panel has "Apply to: Position / Player"; the events change the Position scope. Not seen: ids for Attack Box Side/Depth, Hold Up Ball options
   (app has no such instruction), Marking Target options.
+
+## Rules (read before touching the bridge)
+- **Never replay the recorded "Create New Tactic" wizard with event 90**: it replaced the active tactic. Use `createTactic` (wizard: new, style, Next, Next, confirm); FM holds at most 3 tactics.
+- Never patch SetData/AddData/SetTarget at plugin load (crashed FM before the main menu); `DATAHOOK 1` mid-game is fine.
+- `SEQ 1` logs to `bridge_seq.txt` at ~100 MB/min: turn it off (`SEQ 0`) when done; FM can stall past ~0.5–1.5 GB.
+- Don't touch the user's saves; ask before changing a real game; keep port 27029 and the Harmony ids unique.
+- BepInEx 6 (IL2CPP) is a prerequisite the app does not install. FM-facing actions were verified through `dev/*.mjs` (the browser build's `FMB` over TCP); the native client is `crates/core/src/live/fmbridge.rs` (`FmbIds`).
+
+## Open gaps
+1. **Roles without an FM id:** lhk, ocb, cwcb, swcb, hwb, prwb, fr, ss, soam. Click a player in a position where the role exists in FM and read the role list (`dev/_tienum.mjs` / `dev/_pienum.mjs` show the technique).
+2. **App instructions with no FM tile:** player instructions Hold position, Move into channels, Arrive Late, Attack the Defensive Line; team instruction "Play for Set Pieces → Balanced". Hold Up Ball (5), Attack Box Side/Depth, Marking Target options and the second option of Marking (12) were never mapped.
+3. **Not decoded:** penalty order (`1649488964`), long throws / taker list moves (`1144009829`), opposition instructions, captains, Position vs Player scope of player instructions (only Position is written), team-instruction ids 2, 13, 14.
+4. **Opposition report and live match data:** not started. Leads: FM's opposition analysis screen and `MatchTacticReference` (same event ids as the tactic).
